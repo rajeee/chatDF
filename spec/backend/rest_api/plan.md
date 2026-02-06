@@ -19,12 +19,16 @@ Implements: [spec.md#Endpoints](./spec.md#endpoints)
 - `POST /conversations` -> `create_conversation(user, db)`
 - `GET /conversations` -> `list_conversations(user, db)`
 - `GET /conversations/{conversation_id}` -> `get_conversation_detail(conversation = Depends(get_conversation), db)`
+- `PATCH /conversations/{conversation_id}` -> `rename_conversation(body: RenameConversationRequest, conversation = Depends(get_conversation), db)`
 - `DELETE /conversations/{conversation_id}` -> `delete_conversation(conversation = Depends(get_conversation), db)`
+- `DELETE /conversations` -> `clear_all_conversations(user, db)`
 - `POST /conversations/{conversation_id}/messages` -> `send_message(body: SendMessageRequest, conversation = Depends(get_conversation), db)`
 - `POST /conversations/{conversation_id}/stop` -> `stop_generation(conversation = Depends(get_conversation), db)`
 
 ### `routers/datasets.py`
 - `POST /conversations/{conversation_id}/datasets` -> `add_dataset(body: AddDatasetRequest, conversation = Depends(get_conversation), db)`
+- `PATCH /conversations/{conversation_id}/datasets/{dataset_id}` -> `rename_dataset(body: RenameDatasetRequest, conversation = Depends(get_conversation), dataset_id: str, db)`
+- `POST /conversations/{conversation_id}/datasets/{dataset_id}/refresh` -> `refresh_dataset_schema(conversation = Depends(get_conversation), dataset_id: str, db)`
 - `DELETE /conversations/{conversation_id}/datasets/{dataset_id}` -> `remove_dataset(conversation = Depends(get_conversation), dataset_id: str, db)`
 
 ### `routers/usage.py`
@@ -39,6 +43,8 @@ Defined in `models.py`:
 - `GoogleLoginRequest`: `referral_key: str | None = None`
 - `SendMessageRequest`: `content: str` (min_length=1, max_length=10000)
 - `AddDatasetRequest`: `url: str` (validated as HttpUrl)
+- `RenameConversationRequest`: `title: str` (min_length=1, max_length=100)
+- `RenameDatasetRequest`: `tableName: str` (min_length=1, max_length=50, pattern=`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 **Response models:**
 - `UserResponse`: `user_id: str, email: str, name: str, avatar_url: str | None`
@@ -51,6 +57,8 @@ Defined in `models.py`:
 - `UsageResponse`: `tokens_used: int, token_limit: int, remaining: int, resets_in_seconds: int, usage_percent: float`
 - `MessageAckResponse`: `message_id: str, status: str` (literal "processing")
 - `DatasetAckResponse`: `dataset_id: str, status: str` (literal "loading")
+- `ClearAllResponse`: `success: bool, deleted_count: int`
+- `DatasetDetailResponse`: `id: str, name: str, tableName: str, url: str, row_count: int, column_count: int, schema: dict | None`
 - `SuccessResponse`: `success: bool` (literal True)
 - `ErrorResponse`: `error: str, details: str | None = None`
 
@@ -75,7 +83,7 @@ Implements: [spec.md#CORS](./spec.md#cors)
 
 Applied in `main.py` via `CORSMiddleware`:
 - `allow_origins`: `settings.cors_origins.split(",")`
-- `allow_methods`: `["GET", "POST", "DELETE", "OPTIONS"]`
+- `allow_methods`: `["GET", "POST", "PATCH", "DELETE", "OPTIONS"]`
 - `allow_headers`: `["Content-Type", "Cookie"]`
 - `allow_credentials`: `True`
 

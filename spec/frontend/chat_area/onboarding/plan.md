@@ -35,7 +35,7 @@ Implements: [spec.md#display-condition](./spec.md#display-condition)
 ### Sample Dataset URL
 
 - A constant `SAMPLE_DATASET_URL` defined in `frontend/src/lib/constants.ts`.
-- Points to a publicly accessible parquet file (exact URL configured at build time or hardcoded).
+- Value: `"https://huggingface.co/datasets/scikit-learn/iris/resolve/main/iris.parquet"` (Iris dataset — 150 rows, 5 columns, ~7KB).
 - "Try with sample data" button calls `datasetStore.addDataset(SAMPLE_DATASET_URL)`.
 
 ### Layout

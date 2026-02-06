@@ -1,0 +1,322 @@
+"""Conversations router -- CRUD for conversations plus chat endpoints.
+
+Implements: spec/backend/rest_api/plan.md#routersconversationspy
+
+Endpoints:
+- POST /conversations                          -> create_conversation
+- GET /conversations                           -> list_conversations
+- GET /conversations/{conversation_id}         -> get_conversation_detail
+- PATCH /conversations/{conversation_id}       -> rename_conversation
+- DELETE /conversations/{conversation_id}      -> delete_conversation
+- DELETE /conversations                        -> clear_all_conversations
+- POST /conversations/{conversation_id}/messages -> send_message
+- POST /conversations/{conversation_id}/stop     -> stop_generation
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import uuid4
+
+import aiosqlite
+from fastapi import APIRouter, Depends, Request
+
+from app.dependencies import get_conversation, get_current_user, get_db
+from app.models import (
+    ClearAllResponse,
+    ConversationDetailResponse,
+    ConversationListResponse,
+    ConversationResponse,
+    ConversationSummary,
+    DatasetResponse,
+    MessageAckResponse,
+    MessageResponse,
+    RenameConversationRequest,
+    SendMessageRequest,
+    SuccessResponse,
+)
+from app.services import chat_service
+
+router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations
+# Implements: spec/backend/rest_api/spec.md#post-conversations
+# ---------------------------------------------------------------------------
+
+
+@router.post("", status_code=201, response_model=ConversationResponse)
+async def create_conversation(
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> ConversationResponse:
+    """Create a new empty conversation for the authenticated user."""
+    conv_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+
+    await db.execute(
+        "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (conv_id, user["id"], "", now, now),
+    )
+    await db.commit()
+
+    return ConversationResponse(
+        id=conv_id,
+        title="",
+        created_at=datetime.fromisoformat(now),
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations
+# Implements: spec/backend/rest_api/spec.md#get-conversations
+# ---------------------------------------------------------------------------
+
+
+@router.get("", response_model=ConversationListResponse)
+async def list_conversations(
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> ConversationListResponse:
+    """List all conversations for the authenticated user, sorted by updated_at desc."""
+    cursor = await db.execute(
+        "SELECT c.id, c.title, c.created_at, c.updated_at, "
+        "  (SELECT COUNT(*) FROM datasets d WHERE d.conversation_id = c.id) AS dataset_count "
+        "FROM conversations c "
+        "WHERE c.user_id = ? "
+        "ORDER BY c.updated_at DESC",
+        (user["id"],),
+    )
+    rows = await cursor.fetchall()
+
+    conversations = [
+        ConversationSummary(
+            id=row["id"],
+            title=row["title"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+            dataset_count=row["dataset_count"],
+        )
+        for row in rows
+    ]
+
+    return ConversationListResponse(conversations=conversations)
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}
+# Implements: spec/backend/rest_api/spec.md#get-conversationsid
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{conversation_id}", response_model=ConversationDetailResponse)
+async def get_conversation_detail(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> ConversationDetailResponse:
+    """Get conversation details including messages and datasets."""
+    conv_id = conversation["id"]
+
+    # Fetch messages
+    cursor = await db.execute(
+        "SELECT id, role, content, sql_query, created_at "
+        "FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conv_id,),
+    )
+    message_rows = await cursor.fetchall()
+    messages = [
+        MessageResponse(
+            id=row["id"],
+            role=row["role"],
+            content=row["content"],
+            sql_query=row["sql_query"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
+        for row in message_rows
+    ]
+
+    # Fetch datasets
+    cursor = await db.execute(
+        "SELECT id, name, url, row_count, column_count "
+        "FROM datasets WHERE conversation_id = ?",
+        (conv_id,),
+    )
+    dataset_rows = await cursor.fetchall()
+    datasets = [
+        DatasetResponse(
+            id=row["id"],
+            name=row["name"],
+            url=row["url"],
+            row_count=row["row_count"],
+            column_count=row["column_count"],
+        )
+        for row in dataset_rows
+    ]
+
+    return ConversationDetailResponse(
+        id=conversation["id"],
+        title=conversation["title"],
+        created_at=datetime.fromisoformat(conversation["created_at"]),
+        updated_at=datetime.fromisoformat(conversation["updated_at"]),
+        messages=messages,
+        datasets=datasets,
+    )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /conversations/{conversation_id}
+# Implements: spec/backend/rest_api/spec.md#patch-conversationsid
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/{conversation_id}")
+async def rename_conversation(
+    body: RenameConversationRequest,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Rename a conversation."""
+    now = datetime.utcnow().isoformat()
+
+    await db.execute(
+        "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
+        (body.title, now, conversation["id"]),
+    )
+    await db.commit()
+
+    return {
+        "id": conversation["id"],
+        "title": body.title,
+        "updated_at": now,
+    }
+
+
+# ---------------------------------------------------------------------------
+# DELETE /conversations/{conversation_id}
+# Implements: spec/backend/rest_api/spec.md#delete-conversationsid
+# ---------------------------------------------------------------------------
+
+
+@router.delete("/{conversation_id}", response_model=SuccessResponse)
+async def delete_conversation(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SuccessResponse:
+    """Delete a conversation and all associated data (cascade)."""
+    await db.execute(
+        "DELETE FROM conversations WHERE id = ?",
+        (conversation["id"],),
+    )
+    await db.commit()
+
+    return SuccessResponse(success=True)
+
+
+# ---------------------------------------------------------------------------
+# DELETE /conversations
+# Implements: spec/backend/rest_api/spec.md#delete-conversations-1
+# ---------------------------------------------------------------------------
+
+
+@router.delete("", response_model=ClearAllResponse)
+async def clear_all_conversations(
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> ClearAllResponse:
+    """Delete all conversations for the authenticated user."""
+    # Count first
+    cursor = await db.execute(
+        "SELECT COUNT(*) AS cnt FROM conversations WHERE user_id = ?",
+        (user["id"],),
+    )
+    row = await cursor.fetchone()
+    count = row["cnt"]
+
+    # Delete all
+    await db.execute(
+        "DELETE FROM conversations WHERE user_id = ?",
+        (user["id"],),
+    )
+    await db.commit()
+
+    return ClearAllResponse(success=True, deleted_count=count)
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/messages
+# Implements: spec/backend/rest_api/spec.md#post-conversationsidmessages
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/messages", response_model=MessageAckResponse)
+async def send_message(
+    request: Request,
+    body: SendMessageRequest,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> MessageAckResponse:
+    """Send a chat message and trigger LLM processing.
+
+    The user message is persisted by ``chat_service.process_message`` (step 3)
+    along with the full orchestration pipeline.  This endpoint returns an
+    immediate acknowledgment with a ``message_id``.
+    """
+    conv_id = conversation["id"]
+
+    # Generate a message_id for the acknowledgment response
+    msg_id = str(uuid4())
+
+    # Update conversation updated_at
+    now = datetime.utcnow().isoformat()
+    await db.execute(
+        "UPDATE conversations SET updated_at = ? WHERE id = ?",
+        (now, conv_id),
+    )
+    await db.commit()
+
+    # Get the connection manager for ws_send
+    connection_manager = getattr(request.app.state, "connection_manager", None)
+
+    async def ws_send(event_type: str, data: dict) -> None:
+        if connection_manager is not None:
+            await connection_manager.send_to_user(
+                user["id"], {"type": event_type, **data}
+            )
+
+    # Get the worker pool
+    pool = getattr(request.app.state, "worker_pool", None)
+
+    # Call chat_service.process_message which handles the full 14-step flow
+    # including persisting the user message (step 3), rate limiting, LLM
+    # streaming, and assistant message persistence.  Domain exceptions
+    # (ConflictError, RateLimitError) propagate to the exception handlers
+    # in main.py.
+    await chat_service.process_message(
+        db=db,
+        conversation_id=conv_id,
+        user_id=user["id"],
+        content=body.content,
+        ws_send=ws_send,
+        pool=pool,
+    )
+
+    return MessageAckResponse(message_id=msg_id, status="processing")
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/stop
+# Implements: spec/backend/rest_api/spec.md#post-conversationsidstop
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/stop", response_model=SuccessResponse)
+async def stop_generation(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SuccessResponse:
+    """Stop in-progress LLM generation for this conversation."""
+    chat_service.stop_generation(conversation["id"])
+    return SuccessResponse(success=True)

@@ -115,4 +115,4 @@ Data flow for dataset loading:
 - Client-side reconnection (frontend/plan.md), message processing (llm/plan.md), rate limit triggers (rate_limiting/plan.md)
 
 ### Assumptions
-- Starlette handles protocol-level ping/pong; single-process deployment (in-memory ConnectionManager sufficient)
+- Starlette handles protocol-level ping/pong; single-process deployment (in-memory ConnectionManager sufficient). **Deployment note**: Uvicorn must be run with `--workers 1` (single process). Multiple workers would each have their own `ConnectionManager` instance, breaking WebSocket delivery. If scaling beyond a single process is needed in the future, replace in-memory state with Redis pub/sub.

@@ -1,0 +1,36 @@
+# bv (beads viewer) local config and caches
+.bv/
+.beads/.bv.lock
+
+# Dependencies
+node_modules/
+.history
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+.env.local
+
+# Build artifacts
+dist/
+.vite/
+
+# IDE
+.vscode/
+
+# Playwright MCP
+.playwright-mcp/
+
+# SQLite databases
+*.db
+
+# OS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/

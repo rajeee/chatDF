@@ -62,6 +62,48 @@ Services:
 - `rate_limit_service.py` — token usage tracking, limit enforcement
 - `worker_pool.py` — multiprocessing pool management
 
+## Chat Service Orchestration
+Implements: [spec.md#LLM-Integration](./spec.md#llm-integration), [llm/spec.md](./llm/spec.md), [rate_limiting/spec.md](./rate_limiting/spec.md)
+
+`chat_service.py` is the central orchestrator for the message-send flow. It coordinates rate limiting, LLM calls, tool execution, token recording, and WebSocket events.
+
+### Full Message-Send Flow
+
+`async process_message(user_id: str, conversation_id: str, content: str, db: Connection, connection_manager: ConnectionManager, worker_pool: Pool) -> None`
+
+1. **Concurrency check**: Check if a generation is already in progress for this conversation (in-memory `set` of active conversation IDs). If yes, raise `ConflictError` (409).
+2. **Mark active**: Add `conversation_id` to the active-generations set.
+3. **Persist user message**: Insert user message into `messages` table.
+4. **Rate limit check**: `status = await rate_limit_service.check_limit(db, user_id)`. If `status.allowed` is `False`, send `rate_limit_exceeded` via WebSocket, raise `RateLimitError` (429).
+5. **Build context**: Fetch last 50 messages (by `created_at` desc) from `messages` table for this conversation. Apply token-budget pruning per [llm/spec.md#context-pruning-algorithm](./llm/spec.md#context-pruning-algorithm).
+6. **Fetch datasets**: Load dataset schemas for this conversation from `datasets` table.
+7. **Send query_status("generating")** via WebSocket.
+8. **Call LLM**: `result = await llm_service.stream_chat(messages, datasets, ws_send)`. The `ws_send` callback pushes `chat_token` events to the user via `connection_manager`.
+9. **Handle tool calls** (inside `stream_chat`): If LLM issues `execute_sql`, dispatch to `worker_pool.run_query()`. Send `query_status("executing")` before execution, `query_status("formatting")` after. If LLM issues `load_dataset`, delegate to `dataset_service.add_dataset()`.
+10. **Persist assistant message**: Insert assistant response into `messages` table with `token_count`.
+11. **Record usage**: `await rate_limit_service.record_usage(db, user_id, result.input_tokens, result.output_tokens)`.
+12. **Send completion**: Send `chat_complete` via WebSocket with `message_id`, `sql_query`, `token_count`.
+13. **Check warning**: Re-check rate limit. If `status.warning`, include `rate_limit_warning` in the completion event.
+14. **Mark inactive**: Remove `conversation_id` from active-generations set (in a `finally` block).
+
+### Error Handling at Each Step
+
+| Step | Error | Behavior |
+|------|-------|----------|
+| Rate limit check | DB error | `chat_error` via WebSocket, log error |
+| LLM call | Gemini API error | `chat_error` via WebSocket, partial response preserved if any tokens streamed |
+| Tool execution | Worker timeout/error | Error passed back to LLM as tool response (LLM can retry up to 3 times) |
+| Context too large | Gemini rejects payload | Prune 10 more messages and retry once; if still fails, `chat_error` |
+| Any step | Unhandled exception | `chat_error` via WebSocket, log full traceback, remove from active set |
+
+### Stop/Cancel
+
+`async stop_generation(conversation_id: str) -> None`
+
+- Sets a cancellation flag for the conversation's active generation.
+- `stream_chat` checks this flag between stream chunks and tool calls.
+- On cancellation: partial response preserved in `messages` table, `chat_complete` sent with what was generated so far.
+
 ## Configuration
 Implements: [spec.md#Configuration](./spec.md)
 

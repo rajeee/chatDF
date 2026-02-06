@@ -18,7 +18,7 @@ parent: ../spec.md
 - Chat message display (see message_list/spec.md)
 
 ### Assumptions
-- A publicly accessible sample parquet URL is preconfigured (e.g., NREL building stock or similar public dataset)
+- Sample dataset URL: `https://huggingface.co/datasets/scikit-learn/iris/resolve/main/iris.parquet` (Iris dataset — 150 rows, 5 columns, ~7KB, diverse column types, publicly accessible, stable hosting on HuggingFace)
 
 ## Behavior
 
@@ -41,7 +41,7 @@ parent: ../spec.md
    - Once loaded, onboarding transitions to show example prompts
 5. **Example prompt chips** (visible after sample data loads):
    - 3-4 clickable chips with example questions relevant to the sample dataset
-   - Examples: "How many buildings are in the dataset?", "What are the average energy costs by state?"
+   - Examples: "How many rows are in the dataset?", "What is the average petal length by species?", "Show me the distribution of sepal width"
    - Clicking a chip sends it as a user message
 
 ### Transitions

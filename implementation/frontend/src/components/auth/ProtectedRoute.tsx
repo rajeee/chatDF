@@ -1,0 +1,31 @@
+// Implements: spec/frontend/plan.md#routing
+//
+// ProtectedRoute wrapper component.
+// Reads auth state from useAuth.
+// Redirects to /sign-in if unauthenticated.
+// Shows loading state while checking auth.
+
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
+  return <>{children}</>;
+}

@@ -37,7 +37,8 @@ parent: ../spec.md
 ### Reconnection
 - Client auto-reconnects with exponential backoff:
   - 1s → 2s → 4s → 8s → 16s → max 30s between attempts
-- On reconnect: server replays current conversation state (messages, loaded datasets)
+- On reconnect: server re-authenticates the session and re-registers the connection. No state replay — client re-fetches current conversation via REST `GET /conversations/:id`
+- If disconnected during streaming: partial response is lost. User can resend their message
 - If reconnection fails after 5 attempts: show user "Connection lost" message with manual retry button
 
 ### Message Format
@@ -55,7 +56,7 @@ parent: ../spec.md
 | `dataset_loading` | `type`, `dataset_id`, `url`, `status: "loading"` | Dataset load started |
 | `dataset_loaded` | `type`, `dataset_id`, `name`, `row_count`, `column_count`, `schema` | Dataset ready |
 | `dataset_error` | `type`, `dataset_id`, `error` | Dataset load failed |
-| `query_status` | `type`, `phase: "generating"\|"executing"\|"formatting"` | Query progress phase |
+| `query_status` | `type`, `phase: "queued"\|"generating"\|"executing"\|"formatting"` | Query progress phase |
 | `rate_limit_warning` | `type`, `usage_percent`, `remaining_tokens` | Approaching limit |
 | `rate_limit_exceeded` | `type`, `resets_in_seconds` | Limit hit, request rejected |
 

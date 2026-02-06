@@ -31,8 +31,9 @@ parent: ../spec.md
 - Pool of 4 separate Python worker processes
 - Communicates with main process via `multiprocessing.Queue` (request/response pattern)
 - Each worker has isolated memory space — worker crashes do not take down the main app
-- Requests distributed round-robin to available workers
+- Requests distributed to available workers via work-stealing (`multiprocessing.Pool` default behavior)
 - If all workers busy: requests queued until a worker becomes available
+- Maximum queue depth: 10 pending tasks. If exceeded, new requests rejected with 503 "Server busy, try again shortly"
 
 ### Responsibilities
 

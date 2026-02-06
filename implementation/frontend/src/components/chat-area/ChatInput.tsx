@@ -1,0 +1,170 @@
+// Implements: spec/frontend/chat_area/chat_input/plan.md
+//
+// Auto-resizing textarea with Enter to send, Shift+Enter for newline,
+// 2000 char limit with counter at 1800+, send/stop button toggle,
+// disabled when daily rate limit reached.
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useChatStore } from "@/stores/chatStore";
+
+const CHAR_LIMIT = 2000;
+const CHAR_COUNTER_THRESHOLD = 1800;
+
+interface ChatInputProps {
+  onSend: (text: string) => void;
+  onStop: () => void;
+}
+
+export function ChatInput({ onSend, onStop }: ChatInputProps) {
+  const [inputValue, setInputValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
+
+  const charCount = inputValue.length;
+  const trimmedEmpty = inputValue.trim().length === 0;
+
+  // Auto-focus on mount
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  // Auto-resize textarea height
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value.slice(0, CHAR_LIMIT);
+    setInputValue(value);
+    // Defer resize to after state update
+    requestAnimationFrame(resizeTextarea);
+  };
+
+  const handleSend = useCallback(() => {
+    const trimmed = inputValue.trim();
+    if (!trimmed || dailyLimitReached) return;
+    onSend(trimmed);
+    setInputValue("");
+    // Reset textarea height after clearing
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = "auto";
+      }
+    });
+  }, [inputValue, dailyLimitReached, onSend]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!isStreaming) {
+        handleSend();
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData("text/plain");
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentValue = inputValue;
+    const newValue = currentValue.slice(0, start) + pastedText + currentValue.slice(end);
+
+    if (newValue.length > CHAR_LIMIT) {
+      e.preventDefault();
+      const truncated = newValue.slice(0, CHAR_LIMIT);
+      setInputValue(truncated);
+      requestAnimationFrame(resizeTextarea);
+    }
+  };
+
+  const placeholder = dailyLimitReached
+    ? "Daily limit reached"
+    : "Ask a question about your data...";
+
+  const showCounter = charCount > CHAR_COUNTER_THRESHOLD;
+  const atLimit = charCount >= CHAR_LIMIT;
+
+  const formattedCount = charCount.toLocaleString();
+  const formattedLimit = CHAR_LIMIT.toLocaleString();
+
+  return (
+    <div className="relative flex flex-col gap-1">
+      <div className="flex items-end gap-2">
+        <textarea
+          ref={textareaRef}
+          aria-label="Message input"
+          className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+          style={{
+            borderColor: "var(--color-border, #e5e7eb)",
+            backgroundColor: "var(--color-bg, #fff)",
+            color: "var(--color-text, #111)",
+          }}
+          rows={1}
+          value={inputValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={placeholder}
+          disabled={dailyLimitReached}
+        />
+
+        {isStreaming ? (
+          <button
+            type="button"
+            aria-label="Stop generating"
+            className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-red-100"
+            onClick={onStop}
+          >
+            {/* Square stop icon */}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <rect x="4" y="4" width="12" height="12" rx="2" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Send message"
+            className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handleSend}
+            disabled={trimmedEmpty || dailyLimitReached}
+          >
+            {/* Arrow send icon */}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M3.105 2.289a.75.75 0 0 1 .814.073l13 10a.75.75 0 0 1 0 1.176l-13 10A.75.75 0 0 1 2.75 23V1a.75.75 0 0 1 .355-.711Z" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {showCounter && (
+        <span
+          data-testid="char-counter"
+          className={`text-xs text-right ${atLimit ? "text-red-500" : "text-gray-500"}`}
+        >
+          {formattedCount} / {formattedLimit}
+        </span>
+      )}
+    </div>
+  );
+}

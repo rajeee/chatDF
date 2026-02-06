@@ -63,9 +63,24 @@ parent: ../spec.md
 
 ### Conversation Context
 - Full message history sent to Gemini each turn
-- Maximum 50 messages retained per conversation
-- When limit exceeded: oldest messages pruned (keeping system prompt fresh)
-- Messages include both user messages and assistant responses
+- Maximum 50 messages retained in the context window per turn
+- Messages include user messages, assistant responses, and associated tool-call rounds
+- Tool-call messages (tool invocation + tool response) are considered part of their parent assistant message's "slot" — they do not count independently toward the 50-message limit
+
+### Context Pruning Algorithm
+When the conversation exceeds 50 messages, pruning is applied before each LLM call:
+
+1. Walk backward from the newest message by `created_at`
+2. Keep up to 50 user + assistant messages
+3. For each kept assistant message, include any associated tool-call rounds (these are free — they don't count toward the 50-message limit)
+4. Discard all older messages from the context (they remain in the database, just excluded from the LLM payload)
+5. After pruning to 50 messages, estimate total token count using a rough heuristic: `total_chars / 4`
+6. If estimated tokens exceed 80% of Gemini's context window (1M tokens → budget is 800K tokens), prune further by removing the oldest kept messages until under budget
+7. If Gemini returns a context-too-large error despite pruning, remove the 10 oldest messages from the context and retry once. If it fails again, return `chat_error` to the user: "Conversation context too large. Try starting a new conversation."
+
+### System Prompt
+- System prompt is always included fresh (never pruned)
+- System prompt is not counted toward the 50-message limit
 
 ### Streaming
 - Use Gemini streaming API for response generation

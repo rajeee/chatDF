@@ -66,7 +66,6 @@ Individual chat messages.
 | sql_query | TEXT (nullable) | Executed SQL (if applicable) |
 | token_count | INTEGER | Tokens used for this message |
 | created_at | TIMESTAMP | Message timestamp |
-| sequence | INTEGER | Order within conversation (for pruning) |
 
 ### datasets
 
@@ -91,8 +90,10 @@ Track token consumption for rate limiting.
 |--------|------|-------------|
 | id | TEXT (PK) | UUID |
 | user_id | TEXT (FK) | References users.id |
+| model_name | TEXT | Model used (e.g., 'gemini-2.5-flash') |
 | input_tokens | INTEGER | Prompt tokens |
 | output_tokens | INTEGER | Response tokens |
+| cost | REAL | Estimated cost in USD |
 | timestamp | TIMESTAMP | When tokens were used |
 
 ## Indexes
@@ -102,7 +103,6 @@ Track token consumption for rate limiting.
 - `referral_keys.used_by` - Lookup if user used a key
 - `conversations.user_id` - User's conversation history
 - `messages.conversation_id` - Messages in conversation
-- `messages.sequence` - For pruning oldest messages
 - `datasets.conversation_id` - Datasets in conversation
 - `token_usage.user_id, timestamp` - Rolling usage calculation
 
@@ -111,5 +111,5 @@ Track token consumption for rate limiting.
 - All IDs are UUIDs stored as TEXT
 - Timestamps stored as ISO 8601 strings
 - All conversations are persisted (no guest mode)
-- Message pruning: when conversation exceeds 50 messages, delete lowest sequence numbers
+- Messages are stored in flat chronological order per conversation. For context window pruning, keep the most recent 50 messages by `created_at`
 - Referral keys are single-use: once redeemed, cannot be reused

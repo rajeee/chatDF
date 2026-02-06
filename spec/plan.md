@@ -37,7 +37,7 @@ implements: ./spec.md
 ### Dev & Build
 | Choice | Rationale |
 |--------|-----------|
-| **pnpm** | Frontend package manager |
+| **bun** | Frontend package manager and runtime |
 | **uv** | Python package manager (fast, lockfile support) |
 | **pytest** | Backend testing |
 | **Vitest** | Frontend unit/integration testing |

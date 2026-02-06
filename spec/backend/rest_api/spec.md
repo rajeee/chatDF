@@ -87,12 +87,25 @@ parent: ../spec.md
 - **Response**: `{ id, title, created_at, updated_at, messages: [{ id, role, content, sql_query?, created_at }], datasets: [{ id, name, url, row_count, column_count }] }`
 - **Errors**: 404 not found, 403 not owner
 
+#### `PATCH /conversations/:id`
+- **Purpose**: Rename a conversation
+- **Auth**: Session cookie required, must own conversation
+- **Request**: `{ title: string }` — new conversation title (1-100 chars)
+- **Response**: `{ id, title, updated_at }`
+- **Errors**: 400 invalid title, 404 not found, 403 not owner
+
 #### `DELETE /conversations/:id`
 - **Purpose**: Delete a conversation and all associated data
 - **Auth**: Session cookie required, must own conversation
 - **Response**: `{ success: true }`
 - **Notes**: Cascading delete — removes messages and dataset records
 - **Errors**: 404 not found, 403 not owner
+
+#### `DELETE /conversations`
+- **Purpose**: Delete all conversations for the current user
+- **Auth**: Session cookie required
+- **Response**: `{ success: true, deleted_count: number }`
+- **Notes**: Cascading delete — removes all user's conversations, messages, and dataset records
 
 ### Chat
 
@@ -102,7 +115,8 @@ parent: ../spec.md
 - **Request**: `{ content: string }`
 - **Response**: `{ message_id: string, status: "processing" }`
 - **Notes**: Response is immediate acknowledgment. Actual LLM response streams via WebSocket. If message contains parquet URLs, they are auto-detected and loaded as datasets.
-- **Errors**: 404 conversation not found, 403 not owner, 429 rate limited
+- **Concurrency guard**: If an LLM generation is already in progress for this conversation, returns 409 Conflict with `{ error: "A response is already being generated for this conversation" }`. This prevents interleaved tokens from concurrent requests (e.g., multiple tabs).
+- **Errors**: 404 conversation not found, 403 not owner, 409 generation in progress, 429 rate limited
 
 #### `POST /conversations/:id/stop`
 - **Purpose**: Stop in-progress LLM generation
@@ -120,6 +134,21 @@ parent: ../spec.md
 - **Response**: `{ dataset_id: string, status: "loading" }`
 - **Notes**: Loading progress sent via WebSocket events
 - **Errors**: 400 invalid URL, 400 duplicate URL, 400 at limit (5), 404 conversation not found
+
+#### `PATCH /conversations/:id/datasets/:dataset_id`
+- **Purpose**: Rename a dataset's table name
+- **Auth**: Session cookie required, must own conversation
+- **Request**: `{ tableName: string }` — new table name (1-50 chars, alphanumeric + underscores)
+- **Response**: `{ id, name, tableName, url, row_count, column_count }`
+- **Errors**: 400 invalid name, 404 not found, 403 not owner
+
+#### `POST /conversations/:id/datasets/:dataset_id/refresh`
+- **Purpose**: Re-fetch schema for an existing dataset
+- **Auth**: Session cookie required, must own conversation
+- **Request**: Empty body
+- **Response**: `{ id, name, tableName, url, row_count, column_count, schema }`
+- **Notes**: Re-runs HEAD validation + schema extraction against the original URL. Updates row_count, column_count, and schema in database.
+- **Errors**: 404 not found, 403 not owner, 502 if upstream URL is unreachable
 
 #### `DELETE /conversations/:id/datasets/:dataset_id`
 - **Purpose**: Remove a dataset from conversation
@@ -145,12 +174,13 @@ All errors follow a consistent format:
 - 401: Unauthorized (no valid session)
 - 403: Forbidden (valid session but not authorized for this resource)
 - 404: Not found
+- 409: Conflict (generation already in progress)
 - 429: Rate limited
 - 500: Internal server error
 
 ### CORS
 - Configurable allowed origins via `CORS_ORIGINS` environment variable
-- Allowed methods: GET, POST, DELETE, OPTIONS
+- Allowed methods: GET, POST, PATCH, DELETE, OPTIONS
 - Allowed headers: Content-Type, Cookie
 - Credentials: allowed (for cookies)
 

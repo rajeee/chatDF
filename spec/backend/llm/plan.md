@@ -107,12 +107,17 @@ Implements: [spec.md#token-counting](./spec.md#token-counting)
 
 ## Conversation Context Management
 
-Implements: [spec.md#conversation-context](./spec.md#conversation-context)
+Implements: [spec.md#conversation-context](./spec.md#conversation-context), [spec.md#context-pruning-algorithm](./spec.md#context-pruning-algorithm)
 
-- `stream_chat` receives the full message history (up to 50 messages).
+- `stream_chat` receives the pruned message history (up to 50 user+assistant messages plus their tool-call rounds).
 - Messages converted to Gemini `Content` objects: `role="user"` or `role="model"`.
 - System prompt passed via `config=GenerateContentConfig(system_instruction=system_prompt)`.
-- Pruning to 50 messages happens in `chat_service` before calling `stream_chat`.
+- Pruning happens in `chat_service` before calling `stream_chat`:
+  1. Walk backward from newest message by `created_at`, keep up to 50 user+assistant messages
+  2. Include associated tool-call rounds for each kept assistant message (free — not counted)
+  3. Estimate total tokens via `sum(len(msg.content) for msg in kept_messages) // 4`
+  4. If estimated tokens > 800K (80% of 1M context window), prune oldest messages until under budget
+- If Gemini returns a context-too-large error, `stream_chat` removes the 10 oldest messages and retries once. On second failure, returns a `chat_error`.
 
 ## Scope
 

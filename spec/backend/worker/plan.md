@@ -50,6 +50,8 @@ Each wrapper calls `pool.apply_async()` and awaits the result in an async-friend
 
 Each wrapper catches `multiprocessing.TimeoutError` and `Exception`, returning a structured error dict.
 
+Before submitting work, each wrapper checks the pending task count. If > 10 tasks are pending, returns an error dict with `error_type: "busy"` and `message: "Server busy, try again shortly"`. The caller (`chat_service`) translates this to HTTP 503.
+
 ## Request/Response Serialization
 
 Implements: [spec.md#architecture](./spec.md#architecture)

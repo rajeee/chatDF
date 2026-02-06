@@ -27,9 +27,9 @@ All sub-elements are inline within `Settings.tsx` (no separate files needed give
 
 Implements: [spec.md#theme-toggle](./spec.md#theme-toggle)
 
-- Uses `useTheme` hook which reads/writes `uiStore.themeMode` (`"light" | "dark" | "system"`).
+- Uses standalone `useTheme` hook (from `hooks/useTheme.ts`) which manages its own state via `localStorage("theme-mode")` — not wired through `uiStore`. See [theme/plan.md](../../theme/plan.md#usetheme-hook) for hook details.
 - Rendered as a segmented control (three adjacent buttons) with the active option visually highlighted.
-- On change: `useTheme.setTheme(mode)` updates store, writes to `localStorage("theme")`, and toggles `dark` class on `<html>`.
+- On change: `useTheme.setMode(mode)` updates localStorage, resolves effective theme, and toggles `dark` class on `<html>`.
 
 ## Clear All Conversations
 

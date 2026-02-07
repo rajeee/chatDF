@@ -123,7 +123,7 @@ async def get_conversation_detail(
 
     # Fetch messages
     cursor = await db.execute(
-        "SELECT id, role, content, sql_query, created_at "
+        "SELECT id, role, content, sql_query, reasoning, created_at "
         "FROM messages WHERE conversation_id = ? ORDER BY created_at",
         (conv_id,),
     )
@@ -134,6 +134,7 @@ async def get_conversation_detail(
             role=row["role"],
             content=row["content"],
             sql_query=row["sql_query"],
+            reasoning=row["reasoning"],
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in message_rows

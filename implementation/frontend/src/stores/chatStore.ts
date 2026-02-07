@@ -15,6 +15,7 @@ export interface Message {
   content: string;
   sql_query: string | null;
   sql_executions: SqlExecution[];
+  reasoning: string | null;
   created_at: string;
 }
 
@@ -59,7 +60,9 @@ interface ChatState {
   activeConversationId: string | null;
   messages: Message[];
   streamingTokens: string;
+  streamingReasoning: string;
   isStreaming: boolean;
+  isReasoning: boolean;
   streamingMessageId: string | null;
   loadingPhase: LoadingPhase;
   dailyLimitReached: boolean;
@@ -69,7 +72,9 @@ interface ChatActions {
   setActiveConversation: (id: string | null) => void;
   addMessage: (message: Message) => void;
   appendStreamToken: (token: string) => void;
+  appendReasoningToken: (token: string) => void;
   setStreaming: (isStreaming: boolean, messageId?: string) => void;
+  setReasoning: (isReasoning: boolean) => void;
   finalizeStreamingMessage: (extras?: Partial<Message>) => void;
   setLoadingPhase: (phase: LoadingPhase) => void;
   setDailyLimitReached: (reached: boolean) => void;
@@ -80,7 +85,9 @@ const initialState: ChatState = {
   activeConversationId: null,
   messages: [],
   streamingTokens: "",
+  streamingReasoning: "",
   isStreaming: false,
+  isReasoning: false,
   streamingMessageId: null,
   loadingPhase: "idle",
   dailyLimitReached: false,
@@ -94,7 +101,9 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       activeConversationId: id,
       messages: [],
       streamingTokens: "",
+      streamingReasoning: "",
       isStreaming: false,
+      isReasoning: false,
       streamingMessageId: null,
       loadingPhase: "idle",
     }),
@@ -109,12 +118,20 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       streamingTokens: state.streamingTokens + token,
     })),
 
+  appendReasoningToken: (token) =>
+    set((state) => ({
+      streamingReasoning: state.streamingReasoning + token,
+    })),
+
   setStreaming: (isStreaming, messageId) =>
     set(
       isStreaming
         ? { isStreaming: true, streamingMessageId: messageId ?? null }
-        : { isStreaming: false, streamingMessageId: null, streamingTokens: "" }
+        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false }
     ),
+
+  setReasoning: (isReasoning) =>
+    set({ isReasoning }),
 
   finalizeStreamingMessage: (extras) =>
     set((state) => ({

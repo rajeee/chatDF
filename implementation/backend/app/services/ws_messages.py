@@ -21,6 +21,7 @@ def chat_complete(
     sql_query: str | None,
     token_count: int,
     sql_executions: list[dict] | None = None,
+    reasoning: str | None = None,
 ) -> dict:
     """LLM response finished."""
     return {
@@ -29,6 +30,7 @@ def chat_complete(
         "sql_query": sql_query,
         "token_count": token_count,
         "sql_executions": sql_executions or [],
+        "reasoning": reasoning,
     }
 
 

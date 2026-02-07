@@ -11,6 +11,8 @@ interface UiState {
   sqlResultModalIndex: number | null;
   schemaModalDatasetId: string | null;
   presetModalOpen: boolean;
+  reasoningModalOpen: boolean;
+  activeReasoning: string;
 }
 
 interface UiActions {
@@ -25,6 +27,8 @@ interface UiActions {
   closeSchemaModal: () => void;
   openPresetModal: () => void;
   closePresetModal: () => void;
+  openReasoningModal: (reasoning: string) => void;
+  closeReasoningModal: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()((set) => ({
@@ -36,6 +40,8 @@ export const useUiStore = create<UiState & UiActions>()((set) => ({
   sqlResultModalIndex: null,
   schemaModalDatasetId: null,
   presetModalOpen: false,
+  reasoningModalOpen: false,
+  activeReasoning: "",
 
   toggleLeftPanel: () =>
     set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -69,4 +75,10 @@ export const useUiStore = create<UiState & UiActions>()((set) => ({
 
   closePresetModal: () =>
     set({ presetModalOpen: false }),
+
+  openReasoningModal: (reasoning) =>
+    set({ reasoningModalOpen: true, activeReasoning: reasoning }),
+
+  closeReasoningModal: () =>
+    set({ reasoningModalOpen: false, activeReasoning: "" }),
 }));

@@ -29,6 +29,7 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
     content: "Hello world",
     sql_query: null,
     sql_executions: [],
+    reasoning: null,
     created_at: "2026-02-05T12:00:00Z",
     ...overrides,
   };

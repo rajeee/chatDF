@@ -53,6 +53,7 @@ describe("chatStore", () => {
         content: "Hello",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: new Date().toISOString(),
       });
       expect(useChatStore.getState().messages).toHaveLength(1);
@@ -97,6 +98,7 @@ describe("chatStore", () => {
         content: "Hello",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: "2026-02-05T00:00:00Z",
       });
 
@@ -114,6 +116,7 @@ describe("chatStore", () => {
         content: "Question",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: "2026-02-05T00:00:00Z",
       });
       useChatStore.getState().addMessage({
@@ -122,6 +125,7 @@ describe("chatStore", () => {
         content: "Answer",
         sql_query: "SELECT * FROM data",
         sql_executions: [{ query: "SELECT * FROM data", columns: null, rows: null, total_rows: null, error: null }],
+        reasoning: null,
         created_at: "2026-02-05T00:00:01Z",
       });
 
@@ -180,6 +184,7 @@ describe("chatStore", () => {
         content: "The answer is 42.",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: "2026-02-05T00:00:00Z",
       });
       useChatStore.getState().setStreaming(false);
@@ -243,6 +248,7 @@ describe("chatStore", () => {
         content: "Hello",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: "2026-02-05T00:00:00Z",
       });
       useChatStore.getState().setStreaming(true, "msg-2");

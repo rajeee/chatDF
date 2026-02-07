@@ -163,6 +163,7 @@ describe("OB-4: Hidden when messages exist", () => {
         content: "Hello",
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: new Date().toISOString(),
       },
     ]);

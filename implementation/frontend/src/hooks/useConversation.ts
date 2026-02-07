@@ -48,6 +48,7 @@ export function useConversation() {
         chatState.addMessage({
           ...msg,
           sql_executions: msg.sql_executions ?? parseSqlExecutions(msg.sql_query),
+          reasoning: msg.reasoning ?? null,
         });
       }
     }

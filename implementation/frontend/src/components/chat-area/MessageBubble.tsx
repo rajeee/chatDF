@@ -2,7 +2,7 @@
 //
 // Renders a single message bubble. User messages: right-aligned, accent bg, plain text.
 // Assistant messages: left-aligned, surface bg, markdown rendered.
-// Per-message actions: copy button, "Show SQL" button, timestamp on hover.
+// Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
@@ -11,7 +11,11 @@ interface MessageBubbleProps {
   message: Message;
   displayContent: string;
   isCurrentlyStreaming: boolean;
+  isShowingReasoning: boolean;
+  streamingReasoningContent: string;
+  reasoningContent: string | null;
   onShowSQL: (executions: SqlExecution[]) => void;
+  onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
 }
 
@@ -31,7 +35,11 @@ export function MessageBubble({
   message,
   displayContent,
   isCurrentlyStreaming,
+  isShowingReasoning,
+  streamingReasoningContent,
+  reasoningContent,
   onShowSQL,
+  onShowReasoning,
   onCopy,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -49,6 +57,23 @@ export function MessageBubble({
           color: isUser ? "#ffffff" : "var(--color-text)",
         }}
       >
+        {/* Streaming reasoning display */}
+        {isShowingReasoning && streamingReasoningContent && (
+          <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border, #e5e7eb)" }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs font-medium opacity-60">Thinking...</span>
+              <span className="inline-flex gap-0.5">
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "0ms" }}>.</span>
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "150ms" }}>.</span>
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "300ms" }}>.</span>
+              </span>
+            </div>
+            <div className="text-xs italic opacity-50 max-h-40 overflow-y-auto">
+              {streamingReasoningContent}
+            </div>
+          </div>
+        )}
+
         {/* Message content */}
         {isUser ? (
           <span>{displayContent}</span>
@@ -59,7 +84,7 @@ export function MessageBubble({
         )}
 
         {/* Streaming indicator */}
-        {isCurrentlyStreaming && (
+        {isCurrentlyStreaming && !isShowingReasoning && (
           <span data-testid="streaming-indicator" className="inline-flex gap-0.5 ml-1">
             <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
             <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
@@ -67,15 +92,31 @@ export function MessageBubble({
           </span>
         )}
 
-        {/* Show SQL button */}
-        {!isUser && message.sql_executions.length > 0 && (
-          <button
-            className="mt-2 text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
-            style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
-            onClick={() => onShowSQL(message.sql_executions)}
-          >
-            Show SQL ({message.sql_executions.length})
-          </button>
+        {/* Action buttons row */}
+        {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0) && (
+          <div className="mt-2 flex gap-2">
+            {/* Show Reasoning button */}
+            {reasoningContent && (
+              <button
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                onClick={() => onShowReasoning(reasoningContent)}
+              >
+                Show Reasoning
+              </button>
+            )}
+
+            {/* Show SQL button */}
+            {message.sql_executions.length > 0 && (
+              <button
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                onClick={() => onShowSQL(message.sql_executions)}
+              >
+                Show SQL ({message.sql_executions.length})
+              </button>
+            )}
+          </div>
         )}
 
         {/* Copy button - visible on hover via group-hover */}

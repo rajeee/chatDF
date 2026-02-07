@@ -14,9 +14,12 @@ const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 export function MessageList() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
+  const isReasoning = useChatStore((s) => s.isReasoning);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
   const streamingTokens = useChatStore((s) => s.streamingTokens);
+  const streamingReasoning = useChatStore((s) => s.streamingReasoning);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
+  const openReasoningModal = useUiStore((s) => s.openReasoningModal);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -43,7 +46,7 @@ export function MessageList() {
     if (!userHasScrolledUp && sentinelRef.current) {
       sentinelRef.current.scrollIntoView?.({ behavior: "smooth" });
     }
-  }, [messages, streamingTokens, userHasScrolledUp]);
+  }, [messages, streamingTokens, streamingReasoning, userHasScrolledUp]);
 
   const scrollToBottom = useCallback(() => {
     setUserHasScrolledUp(false);
@@ -55,6 +58,13 @@ export function MessageList() {
       openSqlModal(executions);
     },
     [openSqlModal]
+  );
+
+  const handleShowReasoning = useCallback(
+    (reasoning: string) => {
+      openReasoningModal(reasoning);
+    },
+    [openReasoningModal]
   );
 
   const handleCopy = useCallback((content: string) => {
@@ -83,7 +93,11 @@ export function MessageList() {
               message={message}
               displayContent={displayContent}
               isCurrentlyStreaming={isStreamingMessage}
+              isShowingReasoning={isStreamingMessage && isReasoning}
+              streamingReasoningContent={isStreamingMessage ? streamingReasoning : ""}
+              reasoningContent={message.reasoning}
               onShowSQL={handleShowSQL}
+              onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}
             />
           );

@@ -201,8 +201,8 @@ async def process_message(
 
         await db.execute(
             "INSERT INTO messages "
-            "(id, conversation_id, role, content, sql_query, token_count, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "(id, conversation_id, role, content, sql_query, token_count, created_at, reasoning) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 asst_msg_id,
                 conversation_id,
@@ -211,6 +211,7 @@ async def process_message(
                 sql_query,
                 token_count,
                 asst_now,
+                result.reasoning or None,
             ),
         )
         await db.commit()
@@ -236,6 +237,7 @@ async def process_message(
                 sql_query=sql_query,
                 token_count=token_count,
                 sql_executions=sql_executions_dicts,
+                reasoning=result.reasoning or None,
             ),
         )
 

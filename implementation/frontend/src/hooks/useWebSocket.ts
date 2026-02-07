@@ -37,6 +37,31 @@ export function useWebSocket(isAuthenticated: boolean): void {
       }
 
       switch (msg.type) {
+        case "reasoning_token": {
+          const chatStore = useChatStore.getState();
+          if (!chatStore.isStreaming) {
+            // First reasoning token: add placeholder message
+            const tempId = `streaming-${Date.now()}`;
+            chatStore.addMessage({
+              id: tempId,
+              role: "assistant",
+              content: "",
+              sql_query: null,
+              sql_executions: [],
+              reasoning: null,
+              created_at: new Date().toISOString(),
+            });
+            chatStore.setStreaming(true, tempId);
+            chatStore.setReasoning(true);
+          }
+          chatStore.appendReasoningToken(msg.token as string);
+          break;
+        }
+        case "reasoning_complete": {
+          const chatStore = useChatStore.getState();
+          chatStore.setReasoning(false);
+          break;
+        }
         case "chat_token": {
           const chatStore = useChatStore.getState();
           if (!chatStore.isStreaming) {
@@ -49,6 +74,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
               content: "",
               sql_query: null,
               sql_executions: [],
+              reasoning: null,
               created_at: new Date().toISOString(),
             });
             chatStore.setStreaming(true, tempId);
@@ -73,6 +99,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
           chatStore.finalizeStreamingMessage({
             sql_query: (msg.sql_query as string) ?? null,
             sql_executions: sqlExecs,
+            reasoning: (msg.reasoning as string) ?? null,
           });
           chatStore.setStreaming(false);
           chatStore.setLoadingPhase("idle");

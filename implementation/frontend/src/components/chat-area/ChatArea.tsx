@@ -16,6 +16,7 @@ import { SuggestedPrompts } from "./SuggestedPrompts";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { SQLModal } from "./SQLPanel";
+import { ReasoningModal } from "./ReasoningModal";
 
 export function ChatArea() {
   const messages = useChatStore((s) => s.messages);
@@ -38,6 +39,7 @@ export function ChatArea() {
         content: text,
         sql_query: null,
         sql_executions: [],
+        reasoning: null,
         created_at: new Date().toISOString(),
       };
       addMessage(userMessage);
@@ -110,6 +112,9 @@ export function ChatArea() {
 
       {/* SQL Modal (self-managed visibility via uiStore) */}
       <SQLModal />
+
+      {/* Reasoning Modal */}
+      <ReasoningModal />
     </section>
   );
 }

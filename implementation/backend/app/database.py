@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS messages (
     content           TEXT NOT NULL,
     sql_query         TEXT,
     token_count       INTEGER NOT NULL DEFAULT 0,
-    created_at        TEXT NOT NULL
+    created_at        TEXT NOT NULL,
+    reasoning         TEXT
 );
 
 CREATE TABLE IF NOT EXISTS datasets (
@@ -109,6 +110,13 @@ async def init_db(conn: aiosqlite.Connection) -> None:
     await conn.execute("PRAGMA foreign_keys=ON")
     await conn.executescript(_SCHEMA_SQL)
     await conn.commit()
+
+    # Migration: add reasoning column to existing databases
+    try:
+        await conn.execute("ALTER TABLE messages ADD COLUMN reasoning TEXT")
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
 
 
 async def get_db(request: Request) -> aiosqlite.Connection:

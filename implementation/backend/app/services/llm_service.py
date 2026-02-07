@@ -96,6 +96,7 @@ class StreamResult:
     input_tokens: int = 0
     output_tokens: int = 0
     assistant_message: str = ""
+    reasoning: str = ""
     tool_calls_made: int = 0
     sql_queries: list[str] = field(default_factory=list)
     sql_executions: list[SqlExecution] = field(default_factory=list)
@@ -279,11 +280,14 @@ async def stream_chat(
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
         tools=TOOLS,
+        thinking_config=types.ThinkingConfig(include_thoughts=True),
     )
 
     tool_call_count = 0
     sql_retry_count = 0
     collected_text = ""
+    collected_reasoning = ""
+    reasoning_emitted = False
 
     while True:
         # Call Gemini async streaming API (non-blocking for the event loop)
@@ -310,8 +314,17 @@ async def stream_chat(
                         for part in (candidate.content.parts or []):
                             # Text part
                             if hasattr(part, "text") and part.text is not None and part.text:
-                                collected_text += part.text
-                                await ws_send("chat_token", {"token": part.text})
+                                if getattr(part, "thought", False):
+                                    # Reasoning/thinking token
+                                    collected_reasoning += part.text
+                                    await ws_send("reasoning_token", {"token": part.text})
+                                else:
+                                    # Normal output token
+                                    if collected_reasoning and not reasoning_emitted:
+                                        await ws_send("reasoning_complete", {})
+                                        reasoning_emitted = True
+                                    collected_text += part.text
+                                    await ws_send("chat_token", {"token": part.text})
 
                             # Function call part
                             if hasattr(part, "function_call") and part.function_call is not None:
@@ -465,4 +478,5 @@ async def stream_chat(
         )
 
     result.assistant_message = collected_text
+    result.reasoning = collected_reasoning
     return result

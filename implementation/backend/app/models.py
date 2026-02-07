@@ -97,6 +97,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     sql_query: str | None = None
+    reasoning: str | None = None
     created_at: datetime
 
 

@@ -83,31 +83,34 @@ export function ChatArea() {
   return (
     <section
       data-testid="chat-area"
-      className="relative flex flex-col flex-1 min-w-0"
+      className="relative flex flex-col flex-1 min-w-0 items-center"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      {/* Main content area - conditional rendering */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {!hasDatasets && !hasMessages && (
-          <OnboardingGuide onSendPrompt={handleSend} />
-        )}
+      {/* Constrained-width inner container */}
+      <div className="flex flex-col w-full max-w-3xl flex-1 min-h-0">
+        {/* Main content area - conditional rendering */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {!hasDatasets && !hasMessages && (
+            <OnboardingGuide onSendPrompt={handleSend} />
+          )}
 
-        {hasDatasets && !hasMessages && (
-          <SuggestedPrompts
-            datasetNames={datasets.map((d) => d.name)}
-            onSendPrompt={handleSend}
-          />
-        )}
+          {hasDatasets && !hasMessages && (
+            <SuggestedPrompts
+              datasetNames={datasets.map((d) => d.name)}
+              onSendPrompt={handleSend}
+            />
+          )}
 
-        {hasMessages && <MessageList />}
-      </div>
+          {hasMessages && <MessageList />}
+        </div>
 
-      {/* Chat input - always visible */}
-      <div
-        className="p-4 border-t"
-        style={{ borderColor: "var(--color-border, #e5e7eb)" }}
-      >
-        <ChatInput onSend={handleSend} onStop={handleStop} />
+        {/* Chat input - always visible */}
+        <div
+          className="p-4 border-t"
+          style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+        >
+          <ChatInput onSend={handleSend} onStop={handleStop} />
+        </div>
       </div>
 
       {/* SQL Modal (self-managed visibility via uiStore) */}

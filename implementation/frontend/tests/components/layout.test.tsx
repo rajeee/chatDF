@@ -132,7 +132,7 @@ describe("ChatArea conditional rendering", () => {
     // Default state: no datasets, no messages, no active conversation
     renderWithProviders(<AppShell />);
 
-    expect(screen.getByTestId("onboarding-placeholder")).toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-guide")).toBeInTheDocument();
   });
 
   it("shows suggested prompts placeholder when datasets exist but no messages", () => {
@@ -151,7 +151,7 @@ describe("ChatArea conditional rendering", () => {
 
     renderWithProviders(<AppShell />);
 
-    expect(screen.getByTestId("suggested-prompts-placeholder")).toBeInTheDocument();
+    expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
   });
 
   it("shows message list placeholder when messages exist", () => {
@@ -169,6 +169,6 @@ describe("ChatArea conditional rendering", () => {
 
     renderWithProviders(<AppShell />);
 
-    expect(screen.getByTestId("message-list-placeholder")).toBeInTheDocument();
+    expect(screen.getByTestId("message-list-scroll")).toBeInTheDocument();
   });
 });

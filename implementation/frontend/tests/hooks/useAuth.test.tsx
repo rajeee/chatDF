@@ -89,7 +89,7 @@ describe("useAuth", () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  it("login() redirects to OAuth URL", () => {
+  it("login() redirects to OAuth URL", async () => {
     const assignSpy = vi.fn();
     Object.defineProperty(window, "location", {
       value: { ...window.location, assign: assignSpy },
@@ -101,28 +101,33 @@ describe("useAuth", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.login();
+    await act(async () => {
+      await result.current.login();
+    });
+
     expect(assignSpy).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/google")
+      expect.stringContaining("accounts.google.com")
     );
   });
 
-  it("login() includes referral key when provided", () => {
-    const assignSpy = vi.fn();
-    Object.defineProperty(window, "location", {
-      value: { ...window.location, assign: assignSpy },
-      writable: true,
-      configurable: true,
-    });
+  it("login() with referral key calls dev-login endpoint", async () => {
+    let devLoginBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/auth/dev-login", async ({ request }) => {
+        devLoginBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true });
+      })
+    );
 
     const { result } = renderHook(() => useAuth(), {
       wrapper: createWrapper(),
     });
 
-    result.current.login("my-referral-key");
-    expect(assignSpy).toHaveBeenCalledWith(
-      expect.stringContaining("referral_key=my-referral-key")
-    );
+    await act(async () => {
+      await result.current.login("my-referral-key");
+    });
+
+    expect(devLoginBody).toEqual({ referral_key: "my-referral-key" });
   });
 
   it("logout() calls POST /auth/logout and clears state", async () => {

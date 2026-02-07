@@ -169,11 +169,11 @@ describe("OB-4: Hidden when messages exist", () => {
     ]);
 
     // OnboardingGuide should not be rendered by the parent when messages exist.
-    // We test the parent behavior: ChatArea shows message-list-placeholder.
+    // We test the parent behavior: ChatArea shows message-list-scroll.
     renderWithProviders(<ChatArea />);
 
     expect(screen.queryByTestId("onboarding-guide")).not.toBeInTheDocument();
-    expect(screen.getByTestId("message-list-placeholder")).toBeInTheDocument();
+    expect(screen.getByTestId("message-list-scroll")).toBeInTheDocument();
   });
 });
 

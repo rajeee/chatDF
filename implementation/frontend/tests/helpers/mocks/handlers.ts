@@ -26,6 +26,10 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
+  http.post("/auth/dev-login", () => {
+    return HttpResponse.json({ success: true });
+  }),
+
   // Conversation endpoints
   http.get("/conversations", () => {
     return HttpResponse.json({

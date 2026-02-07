@@ -1,171 +1,114 @@
 // Tests: spec/frontend/chat_area/sql_panel/spec.md
-// Verifies: spec/frontend/chat_area/sql_panel/plan.md
+// Verifies the SQL Modal component (replaced SQLPanel)
 //
-// SP-DISPLAY-1: Shows SQL content in the panel
-// SP-COPY-1: Copy button copies SQL to clipboard
-// SP-CLOSE-1: X button closes the panel
-// SP-CLOSE-2: Escape key closes the panel
-// SP-THEME-1: Theme matches app theme (light/dark)
+// SM-DISPLAY-1: Shows SQL executions in modal
+// SM-CLOSE-1: Close via X button / backdrop / Escape
+// SM-RESULT-1: View Output opens result modal
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderWithProviders, screen, userEvent, act } from "../../helpers/render";
-import { SQLPanel } from "@/components/chat-area/SQLPanel";
+import { SQLModal } from "@/components/chat-area/SQLPanel";
+import { useUiStore } from "@/stores/uiStore";
+import type { SqlExecution } from "@/stores/chatStore";
 
 // Mock the useCodeMirror hook to avoid jsdom + CodeMirror incompatibility.
-// We track the last call args to verify that the SQL content and dark mode
-// flag are passed through correctly.
-let lastUseCodeMirrorArgs: { doc: string; isDark: boolean } | null = null;
-
 vi.mock("@/hooks/useCodeMirror", () => ({
-  useCodeMirror: (
-    _containerRef: unknown,
-    doc: string,
-    isDark: boolean
-  ) => {
-    lastUseCodeMirrorArgs = { doc, isDark };
-  },
+  useCodeMirror: () => {},
 }));
 
-// --- Mock clipboard ---
-const writeTextMock = vi.fn().mockResolvedValue(undefined);
+const sampleExecutions: SqlExecution[] = [
+  {
+    query: "SELECT id, name FROM users WHERE active = true ORDER BY name",
+    columns: ["id", "name"],
+    rows: [[1, "Alice"], [2, "Bob"]],
+    total_rows: 2,
+    error: null,
+  },
+  {
+    query: "SELECT count(*) FROM orders",
+    columns: ["count"],
+    rows: [[42]],
+    total_rows: 1,
+    error: null,
+  },
+];
 
 beforeEach(() => {
-  Object.defineProperty(navigator, "clipboard", {
-    value: { writeText: writeTextMock },
-    writable: true,
-    configurable: true,
-  });
-  writeTextMock.mockClear();
-  lastUseCodeMirrorArgs = null;
+  useUiStore.getState().closeSqlModal();
 });
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-const sampleSQL = "SELECT id, name FROM users WHERE active = true ORDER BY name";
-
-describe("SP-DISPLAY-1: Shows SQL content", () => {
-  it("renders the SQL panel with 'SQL Query' heading", () => {
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(screen.getByText("SQL Query")).toBeInTheDocument();
+describe("SM-DISPLAY-1: Shows SQL executions in modal", () => {
+  it("renders nothing when sqlModalOpen is false", () => {
+    renderWithProviders(<SQLModal />);
+    expect(screen.queryByTestId("sql-modal")).not.toBeInTheDocument();
   });
 
-  it("passes SQL content to useCodeMirror hook", () => {
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(lastUseCodeMirrorArgs).not.toBeNull();
-    expect(lastUseCodeMirrorArgs!.doc).toBe(sampleSQL);
+  it("renders the modal when opened via uiStore", () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
+    renderWithProviders(<SQLModal />);
+    expect(screen.getByTestId("sql-modal")).toBeInTheDocument();
   });
 
-  it("renders the panel container with expected test id", () => {
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(screen.getByTestId("sql-panel")).toBeInTheDocument();
+  it("shows execution count in header", () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
+    renderWithProviders(<SQLModal />);
+    expect(screen.getByText("SQL Queries (2)")).toBeInTheDocument();
   });
 
-  it("renders the CodeMirror container div", () => {
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(screen.getByTestId("codemirror-container")).toBeInTheDocument();
+  it("shows query labels", () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
+    renderWithProviders(<SQLModal />);
+    expect(screen.getByText("Query 1")).toBeInTheDocument();
+    expect(screen.getByText("Query 2")).toBeInTheDocument();
   });
 });
 
-describe("SP-COPY-1: Copy button copies SQL to clipboard", () => {
-  it("renders a copy button", () => {
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(screen.getByRole("button", { name: /copy/i })).toBeInTheDocument();
-  });
-
-  it("copies SQL to clipboard when copy button is clicked", async () => {
+describe("SM-CLOSE-1: Close via X button", () => {
+  it("closes modal when X button is clicked", async () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
     const user = userEvent.setup();
-    // Spy on the clipboard after userEvent.setup() to capture the actual call
-    const clipboardSpy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
+    renderWithProviders(<SQLModal />);
 
-    const copyBtn = screen.getByRole("button", { name: /copy/i });
-    await user.click(copyBtn);
-
-    expect(clipboardSpy).toHaveBeenCalledWith(sampleSQL);
-    clipboardSpy.mockRestore();
-  });
-
-  it("shows 'Copied!' feedback after clicking copy", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-
-    const copyBtn = screen.getByRole("button", { name: /copy/i });
-    await user.click(copyBtn);
-
-    expect(screen.getByText("Copied!")).toBeInTheDocument();
-
-    // After 1.5 seconds the "Copied!" text should revert
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-
-    expect(screen.queryByText("Copied!")).not.toBeInTheDocument();
-  });
-});
-
-describe("SP-CLOSE-1: X button closes the panel", () => {
-  it("calls onClose when X button is clicked", async () => {
-    const onClose = vi.fn();
-    const user = userEvent.setup();
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={onClose} />
-    );
-
-    const closeBtn = screen.getByRole("button", { name: /close/i });
+    const closeBtn = screen.getByRole("button", { name: /close sql modal/i });
     await user.click(closeBtn);
 
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(useUiStore.getState().sqlModalOpen).toBe(false);
   });
 });
 
-describe("SP-CLOSE-2: Escape key closes the panel", () => {
-  it("calls onClose when Escape key is pressed", async () => {
-    const onClose = vi.fn();
+describe("SM-CLOSE-2: Escape key closes the modal", () => {
+  it("closes modal when Escape is pressed", async () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
     const user = userEvent.setup();
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={onClose} />
-    );
+    renderWithProviders(<SQLModal />);
 
     await user.keyboard("{Escape}");
 
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(useUiStore.getState().sqlModalOpen).toBe(false);
   });
 });
 
-describe("SP-THEME-1: Theme matches app theme", () => {
-  it("passes isDark=false to useCodeMirror in light mode", () => {
-    document.documentElement.classList.remove("dark");
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(lastUseCodeMirrorArgs).not.toBeNull();
-    expect(lastUseCodeMirrorArgs!.isDark).toBe(false);
+describe("SM-RESULT-1: View Output button", () => {
+  it("shows View Output buttons for executions with columns", () => {
+    useUiStore.getState().openSqlModal(sampleExecutions);
+    renderWithProviders(<SQLModal />);
+
+    const viewBtns = screen.getAllByText(/View Output/);
+    expect(viewBtns).toHaveLength(2);
   });
 
-  it("passes isDark=true to useCodeMirror in dark mode", () => {
-    document.documentElement.classList.add("dark");
-    renderWithProviders(
-      <SQLPanel sql={sampleSQL} onClose={vi.fn()} />
-    );
-    expect(lastUseCodeMirrorArgs).not.toBeNull();
-    expect(lastUseCodeMirrorArgs!.isDark).toBe(true);
-    document.documentElement.classList.remove("dark");
+  it("does not show View Output for executions without columns", () => {
+    const errorExecution: SqlExecution[] = [
+      { query: "BAD SQL", columns: null, rows: null, total_rows: null, error: "syntax error" },
+    ];
+    useUiStore.getState().openSqlModal(errorExecution);
+    renderWithProviders(<SQLModal />);
+
+    expect(screen.queryByText(/View Output/)).not.toBeInTheDocument();
+    expect(screen.getByText("Show Error")).toBeInTheDocument();
   });
 });

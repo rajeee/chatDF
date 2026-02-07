@@ -28,9 +28,22 @@ dist/
 
 # SQLite databases
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # OS
 .DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Debug / scratch scripts
+debug_*.mjs
+debug_*.js
+
+# Screenshots (E2E debug artifacts)
+screenshots/
 
 # Jupyter
 .ipynb_checkpoints/

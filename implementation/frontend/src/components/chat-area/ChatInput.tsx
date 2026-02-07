@@ -104,9 +104,9 @@ export function ChatInput({ onSend, onStop }: ChatInputProps) {
           aria-label="Message input"
           className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
           style={{
-            borderColor: "var(--color-border, #e5e7eb)",
-            backgroundColor: "var(--color-bg, #fff)",
-            color: "var(--color-text, #111)",
+            borderColor: "var(--color-border)",
+            backgroundColor: "var(--color-bg)",
+            color: "var(--color-text)",
           }}
           rows={1}
           value={inputValue}

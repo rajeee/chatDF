@@ -58,7 +58,8 @@ export function RightPanel() {
         minWidth: rightPanelWidth,
         height: "calc(100vh - 3rem)",
         backgroundColor: "var(--color-surface)",
-        borderColor: "var(--color-bg)",
+        borderColor: "var(--color-border)",
+        boxShadow: "-1px 0 3px var(--color-shadow)",
       }}
     >
       {/* Resize handle */}

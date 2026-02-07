@@ -204,7 +204,7 @@ export function SchemaModal() {
               className="w-full rounded border px-2 py-1 text-sm"
               style={{
                 backgroundColor: "var(--color-surface)",
-                borderColor: "var(--color-bg)",
+                borderColor: "var(--color-border)",
                 color: "var(--color-text)",
               }}
             />
@@ -220,7 +220,7 @@ export function SchemaModal() {
           <div className="mb-4">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b" style={{ borderColor: "var(--color-bg)" }}>
+                <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
                   <th className="text-left py-1 font-medium">Name</th>
                   <th className="text-left py-1 font-medium">Type</th>
                 </tr>
@@ -230,7 +230,7 @@ export function SchemaModal() {
                   <tr
                     key={idx}
                     className="border-b"
-                    style={{ borderColor: "var(--color-bg)" }}
+                    style={{ borderColor: "var(--color-border)" }}
                   >
                     <td className="py-1">{col.name}</td>
                     <td className="py-1 opacity-70">{mapType(col.type)}</td>
@@ -247,8 +247,8 @@ export function SchemaModal() {
               disabled={isRefreshing}
               className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50"
               style={{
-                backgroundColor: "var(--color-primary)",
-                color: "var(--color-primary-text, #fff)",
+                backgroundColor: "var(--color-accent)",
+                color: "#fff",
               }}
             >
               {isRefreshing ? (

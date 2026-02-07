@@ -199,7 +199,7 @@ export function PresetSourcesModal() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--color-bg)" }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
           <h2 className="text-lg font-semibold">Preset Sources</h2>
           <button
             onClick={closeModal}
@@ -228,7 +228,7 @@ export function PresetSourcesModal() {
               className="rounded border px-2 py-1.5 text-sm"
               style={{
                 backgroundColor: "var(--color-surface)",
-                borderColor: "var(--color-bg)",
+                borderColor: "var(--color-border)",
                 color: "var(--color-text)",
               }}
             >
@@ -246,7 +246,7 @@ export function PresetSourcesModal() {
               className="rounded border px-2 py-1.5 text-sm"
               style={{
                 backgroundColor: "var(--color-surface)",
-                borderColor: "var(--color-bg)",
+                borderColor: "var(--color-border)",
                 color: "var(--color-text)",
               }}
             >
@@ -261,7 +261,7 @@ export function PresetSourcesModal() {
         <div className="flex-1 overflow-y-auto px-4" style={{ minHeight: 200 }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b" style={{ borderColor: "var(--color-bg)" }}>
+              <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
                 <th className="w-8 py-1.5 text-left">
                   <input
                     type="checkbox"
@@ -280,7 +280,7 @@ export function PresetSourcesModal() {
                 <tr
                   key={idx}
                   className="border-b cursor-pointer hover:bg-opacity-5 hover:bg-gray-500"
-                  style={{ borderColor: "var(--color-bg)" }}
+                  style={{ borderColor: "var(--color-border)" }}
                   onClick={() => !isLoading && toggleSelection(idx)}
                 >
                   <td className="py-1.5">
@@ -306,7 +306,7 @@ export function PresetSourcesModal() {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--color-bg)" }}>
+        <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--color-border)" }}>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
@@ -322,8 +322,8 @@ export function PresetSourcesModal() {
             disabled={selected.size === 0 || isLoading}
             className="rounded px-4 py-1.5 text-sm font-medium disabled:opacity-50"
             style={{
-              backgroundColor: "var(--color-primary)",
-              color: "var(--color-primary-text, #fff)",
+              backgroundColor: "var(--color-accent)",
+              color: "#fff",
             }}
           >
             {isLoading

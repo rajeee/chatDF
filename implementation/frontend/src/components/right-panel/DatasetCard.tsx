@@ -74,7 +74,7 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
         .join(" ")}
       style={{
         backgroundColor: "var(--color-surface)",
-        borderColor: isError ? undefined : "var(--color-bg)",
+        borderColor: isError ? undefined : "var(--color-border)",
       }}
       onClick={handleCardClick}
     >
@@ -89,7 +89,7 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
           >
             <div
               className="h-full w-1/2 rounded-full animate-pulse"
-              style={{ backgroundColor: "var(--color-primary)" }}
+              style={{ backgroundColor: "var(--color-accent)" }}
             />
           </div>
         </>

@@ -139,8 +139,8 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         disabled={atLimit}
         className="w-full rounded px-3 py-1.5 text-sm font-medium mb-3 disabled:opacity-50"
         style={{
-          backgroundColor: "var(--color-primary)",
-          color: "var(--color-primary-text, #fff)",
+          backgroundColor: "var(--color-accent)",
+          color: "#fff",
         }}
       >
         Preset Sources
@@ -161,7 +161,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
           className="flex-1 rounded border px-2 py-1 text-sm disabled:opacity-50"
           style={{
             backgroundColor: "var(--color-surface)",
-            borderColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
             color: "var(--color-text)",
           }}
         />
@@ -171,8 +171,8 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
           aria-label="Add"
           className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50"
           style={{
-            backgroundColor: "var(--color-primary)",
-            color: "var(--color-primary-text, #fff)",
+            backgroundColor: "var(--color-accent)",
+            color: "#fff",
           }}
         >
           {isSubmitting ? (

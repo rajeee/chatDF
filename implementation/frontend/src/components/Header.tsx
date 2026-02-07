@@ -9,10 +9,11 @@ export function Header() {
       className="flex items-center h-12 px-4 border-b sticky top-0 z-20"
       style={{
         backgroundColor: "var(--color-surface)",
-        borderColor: "var(--color-bg)",
+        borderColor: "var(--color-border)",
+        boxShadow: "0 1px 2px var(--color-shadow)",
       }}
     >
-      <span className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
+      <span className="text-lg font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
         ChatDF
       </span>
     </header>

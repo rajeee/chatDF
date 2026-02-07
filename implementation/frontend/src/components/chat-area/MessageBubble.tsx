@@ -55,11 +55,13 @@ export function MessageBubble({
         style={{
           backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
           color: isUser ? "#ffffff" : "var(--color-text)",
+          border: isUser ? "none" : "1px solid var(--color-border)",
+          boxShadow: isUser ? "none" : "0 1px 2px var(--color-shadow)",
         }}
       >
         {/* Streaming reasoning display */}
         {isShowingReasoning && streamingReasoningContent && (
-          <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border, #e5e7eb)" }}>
+          <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border)" }}>
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-xs font-medium opacity-60">Thinking...</span>
               <span className="inline-flex gap-0.5">

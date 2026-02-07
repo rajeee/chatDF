@@ -89,6 +89,7 @@ async def add_dataset(
     request: Request,
     body: AddDatasetRequest,
     conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
     db: aiosqlite.Connection = Depends(get_db),
 ) -> DatasetAckResponse:
     """Add a dataset to the conversation via the validation pipeline."""
@@ -100,6 +101,26 @@ async def add_dataset(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Send dataset_loaded WS event so frontend can update from "loading" to "ready"
+    connection_manager = getattr(request.app.state, "connection_manager", None)
+    if connection_manager is not None:
+        await connection_manager.send_to_user(
+            user["id"],
+            {
+                "type": "dataset_loaded",
+                "dataset": {
+                    "id": result["id"],
+                    "url": result["url"],
+                    "name": result["name"],
+                    "row_count": result["row_count"],
+                    "column_count": result["column_count"],
+                    "schema_json": result["schema_json"],
+                    "status": "ready",
+                    "error_message": None,
+                },
+            },
+        )
 
     return DatasetAckResponse(dataset_id=result["id"], status="loading")
 

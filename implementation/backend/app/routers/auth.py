@@ -62,11 +62,12 @@ def _set_session_cookie(response, token: str) -> None:
 
     Implements: spec/backend/auth/plan.md#httpOnly-Cookie-Configuration
     """
+    settings = get_settings()
     response.set_cookie(
         key="session_token",
         value=token,
         httponly=True,
-        secure=False,
+        secure=settings.secure_cookies,
         samesite="lax",
         max_age=SESSION_COOKIE_MAX_AGE,
         path="/",
@@ -75,11 +76,12 @@ def _set_session_cookie(response, token: str) -> None:
 
 def _clear_session_cookie(response) -> None:
     """Clear the session_token cookie on *response*."""
+    settings = get_settings()
     response.delete_cookie(
         key="session_token",
         path="/",
         httponly=True,
-        secure=True,
+        secure=settings.secure_cookies,
         samesite="lax",
     )
 

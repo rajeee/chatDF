@@ -5,13 +5,13 @@
 // Per-message actions: copy button, "Show SQL" button, timestamp on hover.
 
 import ReactMarkdown from "react-markdown";
-import type { Message } from "@/stores/chatStore";
+import type { Message, SqlExecution } from "@/stores/chatStore";
 
 interface MessageBubbleProps {
   message: Message;
   displayContent: string;
   isCurrentlyStreaming: boolean;
-  onShowSQL: (sql: string) => void;
+  onShowSQL: (executions: SqlExecution[]) => void;
   onCopy: (content: string) => void;
 }
 
@@ -53,7 +53,7 @@ export function MessageBubble({
         {isUser ? (
           <span>{displayContent}</span>
         ) : (
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown>{displayContent}</ReactMarkdown>
           </div>
         )}
@@ -68,13 +68,13 @@ export function MessageBubble({
         )}
 
         {/* Show SQL button */}
-        {!isUser && message.sql_query && (
+        {!isUser && message.sql_executions.length > 0 && (
           <button
             className="mt-2 text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
             style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
-            onClick={() => onShowSQL(message.sql_query!)}
+            onClick={() => onShowSQL(message.sql_executions)}
           >
-            Show SQL
+            Show SQL ({message.sql_executions.length})
           </button>
         )}
 

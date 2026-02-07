@@ -1,35 +1,46 @@
 // Implements: spec/frontend/plan.md#state-management-architecture (uiStore)
 import { create } from "zustand";
+import type { SqlExecution } from "@/stores/chatStore";
 
 interface UiState {
   leftPanelOpen: boolean;
-  sqlPanelOpen: boolean;
-  activeSqlContent: string | null;
+  sqlModalOpen: boolean;
+  activeSqlExecutions: SqlExecution[];
+  sqlResultModalIndex: number | null;
   schemaModalDatasetId: string | null;
 }
 
 interface UiActions {
   toggleLeftPanel: () => void;
-  openSqlPanel: (sql: string) => void;
-  closeSqlPanel: () => void;
+  openSqlModal: (executions: SqlExecution[]) => void;
+  closeSqlModal: () => void;
+  openSqlResultModal: (index: number) => void;
+  closeSqlResultModal: () => void;
   openSchemaModal: (datasetId: string) => void;
   closeSchemaModal: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()((set) => ({
   leftPanelOpen: true,
-  sqlPanelOpen: false,
-  activeSqlContent: null,
+  sqlModalOpen: false,
+  activeSqlExecutions: [],
+  sqlResultModalIndex: null,
   schemaModalDatasetId: null,
 
   toggleLeftPanel: () =>
     set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
 
-  openSqlPanel: (sql) =>
-    set({ sqlPanelOpen: true, activeSqlContent: sql }),
+  openSqlModal: (executions) =>
+    set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: null }),
 
-  closeSqlPanel: () =>
-    set({ sqlPanelOpen: false, activeSqlContent: null }),
+  closeSqlModal: () =>
+    set({ sqlModalOpen: false, activeSqlExecutions: [], sqlResultModalIndex: null }),
+
+  openSqlResultModal: (index) =>
+    set({ sqlResultModalIndex: index }),
+
+  closeSqlResultModal: () =>
+    set({ sqlResultModalIndex: null }),
 
   openSchemaModal: (datasetId) =>
     set({ schemaModalDatasetId: datasetId }),

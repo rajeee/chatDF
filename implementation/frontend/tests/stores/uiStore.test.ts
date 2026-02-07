@@ -1,34 +1,44 @@
 // Tests for uiStore Zustand store
-// Covers: FE-S-04 (panel toggles, SQL panel open/close)
+// Covers: FE-S-04 (panel toggles, SQL modal open/close)
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { useUiStore } from "@/stores/uiStore";
+import type { SqlExecution } from "@/stores/chatStore";
+
+const sampleExecutions: SqlExecution[] = [
+  { query: "SELECT * FROM users", columns: ["id", "name"], rows: [[1, "Alice"]], total_rows: 1, error: null },
+  { query: "SELECT count(*) FROM orders", columns: ["count"], rows: [[42]], total_rows: 1, error: null },
+];
 
 describe("uiStore", () => {
   beforeEach(() => {
     useUiStore.getState().closeSchemaModal();
-    useUiStore.getState().closeSqlPanel();
+    useUiStore.getState().closeSqlModal();
     useUiStore.setState({ leftPanelOpen: true });
   });
 
   describe("initial state", () => {
     it("has leftPanelOpen as true by default", () => {
-      // Reset to truly initial state
       useUiStore.setState({
         leftPanelOpen: true,
-        sqlPanelOpen: false,
-        activeSqlContent: null,
+        sqlModalOpen: false,
+        activeSqlExecutions: [],
+        sqlResultModalIndex: null,
         schemaModalDatasetId: null,
       });
       expect(useUiStore.getState().leftPanelOpen).toBe(true);
     });
 
-    it("has sqlPanelOpen as false by default", () => {
-      expect(useUiStore.getState().sqlPanelOpen).toBe(false);
+    it("has sqlModalOpen as false by default", () => {
+      expect(useUiStore.getState().sqlModalOpen).toBe(false);
     });
 
-    it("has null activeSqlContent by default", () => {
-      expect(useUiStore.getState().activeSqlContent).toBeNull();
+    it("has empty activeSqlExecutions by default", () => {
+      expect(useUiStore.getState().activeSqlExecutions).toEqual([]);
+    });
+
+    it("has null sqlResultModalIndex by default", () => {
+      expect(useUiStore.getState().sqlResultModalIndex).toBeNull();
     });
 
     it("has null schemaModalDatasetId by default", () => {
@@ -60,52 +70,73 @@ describe("uiStore", () => {
     });
   });
 
-  describe("SQL panel (FE-S-04)", () => {
-    it("openSqlPanel sets sqlPanelOpen to true and stores content", () => {
-      useUiStore.getState().openSqlPanel("SELECT * FROM users");
+  describe("SQL modal (FE-S-04)", () => {
+    it("openSqlModal sets sqlModalOpen to true and stores executions", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT * FROM users");
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(sampleExecutions);
     });
 
-    it("openSqlPanel replaces previous content", () => {
-      useUiStore.getState().openSqlPanel("SELECT 1");
-      useUiStore.getState().openSqlPanel("SELECT 2");
+    it("openSqlModal replaces previous executions", () => {
+      useUiStore.getState().openSqlModal([sampleExecutions[0]]);
+      useUiStore.getState().openSqlModal(sampleExecutions);
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT 2");
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(sampleExecutions);
     });
 
-    it("closeSqlPanel sets sqlPanelOpen to false and clears content", () => {
-      useUiStore.getState().openSqlPanel("SELECT * FROM data");
-      useUiStore.getState().closeSqlPanel();
+    it("closeSqlModal sets sqlModalOpen to false and clears executions", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      useUiStore.getState().closeSqlModal();
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(false);
-      expect(useUiStore.getState().activeSqlContent).toBeNull();
+      expect(useUiStore.getState().sqlModalOpen).toBe(false);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual([]);
     });
 
-    it("closeSqlPanel is idempotent when already closed", () => {
-      useUiStore.getState().closeSqlPanel();
+    it("closeSqlModal is idempotent when already closed", () => {
+      useUiStore.getState().closeSqlModal();
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(false);
-      expect(useUiStore.getState().activeSqlContent).toBeNull();
+      expect(useUiStore.getState().sqlModalOpen).toBe(false);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual([]);
     });
 
     it("open/close cycle works correctly", () => {
       // Open
-      useUiStore.getState().openSqlPanel("SELECT count(*) FROM orders");
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT count(*) FROM orders");
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(sampleExecutions);
 
       // Close
-      useUiStore.getState().closeSqlPanel();
-      expect(useUiStore.getState().sqlPanelOpen).toBe(false);
-      expect(useUiStore.getState().activeSqlContent).toBeNull();
+      useUiStore.getState().closeSqlModal();
+      expect(useUiStore.getState().sqlModalOpen).toBe(false);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual([]);
 
       // Re-open with different content
-      useUiStore.getState().openSqlPanel("SELECT avg(price) FROM products");
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT avg(price) FROM products");
+      const newExecs = [sampleExecutions[1]];
+      useUiStore.getState().openSqlModal(newExecs);
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(newExecs);
+    });
+
+    it("openSqlResultModal sets the index", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      useUiStore.getState().openSqlResultModal(0);
+      expect(useUiStore.getState().sqlResultModalIndex).toBe(0);
+    });
+
+    it("closeSqlResultModal clears the index", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      useUiStore.getState().openSqlResultModal(1);
+      useUiStore.getState().closeSqlResultModal();
+      expect(useUiStore.getState().sqlResultModalIndex).toBeNull();
+    });
+
+    it("closeSqlModal also clears sqlResultModalIndex", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      useUiStore.getState().openSqlResultModal(0);
+      useUiStore.getState().closeSqlModal();
+      expect(useUiStore.getState().sqlResultModalIndex).toBeNull();
     });
   });
 
@@ -134,20 +165,20 @@ describe("uiStore", () => {
   });
 
   describe("state independence", () => {
-    it("toggling left panel does not affect SQL panel", () => {
-      useUiStore.getState().openSqlPanel("SELECT 1");
+    it("toggling left panel does not affect SQL modal", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
       useUiStore.getState().toggleLeftPanel();
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT 1");
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(sampleExecutions);
     });
 
-    it("opening schema modal does not affect SQL panel", () => {
-      useUiStore.getState().openSqlPanel("SELECT 1");
+    it("opening schema modal does not affect SQL modal", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
       useUiStore.getState().openSchemaModal("ds-1");
 
-      expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-      expect(useUiStore.getState().activeSqlContent).toBe("SELECT 1");
+      expect(useUiStore.getState().sqlModalOpen).toBe(true);
+      expect(useUiStore.getState().activeSqlExecutions).toEqual(sampleExecutions);
       expect(useUiStore.getState().schemaModalDatasetId).toBe("ds-1");
     });
   });

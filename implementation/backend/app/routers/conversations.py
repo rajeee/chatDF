@@ -15,6 +15,8 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from datetime import datetime
 from uuid import uuid4
 
@@ -250,6 +252,9 @@ async def clear_all_conversations(
 # ---------------------------------------------------------------------------
 
 
+_logger = logging.getLogger(__name__)
+
+
 @router.post("/{conversation_id}/messages", response_model=MessageAckResponse)
 async def send_message(
     request: Request,
@@ -260,9 +265,8 @@ async def send_message(
 ) -> MessageAckResponse:
     """Send a chat message and trigger LLM processing.
 
-    The user message is persisted by ``chat_service.process_message`` (step 3)
-    along with the full orchestration pipeline.  This endpoint returns an
-    immediate acknowledgment with a ``message_id``.
+    Returns an immediate acknowledgment. The full 14-step orchestration
+    runs as a background task, streaming results via WebSocket events.
     """
     conv_id = conversation["id"]
 
@@ -289,19 +293,25 @@ async def send_message(
     # Get the worker pool
     pool = getattr(request.app.state, "worker_pool", None)
 
-    # Call chat_service.process_message which handles the full 14-step flow
-    # including persisting the user message (step 3), rate limiting, LLM
-    # streaming, and assistant message persistence.  Domain exceptions
-    # (ConflictError, RateLimitError) propagate to the exception handlers
-    # in main.py.
-    await chat_service.process_message(
-        db=db,
-        conversation_id=conv_id,
-        user_id=user["id"],
-        content=body.content,
-        ws_send=ws_send,
-        pool=pool,
-    )
+    # Run the full 14-step LLM flow as a background task so the HTTP ack
+    # returns immediately.  Results stream back to the client via WebSocket
+    # events (chat_token, chat_complete, chat_error).
+    async def _background_process() -> None:
+        try:
+            await chat_service.process_message(
+                db=db,
+                conversation_id=conv_id,
+                user_id=user["id"],
+                content=body.content,
+                ws_send=ws_send,
+                pool=pool,
+            )
+        except Exception:
+            _logger.exception(
+                "Background process_message failed for conversation %s", conv_id
+            )
+
+    asyncio.create_task(_background_process())
 
     return MessageAckResponse(message_id=msg_id, status="processing")
 

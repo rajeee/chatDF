@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ["datachatdata.com"],
     proxy: {
       "/auth": {
         target: API_TARGET,
@@ -26,8 +27,9 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/ws": {
-        target: API_TARGET.replace("http", "ws"),
+        target: API_TARGET,
         ws: true,
+        changeOrigin: true,
       },
     },
   },

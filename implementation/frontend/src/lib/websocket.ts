@@ -35,11 +35,12 @@ export class ChatDFSocket {
   private errorCallbacks: ErrorCallback[] = [];
 
   /**
-   * Open a WebSocket connection with the given auth token.
-   * The token is sent as a query parameter on the upgrade request.
+   * Open a WebSocket connection.
+   * Auth is handled via session cookie sent on the upgrade request.
+   * An optional token can be passed as a query parameter fallback.
    */
-  connect(token: string): void {
-    this.token = token;
+  connect(token?: string): void {
+    this.token = token ?? null;
     this.intentionalClose = false;
     this.backoffMs = INITIAL_BACKOFF_MS;
     this.createConnection();
@@ -89,10 +90,17 @@ export class ChatDFSocket {
   // --- Private ---
 
   private buildUrl(): string {
-    // Use relative URL so the browser resolves against the current host.
-    // In dev, the Vite proxy forwards /ws to the backend.
+    // VITE_WS_URL allows direct WebSocket connection to the backend,
+    // bypassing the Vite dev proxy (which doesn't support WS under Bun).
+    // In production this is unset, so we fall back to a same-origin
+    // relative URL handled by the reverse proxy.
+    const wsUrl = import.meta.env.VITE_WS_URL as string | undefined;
+    if (wsUrl) {
+      return this.token ? `${wsUrl}?token=${this.token}` : wsUrl;
+    }
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${location.host}/ws?token=${this.token}`;
+    const base = `${protocol}//${location.host}/ws`;
+    return this.token ? `${base}?token=${this.token}` : base;
   }
 
   private createConnection(): void {

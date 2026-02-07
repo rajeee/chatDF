@@ -79,6 +79,17 @@ TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl
 
 
 @dataclass
+class SqlExecution:
+    """Result of a single SQL query execution."""
+
+    query: str = ""
+    columns: list[str] | None = None
+    rows: list[list] | None = None
+    total_rows: int | None = None
+    error: str | None = None
+
+
+@dataclass
 class StreamResult:
     """Result of a streaming chat turn."""
 
@@ -86,6 +97,8 @@ class StreamResult:
     output_tokens: int = 0
     assistant_message: str = ""
     tool_calls_made: int = 0
+    sql_queries: list[str] = field(default_factory=list)
+    sql_executions: list[SqlExecution] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -273,8 +286,8 @@ async def stream_chat(
     collected_text = ""
 
     while True:
-        # Call Gemini streaming API
-        stream = client.models.generate_content_stream(
+        # Call Gemini async streaming API (non-blocking for the event loop)
+        stream = await client.aio.models.generate_content_stream(
             model=MODEL_ID,
             contents=contents,
             config=config,
@@ -284,21 +297,17 @@ async def stream_chat(
         tool_call_name = None
         tool_call_args = None
 
-        for chunk in stream:
+        async for chunk in stream:
             # Check for cancellation
             if cancel_event and cancel_event.is_set():
                 result.assistant_message = collected_text
-                # Grab usage if available
-                if hasattr(stream, "usage_metadata") and stream.usage_metadata:
-                    result.input_tokens += stream.usage_metadata.prompt_token_count or 0
-                    result.output_tokens += stream.usage_metadata.candidates_token_count or 0
                 return result
 
             # Process chunk parts
             if hasattr(chunk, "candidates") and chunk.candidates:
                 for candidate in chunk.candidates:
                     if hasattr(candidate, "content") and candidate.content:
-                        for part in candidate.content.parts:
+                        for part in (candidate.content.parts or []):
                             # Text part
                             if hasattr(part, "text") and part.text is not None and part.text:
                                 collected_text += part.text
@@ -319,10 +328,10 @@ async def stream_chat(
             if found_tool_call:
                 break
 
-        # Accumulate token counts from this stream
-        if hasattr(stream, "usage_metadata") and stream.usage_metadata:
-            result.input_tokens += stream.usage_metadata.prompt_token_count or 0
-            result.output_tokens += stream.usage_metadata.candidates_token_count or 0
+        # Accumulate token counts from usage_metadata
+        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+            result.input_tokens += chunk.usage_metadata.prompt_token_count or 0
+            result.output_tokens += chunk.usage_metadata.candidates_token_count or 0
 
         if not found_tool_call:
             # No tool call — streaming complete
@@ -374,12 +383,21 @@ async def stream_chat(
                 )
             else:
                 query = tool_call_args.get("query", "")
-                query_result = await pool.run_query(query, datasets)
+                result.sql_queries.append(query)
+                # Map dataset dicts to worker format (execute_query expects "table_name")
+                worker_datasets = [
+                    {"url": ds["url"], "table_name": ds["name"]}
+                    for ds in datasets
+                ]
+                query_result = await pool.run_query(query, worker_datasets)
 
                 if "error_type" in query_result or "error" in query_result:
                     sql_retry_count += 1
                     error_msg = query_result.get("message", query_result.get("error", "Unknown error"))
                     tool_result_str = f"Error executing SQL: {error_msg}"
+                    result.sql_executions.append(SqlExecution(
+                        query=query, error=error_msg,
+                    ))
 
                     # Check if max SQL retries reached
                     if sql_retry_count >= MAX_SQL_RETRIES:
@@ -391,11 +409,24 @@ async def stream_chat(
                     rows = query_result.get("rows", [])
                     columns = query_result.get("columns", [])
                     total = query_result.get("total_rows", len(rows))
+                    # Cap rows at 100 for the frontend payload.
+                    # Convert dict rows to arrays (Polars to_dicts() returns
+                    # list[dict], but the frontend expects list[list]).
+                    capped_rows = [
+                        [row.get(c) for c in columns]
+                        for row in rows[:100]
+                    ]
+                    result.sql_executions.append(SqlExecution(
+                        query=query,
+                        columns=columns,
+                        rows=capped_rows,
+                        total_rows=total,
+                    ))
                     tool_result_str = (
                         f"Query executed successfully.\n"
                         f"Columns: {columns}\n"
                         f"Total rows: {total}\n"
-                        f"Results (first {len(rows)} rows): {json.dumps(rows[:20])}"
+                        f"Results (first {len(rows)} rows): {json.dumps(rows[:20], default=str)}"
                     )
 
         elif tool_call_name == "load_dataset":

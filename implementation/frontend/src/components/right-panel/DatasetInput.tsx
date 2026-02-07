@@ -90,17 +90,23 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         { url }
       );
 
-      // Add a loading-state dataset entry to the store.
-      addDataset({
-        id: response.dataset_id,
-        url,
-        name: "",
-        row_count: 0,
-        column_count: 0,
-        schema_json: "{}",
-        status: "loading",
-        error_message: null,
-      });
+      // Add a loading-state dataset entry to the store, unless
+      // the WS dataset_loaded event already added it (race condition).
+      const alreadyExists = useDatasetStore
+        .getState()
+        .datasets.some((d) => d.id === response.dataset_id);
+      if (!alreadyExists) {
+        addDataset({
+          id: response.dataset_id,
+          url,
+          name: "",
+          row_count: 0,
+          column_count: 0,
+          schema_json: "{}",
+          status: "loading",
+          error_message: null,
+        });
+      }
 
       setUrl("");
       setError(null);

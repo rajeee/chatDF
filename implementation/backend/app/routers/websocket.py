@@ -75,6 +75,10 @@ async def websocket_endpoint(
 
     # --- Auth ---
     # Implements: spec/backend/websocket/plan.md#Auth-on-Connect
+    # Accept token from query param or fall back to session cookie
+    # (browsers send cookies on WS upgrade, so cookie auth works reliably)
+    if not token:
+        token = websocket.cookies.get("session_token")
     if not token:
         await websocket.close(code=4001, reason="Authentication failed")
         return

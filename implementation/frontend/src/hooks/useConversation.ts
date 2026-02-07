@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/api/client";
-import { useChatStore, type Message } from "@/stores/chatStore";
+import { useChatStore, parseSqlExecutions, type Message } from "@/stores/chatStore";
 import { useDatasetStore, type Dataset } from "@/stores/datasetStore";
 
 interface ConversationDetail {
@@ -45,7 +45,10 @@ export function useConversation() {
     // Only populate if messages are empty (first load or switch)
     if (chatState.messages.length === 0 && conversation.messages.length > 0) {
       for (const msg of conversation.messages) {
-        chatState.addMessage(msg);
+        chatState.addMessage({
+          ...msg,
+          sql_executions: msg.sql_executions ?? parseSqlExecutions(msg.sql_query),
+        });
       }
     }
     const datasetState = useDatasetStore.getState();

@@ -16,7 +16,11 @@ def chat_token(*, token: str, message_id: str) -> dict:
 
 
 def chat_complete(
-    *, message_id: str, sql_query: str | None, token_count: int
+    *,
+    message_id: str,
+    sql_query: str | None,
+    token_count: int,
+    sql_executions: list[dict] | None = None,
 ) -> dict:
     """LLM response finished."""
     return {
@@ -24,6 +28,7 @@ def chat_complete(
         "message_id": message_id,
         "sql_query": sql_query,
         "token_count": token_count,
+        "sql_executions": sql_executions or [],
     }
 
 

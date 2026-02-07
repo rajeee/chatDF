@@ -18,12 +18,12 @@ interface WsMessage {
   [key: string]: unknown;
 }
 
-export function useWebSocket(token: string | null): void {
+export function useWebSocket(isAuthenticated: boolean): void {
   const queryClient = useQueryClient();
   const socketRef = useRef<ChatDFSocket | null>(null);
 
   useEffect(() => {
-    if (!token) {
+    if (!isAuthenticated) {
       return;
     }
 
@@ -39,29 +39,51 @@ export function useWebSocket(token: string | null): void {
       switch (msg.type) {
         case "chat_token": {
           const chatStore = useChatStore.getState();
-          if (!chatStore.isStreaming && msg.message_id) {
-            chatStore.setStreaming(true, msg.message_id as string);
+          if (!chatStore.isStreaming) {
+            // First token: add a placeholder assistant message so
+            // MessageList has something to render the streaming tokens into.
+            const tempId = `streaming-${Date.now()}`;
+            chatStore.addMessage({
+              id: tempId,
+              role: "assistant",
+              content: "",
+              sql_query: null,
+              sql_executions: [],
+              created_at: new Date().toISOString(),
+            });
+            chatStore.setStreaming(true, tempId);
           }
           chatStore.appendStreamToken(msg.token as string);
           break;
         }
         case "chat_complete": {
           const chatStore = useChatStore.getState();
+          // Copy accumulated streaming tokens into the message content
+          // before clearing, so the response persists in the message list.
+          // Attach sql_query and structured sql_executions from the backend.
+          const sqlExecs = Array.isArray(msg.sql_executions)
+            ? (msg.sql_executions as Array<Record<string, unknown>>).map((ex) => ({
+                query: (ex.query as string) || "",
+                columns: (ex.columns as string[] | null) ?? null,
+                rows: (ex.rows as unknown[][] | null) ?? null,
+                total_rows: (ex.total_rows as number | null) ?? null,
+                error: (ex.error as string | null) ?? null,
+              }))
+            : [];
+          chatStore.finalizeStreamingMessage({
+            sql_query: (msg.sql_query as string) ?? null,
+            sql_executions: sqlExecs,
+          });
           chatStore.setStreaming(false);
-          if (msg.message) {
-            chatStore.addMessage(msg.message as {
-              id: string;
-              role: "user" | "assistant";
-              content: string;
-              sql_query: string | null;
-              created_at: string;
-            });
-          }
           chatStore.setLoadingPhase("idle");
           break;
         }
         case "chat_error": {
           const chatStore = useChatStore.getState();
+          // Preserve any partial streaming content before clearing
+          if (chatStore.isStreaming) {
+            chatStore.finalizeStreamingMessage();
+          }
           chatStore.setStreaming(false);
           chatStore.setLoadingPhase("idle");
           break;
@@ -69,19 +91,25 @@ export function useWebSocket(token: string | null): void {
         case "dataset_loaded": {
           const datasetStore = useDatasetStore.getState();
           if (msg.dataset) {
-            datasetStore.updateDataset(
-              (msg.dataset as { id: string }).id,
-              msg.dataset as Partial<{
-                id: string;
-                url: string;
-                name: string;
-                row_count: number;
-                column_count: number;
-                schema_json: string;
-                status: "loading" | "ready" | "error";
-                error_message: string | null;
-              }>
+            const dsPayload = msg.dataset as {
+              id: string;
+              url: string;
+              name: string;
+              row_count: number;
+              column_count: number;
+              schema_json: string;
+              status: "loading" | "ready" | "error";
+              error_message: string | null;
+            };
+            const exists = datasetStore.datasets.some(
+              (d) => d.id === dsPayload.id
             );
+            if (exists) {
+              datasetStore.updateDataset(dsPayload.id, dsPayload);
+            } else {
+              // WS event arrived before HTTP response added the dataset
+              datasetStore.addDataset(dsPayload);
+            }
           }
           break;
         }
@@ -93,6 +121,10 @@ export function useWebSocket(token: string | null): void {
               error_message: (msg.error as string) ?? "Unknown error",
             });
           }
+          break;
+        }
+        case "conversation_title_updated": {
+          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
           break;
         }
         case "usage_update": {
@@ -110,11 +142,11 @@ export function useWebSocket(token: string | null): void {
       }
     });
 
-    socket.connect(token);
+    socket.connect();
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [token, queryClient]);
+  }, [isAuthenticated, queryClient]);
 }

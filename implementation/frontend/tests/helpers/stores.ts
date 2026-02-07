@@ -4,9 +4,9 @@
 // Store shapes from spec/frontend/plan.md:
 //   chatStore:    { activeConversationId, messages[], streamingTokens, isStreaming, ... }
 //   datasetStore: { datasets[], loadingDatasets }
-//   uiStore:      { leftPanelOpen, sqlPanelOpen, activeSqlContent, schemaModalDatasetId }
+//   uiStore:      { leftPanelOpen, sqlModalOpen, activeSqlExecutions, sqlResultModalIndex, schemaModalDatasetId }
 
-import { useChatStore, type Message } from "@/stores/chatStore";
+import { useChatStore, type Message, type SqlExecution } from "@/stores/chatStore";
 import { useDatasetStore, type Dataset } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -23,8 +23,9 @@ export function resetAllStores(): void {
   useDatasetStore.getState().reset();
   useUiStore.setState({
     leftPanelOpen: true,
-    sqlPanelOpen: false,
-    activeSqlContent: null,
+    sqlModalOpen: false,
+    activeSqlExecutions: [],
+    sqlResultModalIndex: null,
     schemaModalDatasetId: null,
   });
 }
@@ -73,8 +74,9 @@ export function setDatasetsLoaded(datasets: Dataset[]): void {
  */
 export function setUiState(state: Partial<{
   leftPanelOpen: boolean;
-  sqlPanelOpen: boolean;
-  activeSqlContent: string | null;
+  sqlModalOpen: boolean;
+  activeSqlExecutions: SqlExecution[];
+  sqlResultModalIndex: number | null;
   schemaModalDatasetId: string | null;
 }>): void {
   useUiStore.setState(state);

@@ -16,6 +16,8 @@ from uuid import uuid4
 
 import aiosqlite
 
+import json
+
 from app.exceptions import ConflictError, RateLimitError
 from app.services import dataset_service, llm_service, rate_limit_service
 from app.services import ws_messages
@@ -90,6 +92,28 @@ async def process_message(
         await db.commit()
 
         # -------------------------------------------------------------------
+        # Step 3b: Auto-generate conversation title from first user message
+        # -------------------------------------------------------------------
+        cursor = await db.execute(
+            "SELECT title FROM conversations WHERE id = ?",
+            (conversation_id,),
+        )
+        conv_row = await cursor.fetchone()
+        if conv_row and (not conv_row["title"]):
+            auto_title = content[:50].strip()
+            if len(content) > 50:
+                auto_title += "…"
+            await db.execute(
+                "UPDATE conversations SET title = ? WHERE id = ?",
+                (auto_title, conversation_id),
+            )
+            await db.commit()
+            await ws_send(
+                "conversation_title_updated",
+                {"conversation_id": conversation_id, "title": auto_title},
+            )
+
+        # -------------------------------------------------------------------
         # Step 4: Rate limit check
         # -------------------------------------------------------------------
         status = await rate_limit_service.check_limit(db, user_id)
@@ -158,8 +182,22 @@ async def process_message(
         asst_msg_id = str(uuid4())
         asst_now = datetime.utcnow().isoformat()
         token_count = result.input_tokens + result.output_tokens
-        # Extract sql_query from the assistant message if any tool calls were made
-        sql_query = None  # Tool calls are handled inside stream_chat
+        # Serialize sql_executions as JSON for storage in the sql_query column
+        sql_executions_dicts = [
+            {
+                "query": ex.query,
+                "columns": ex.columns,
+                "rows": ex.rows,
+                "total_rows": ex.total_rows,
+                "error": ex.error,
+            }
+            for ex in result.sql_executions
+        ]
+        sql_query = (
+            json.dumps(sql_executions_dicts, default=str)
+            if sql_executions_dicts
+            else None
+        )
 
         await db.execute(
             "INSERT INTO messages "
@@ -197,6 +235,7 @@ async def process_message(
                 message_id=asst_msg_id,
                 sql_query=sql_query,
                 token_count=token_count,
+                sql_executions=sql_executions_dicts,
             ),
         )
 

@@ -7,6 +7,9 @@
 // Below 1024px: left panel as fixed overlay with backdrop.
 
 import { useUiStore } from "@/stores/uiStore";
+import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { useConversation } from "@/hooks/useConversation";
 import { Header } from "@/components/Header";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import { ChatArea } from "@/components/chat-area/ChatArea";
@@ -15,6 +18,14 @@ import { RightPanel } from "@/components/right-panel/RightPanel";
 export function AppShell() {
   const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+
+  const { isAuthenticated } = useAuth();
+
+  // Establish WebSocket connection when authenticated
+  useWebSocket(isAuthenticated);
+
+  // Load conversation data when active conversation changes
+  useConversation();
 
   return (
     <div

@@ -5,7 +5,7 @@
 // Handles streaming display by merging streamingTokens into the active message.
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { MessageBubble } from "./MessageBubble";
 
@@ -16,7 +16,7 @@ export function MessageList() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
   const streamingTokens = useChatStore((s) => s.streamingTokens);
-  const openSqlPanel = useUiStore((s) => s.openSqlPanel);
+  const openSqlModal = useUiStore((s) => s.openSqlModal);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -51,10 +51,10 @@ export function MessageList() {
   }, []);
 
   const handleShowSQL = useCallback(
-    (sql: string) => {
-      openSqlPanel(sql);
+    (executions: SqlExecution[]) => {
+      openSqlModal(executions);
     },
-    [openSqlPanel]
+    [openSqlModal]
   );
 
   const handleCopy = useCallback((content: string) => {

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     worker_memory_limit: int = 512
     worker_pool_size: int = 4
     session_duration_days: int = 7
+    secure_cookies: bool = False
 
     model_config = {
         "env_file": ".env",

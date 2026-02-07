@@ -28,6 +28,7 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
     role: "user",
     content: "Hello world",
     sql_query: null,
+    sql_executions: [],
     created_at: "2026-02-05T12:00:00Z",
     ...overrides,
   };
@@ -187,34 +188,36 @@ describe("ML-SCROLL-1: Auto-scroll to bottom", () => {
 });
 
 describe("ML-SQL-1: Show SQL button opens SQL panel", () => {
-  it("renders 'Show SQL' button when message has sql_query", () => {
+  it("renders 'Show SQL' button when message has sql_executions", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-2",
         role: "assistant",
         content: "Here are the results",
         sql_query: "SELECT * FROM users",
+        sql_executions: [{ query: "SELECT * FROM users", columns: null, rows: null, total_rows: null, error: null }],
       }),
     ]);
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.getByText("Show SQL")).toBeInTheDocument();
+    expect(screen.getByText("Show SQL (1)")).toBeInTheDocument();
   });
 
-  it("does not render 'Show SQL' button when no sql_query", () => {
+  it("does not render 'Show SQL' button when no sql_executions", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-2",
         role: "assistant",
         content: "Hello",
         sql_query: null,
+        sql_executions: [],
       }),
     ]);
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.queryByText("Show SQL")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Show SQL/)).not.toBeInTheDocument();
   });
 
   it("clicking 'Show SQL' opens the SQL panel with correct content", async () => {
@@ -225,16 +228,18 @@ describe("ML-SQL-1: Show SQL button opens SQL panel", () => {
         role: "assistant",
         content: "Results",
         sql_query: "SELECT name FROM users WHERE active = true",
+        sql_executions: [{ query: "SELECT name FROM users WHERE active = true", columns: ["name"], rows: [["Alice"]], total_rows: 1, error: null }],
       }),
     ]);
 
     renderWithProviders(<MessageList />);
 
-    const showSqlBtn = screen.getByText("Show SQL");
+    const showSqlBtn = screen.getByText("Show SQL (1)");
     await user.click(showSqlBtn);
 
-    expect(useUiStore.getState().sqlPanelOpen).toBe(true);
-    expect(useUiStore.getState().activeSqlContent).toBe(
+    expect(useUiStore.getState().sqlModalOpen).toBe(true);
+    expect(useUiStore.getState().activeSqlExecutions).toHaveLength(1);
+    expect(useUiStore.getState().activeSqlExecutions[0].query).toBe(
       "SELECT name FROM users WHERE active = true"
     );
   });

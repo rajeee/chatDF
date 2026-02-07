@@ -170,13 +170,13 @@ export function ChatHistory() {
               ) : (
                 <>
                   <span
-                    className="flex-1 truncate"
+                    className={`flex-1 truncate${conv.title ? "" : " italic opacity-50"}`}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       handleDoubleClick(conv);
                     }}
                   >
-                    {conv.title}
+                    {conv.title || "Untitled"}
                   </span>
 
                   {confirmingDeleteId === conv.id ? (

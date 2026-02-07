@@ -72,8 +72,9 @@ export function useAuth() {
     useDatasetStore.getState().reset();
     useUiStore.setState({
       leftPanelOpen: true,
-      sqlPanelOpen: false,
-      activeSqlContent: null,
+      sqlModalOpen: false,
+      activeSqlExecutions: [],
+      sqlResultModalIndex: null,
       schemaModalDatasetId: null,
     });
     // Navigate to sign-in

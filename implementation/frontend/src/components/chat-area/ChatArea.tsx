@@ -1,22 +1,82 @@
 // Implements: spec/frontend/plan.md#component-hierarchy (ChatArea)
 //
 // Conditional rendering based on state:
-// - No datasets AND no messages -> OnboardingGuide placeholder
-// - Datasets exist but no messages -> Suggested prompts placeholder
-// - Otherwise -> MessageList + ChatInput placeholder
-// Also includes SQL panel overlay placeholder.
+// - No datasets AND no messages -> OnboardingGuide
+// - Datasets exist but no messages -> SuggestedPrompts
+// - Otherwise -> MessageList
+// ChatInput is always visible at the bottom.
+// SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
+import { useCallback } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore } from "@/stores/datasetStore";
-import { useUiStore } from "@/stores/uiStore";
+import { apiPost } from "@/api/client";
+import { OnboardingGuide } from "./OnboardingGuide";
+import { SuggestedPrompts } from "./SuggestedPrompts";
+import { MessageList } from "./MessageList";
+import { ChatInput } from "./ChatInput";
+import { SQLModal } from "./SQLPanel";
 
 export function ChatArea() {
   const messages = useChatStore((s) => s.messages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const setStreaming = useChatStore((s) => s.setStreaming);
+  const setLoadingPhase = useChatStore((s) => s.setLoadingPhase);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const datasets = useDatasetStore((s) => s.datasets);
-  const sqlPanelOpen = useUiStore((s) => s.sqlPanelOpen);
 
   const hasDatasets = datasets.length > 0;
   const hasMessages = messages.length > 0;
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      // Optimistic: show user message immediately
+      const userMessage = {
+        id: `msg-${Date.now()}`,
+        role: "user" as const,
+        content: text,
+        sql_query: null,
+        sql_executions: [],
+        created_at: new Date().toISOString(),
+      };
+      addMessage(userMessage);
+      setLoadingPhase("thinking");
+
+      try {
+        // Auto-create conversation if none active
+        let convId = activeConversationId;
+        if (!convId) {
+          const newConv = await apiPost<{ id: string }>("/conversations");
+          convId = newConv.id;
+          setActiveConversation(convId);
+        }
+
+        // Send message to backend — response streams back via WebSocket
+        await apiPost<{ message_id: string; status: string }>(
+          `/conversations/${convId}/messages`,
+          { content: text }
+        );
+
+        // Backend acknowledged — streaming will begin via WS (chat_token events).
+        // The WS chat_token handler sets streaming=true on the first token.
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        setLoadingPhase("idle");
+        setStreaming(false);
+      }
+    },
+    [addMessage, setStreaming, setLoadingPhase, activeConversationId, setActiveConversation]
+  );
+
+  const handleStop = useCallback(async () => {
+    if (!activeConversationId) return;
+    try {
+      await apiPost(`/conversations/${activeConversationId}/stop`);
+    } catch (err) {
+      console.error("Failed to stop generation:", err);
+    }
+  }, [activeConversationId]);
 
   return (
     <section
@@ -27,50 +87,29 @@ export function ChatArea() {
       {/* Main content area - conditional rendering */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!hasDatasets && !hasMessages && (
-          <div
-            data-testid="onboarding-placeholder"
-            className="flex-1 flex items-center justify-center"
-          >
-            <span className="text-sm opacity-50">OnboardingGuide area</span>
-          </div>
+          <OnboardingGuide onSendPrompt={handleSend} />
         )}
 
         {hasDatasets && !hasMessages && (
-          <div
-            data-testid="suggested-prompts-placeholder"
-            className="flex-1 flex items-center justify-center"
-          >
-            <span className="text-sm opacity-50">Suggested prompts area</span>
-          </div>
+          <SuggestedPrompts
+            datasetNames={datasets.map((d) => d.name)}
+            onSendPrompt={handleSend}
+          />
         )}
 
-        {hasMessages && (
-          <div
-            data-testid="message-list-placeholder"
-            className="flex-1 flex flex-col overflow-hidden"
-          >
-            <div className="flex-1 overflow-y-auto">
-              <span className="text-sm opacity-50 p-4 block">
-                MessageList area
-              </span>
-            </div>
-            <div className="p-4 border-t" style={{ borderColor: "var(--color-surface)" }}>
-              <span className="text-sm opacity-50">ChatInput area</span>
-            </div>
-          </div>
-        )}
+        {hasMessages && <MessageList />}
       </div>
 
-      {/* SQL Panel overlay placeholder */}
-      {sqlPanelOpen && (
-        <div
-          data-testid="sql-panel-placeholder"
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ backgroundColor: "var(--color-surface)" }}
-        >
-          <span className="text-sm opacity-50">SQL Panel overlay</span>
-        </div>
-      )}
+      {/* Chat input - always visible */}
+      <div
+        className="p-4 border-t"
+        style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+      >
+        <ChatInput onSend={handleSend} onStop={handleStop} />
+      </div>
+
+      {/* SQL Modal (self-managed visibility via uiStore) */}
+      <SQLModal />
     </section>
   );
 }

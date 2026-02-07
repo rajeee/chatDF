@@ -163,6 +163,7 @@ describe("ChatArea conditional rendering", () => {
         role: "user",
         content: "Hello",
         sql_query: null,
+        sql_executions: [],
         created_at: new Date().toISOString(),
       },
     ]);

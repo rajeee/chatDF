@@ -35,7 +35,8 @@ describe("FE-L-1: Three-panel layout", () => {
     renderWithProviders(<AppShell />);
 
     expect(screen.getByTestId("header")).toBeInTheDocument();
-    expect(screen.getByText("ChatDF")).toBeInTheDocument();
+    const header = screen.getByTestId("header");
+    expect(header.textContent).toContain("ChatDF");
   });
 
   it("renders panels in correct DOM order: left, chat, right", () => {
@@ -71,22 +72,19 @@ describe("FE-L-2: Left panel collapse/expand", () => {
     const user = userEvent.setup();
     renderWithProviders(<AppShell />);
 
-    const toggleBtn = screen.getByTestId("toggle-left-panel");
-    const leftPanel = screen.getByTestId("left-panel");
-
     // Initially open
     expect(useUiStore.getState().leftPanelOpen).toBe(true);
 
     // Click to close
-    await user.click(toggleBtn);
+    await user.click(screen.getByTestId("toggle-left-panel"));
     expect(useUiStore.getState().leftPanelOpen).toBe(false);
 
-    // Click to reopen
-    await user.click(toggleBtn);
+    // Click to reopen (re-query since component re-renders)
+    await user.click(screen.getByTestId("toggle-left-panel"));
     expect(useUiStore.getState().leftPanelOpen).toBe(true);
   });
 
-  it("collapsed left panel has overflow hidden", async () => {
+  it("collapsed left panel renders as narrow strip", async () => {
     const user = userEvent.setup();
     renderWithProviders(<AppShell />);
 
@@ -94,7 +92,7 @@ describe("FE-L-2: Left panel collapse/expand", () => {
     await user.click(toggleBtn);
 
     const leftPanel = screen.getByTestId("left-panel");
-    expect(leftPanel).toHaveClass("overflow-hidden");
+    expect(leftPanel.style.width).toBe("48px");
   });
 });
 

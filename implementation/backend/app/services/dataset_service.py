@@ -24,7 +24,7 @@ import aiosqlite
 # Constants
 # ---------------------------------------------------------------------------
 
-MAX_DATASETS_PER_CONVERSATION = 5
+MAX_DATASETS_PER_CONVERSATION = 50
 
 # Regex: http or https scheme, no spaces
 _URL_PATTERN = re.compile(r"^https?://\S+$")
@@ -77,6 +77,7 @@ async def add_dataset(
     conversation_id: str,
     url: str,
     worker_pool: object,
+    name: str | None = None,
 ) -> dict:
     """Run the 6-step validation pipeline and persist a new dataset.
 
@@ -109,7 +110,7 @@ async def add_dataset(
     )
     row = await cursor.fetchone()
     if row["cnt"] >= MAX_DATASETS_PER_CONVERSATION:
-        raise ValueError("Maximum 5 datasets reached")
+        raise ValueError("Maximum 50 datasets reached")
 
     # Step 4: HEAD + magic bytes
     validate_result = await worker_pool.validate_url(url)
@@ -127,7 +128,8 @@ async def add_dataset(
     row_count = schema_result.get("row_count", 0)
     column_count = len(columns)
     schema_json = json.dumps(columns)
-    name = await _next_table_name(db, conversation_id)
+    if not name:
+        name = await _next_table_name(db, conversation_id)
 
     dataset_id = str(uuid4())
     now = datetime.utcnow().isoformat()

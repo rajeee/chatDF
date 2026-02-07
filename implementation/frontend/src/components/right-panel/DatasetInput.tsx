@@ -1,11 +1,12 @@
 // Implements: spec/frontend/right_panel/dataset_input/plan.md
 //
-// URL text input with Add button for loading parquet datasets.
+// "Preset Sources" button at top, then URL text input with Add button.
 // Client-side validation (debounced 300ms), server-side validation on submit.
 
 import { useState, useEffect, useCallback } from "react";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useUiStore } from "@/stores/uiStore";
 import { apiPost } from "@/api/client";
 
 const URL_REGEX = /^https?:\/\/[^/]+\.[^/]+/;
@@ -23,8 +24,9 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const datasets = useDatasetStore((s) => s.datasets);
   const addDataset = useDatasetStore((s) => s.addDataset);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const openPresetModal = useUiStore((s) => s.openPresetModal);
 
-  const atLimit = datasetCount >= 5;
+  const atLimit = datasetCount >= 50;
 
   // Validate a URL synchronously, returning an error string or null.
   const validate = useCallback(
@@ -131,13 +133,30 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
   return (
     <div data-testid="dataset-input">
+      {/* Preset Sources button */}
+      <button
+        onClick={openPresetModal}
+        disabled={atLimit}
+        className="w-full rounded px-3 py-1.5 text-sm font-medium mb-3 disabled:opacity-50"
+        style={{
+          backgroundColor: "var(--color-primary)",
+          color: "var(--color-primary-text, #fff)",
+        }}
+      >
+        Preset Sources
+      </button>
+
+      {/* Custom URL input */}
+      <label className="text-xs font-medium opacity-70 mb-1 block">
+        Custom Parquet URL
+      </label>
       <div className="flex gap-2">
         <input
           type="text"
           value={url}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={atLimit ? "Maximum 5 datasets" : "Paste parquet URL..."}
+          placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
           disabled={atLimit || isSubmitting}
           className="flex-1 rounded border px-2 py-1 text-sm disabled:opacity-50"
           style={{

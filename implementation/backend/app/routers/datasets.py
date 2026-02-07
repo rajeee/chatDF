@@ -97,7 +97,7 @@ async def add_dataset(
 
     try:
         result = await dataset_service.add_dataset(
-            db, conversation["id"], body.url, worker_pool
+            db, conversation["id"], body.url, worker_pool, name=body.name
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -129,13 +129,13 @@ describe("DI-DUP-1: Duplicate URL shows error", () => {
   });
 });
 
-describe("DI-LIMIT-1: At 5 datasets, input disabled", () => {
-  it("disables input and button when at 5 datasets", () => {
+describe("DI-LIMIT-1: At 50 datasets, input disabled", () => {
+  it("disables input and button when at 50 datasets", () => {
     renderWithProviders(
-      <DatasetInput conversationId="conv-1" datasetCount={5} />
+      <DatasetInput conversationId="conv-1" datasetCount={50} />
     );
 
-    const input = screen.getByPlaceholderText("Maximum 5 datasets");
+    const input = screen.getByPlaceholderText("Maximum 50 datasets");
     expect(input).toBeDisabled();
 
     const button = screen.getByRole("button", { name: /add/i });

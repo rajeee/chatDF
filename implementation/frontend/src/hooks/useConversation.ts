@@ -54,7 +54,12 @@ export function useConversation() {
     const datasetState = useDatasetStore.getState();
     if (datasetState.datasets.length === 0 && conversation.datasets.length > 0) {
       for (const ds of conversation.datasets) {
-        datasetState.addDataset(ds);
+        datasetState.addDataset({
+          ...ds,
+          status: ds.status ?? "ready",
+          schema_json: ds.schema_json ?? "{}",
+          error_message: ds.error_message ?? null,
+        });
       }
     }
   }

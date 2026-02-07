@@ -164,6 +164,56 @@ describe("uiStore", () => {
     });
   });
 
+  describe("panel width clamping", () => {
+    it("setLeftPanelWidth clamps to minimum 180", () => {
+      useUiStore.getState().setLeftPanelWidth(100);
+      expect(useUiStore.getState().leftPanelWidth).toBe(180);
+    });
+
+    it("setLeftPanelWidth clamps to maximum 400", () => {
+      useUiStore.getState().setLeftPanelWidth(500);
+      expect(useUiStore.getState().leftPanelWidth).toBe(400);
+    });
+
+    it("setLeftPanelWidth allows values within range", () => {
+      useUiStore.getState().setLeftPanelWidth(300);
+      expect(useUiStore.getState().leftPanelWidth).toBe(300);
+    });
+
+    it("setRightPanelWidth clamps to minimum 200", () => {
+      useUiStore.getState().setRightPanelWidth(100);
+      expect(useUiStore.getState().rightPanelWidth).toBe(200);
+    });
+
+    it("setRightPanelWidth clamps to maximum 500", () => {
+      useUiStore.getState().setRightPanelWidth(600);
+      expect(useUiStore.getState().rightPanelWidth).toBe(500);
+    });
+
+    it("setRightPanelWidth allows values within range", () => {
+      useUiStore.getState().setRightPanelWidth(350);
+      expect(useUiStore.getState().rightPanelWidth).toBe(350);
+    });
+  });
+
+  describe("preset modal", () => {
+    it("openPresetModal sets presetModalOpen to true", () => {
+      useUiStore.getState().openPresetModal();
+      expect(useUiStore.getState().presetModalOpen).toBe(true);
+    });
+
+    it("closePresetModal sets presetModalOpen to false", () => {
+      useUiStore.getState().openPresetModal();
+      useUiStore.getState().closePresetModal();
+      expect(useUiStore.getState().presetModalOpen).toBe(false);
+    });
+
+    it("closePresetModal is idempotent", () => {
+      useUiStore.getState().closePresetModal();
+      expect(useUiStore.getState().presetModalOpen).toBe(false);
+    });
+  });
+
   describe("state independence", () => {
     it("toggling left panel does not affect SQL modal", () => {
       useUiStore.getState().openSqlModal(sampleExecutions);

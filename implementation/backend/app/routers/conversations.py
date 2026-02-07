@@ -141,7 +141,7 @@ async def get_conversation_detail(
 
     # Fetch datasets
     cursor = await db.execute(
-        "SELECT id, name, url, row_count, column_count "
+        "SELECT id, name, url, row_count, column_count, status, schema_json "
         "FROM datasets WHERE conversation_id = ?",
         (conv_id,),
     )
@@ -153,6 +153,8 @@ async def get_conversation_detail(
             url=row["url"],
             row_count=row["row_count"],
             column_count=row["column_count"],
+            status=row["status"] or "ready",
+            schema_json=row["schema_json"] or "{}",
         )
         for row in dataset_rows
     ]

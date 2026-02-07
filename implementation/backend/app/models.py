@@ -32,6 +32,7 @@ class AddDatasetRequest(BaseModel):
     """Body for ``POST /conversations/{id}/datasets``."""
 
     url: str
+    name: str | None = None
 
 
 class RenameConversationRequest(BaseModel):
@@ -107,6 +108,8 @@ class DatasetResponse(BaseModel):
     url: str
     row_count: int
     column_count: int
+    status: str = "ready"
+    schema_json: str = "{}"
 
 
 class ConversationDetailResponse(BaseModel):

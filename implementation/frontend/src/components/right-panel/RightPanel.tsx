@@ -52,10 +52,11 @@ export function RightPanel() {
   return (
     <aside
       data-testid="right-panel"
-      className="flex flex-col border-l relative"
+      className="flex flex-col border-l relative sticky top-12 self-start"
       style={{
         width: rightPanelWidth,
         minWidth: rightPanelWidth,
+        height: "calc(100vh - 3rem)",
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-bg)",
       }}
@@ -66,7 +67,7 @@ export function RightPanel() {
         className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-400/50 transition-colors"
         style={{ zIndex: 10 }}
       />
-      <div className="flex flex-col h-full p-4">
+      <div className="flex flex-col h-full p-4 overflow-y-auto">
         <DatasetInput
           conversationId={conversationId ?? ""}
           datasetCount={datasets.length}

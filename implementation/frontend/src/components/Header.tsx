@@ -6,7 +6,7 @@ export function Header() {
   return (
     <header
       data-testid="header"
-      className="flex items-center h-12 px-4 border-b"
+      className="flex items-center h-12 px-4 border-b sticky top-0 z-20"
       style={{
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-bg)",

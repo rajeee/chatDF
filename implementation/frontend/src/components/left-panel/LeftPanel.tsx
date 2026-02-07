@@ -72,10 +72,11 @@ export function LeftPanel() {
     return (
       <aside
         data-testid="left-panel"
-        className="flex flex-col items-center pt-3"
+        className="flex flex-col items-center pt-3 sticky top-12 self-start"
         style={{
           width: 48,
           minWidth: 48,
+          height: "calc(100vh - 3rem)",
           backgroundColor: "var(--color-surface)",
         }}
       >
@@ -95,14 +96,15 @@ export function LeftPanel() {
   return (
     <aside
       data-testid="left-panel"
-      className="flex flex-col relative"
+      className="flex flex-col relative sticky top-12 self-start"
       style={{
         width: leftPanelWidth,
         minWidth: leftPanelWidth,
+        height: "calc(100vh - 3rem)",
         backgroundColor: "var(--color-surface)",
       }}
     >
-      <div className="flex flex-col h-full p-4">
+      <div className="flex flex-col h-full p-4 overflow-y-auto">
         <div className="flex items-center mb-3">
           <button
             data-testid="toggle-left-panel"

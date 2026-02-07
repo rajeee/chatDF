@@ -1,6 +1,6 @@
 // Implements: spec/frontend/chat_area/message_list/plan.md
 //
-// Scrollable message container with auto-scroll behavior.
+// Message container that renders into the document flow (uses document scroll).
 // Maps over chatStore.messages to render MessageBubble components.
 // Handles streaming display by merging streamingTokens into the active message.
 
@@ -21,24 +21,24 @@ export function MessageList() {
   const openSqlModal = useUiStore((s) => s.openSqlModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
-  // Check if user is near bottom
+  // Check if user is near bottom of page
   const isNearBottom = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientHeight = document.documentElement.clientHeight;
+    return scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD;
   }, []);
 
   // Handle scroll events to detect manual scroll-up
-  const handleScroll = useCallback(() => {
-    if (isNearBottom()) {
-      setUserHasScrolledUp(false);
-    } else {
-      setUserHasScrolledUp(true);
-    }
+  useEffect(() => {
+    const handleScroll = () => {
+      setUserHasScrolledUp(!isNearBottom());
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [isNearBottom]);
 
   // Auto-scroll to bottom when new content arrives
@@ -72,12 +72,10 @@ export function MessageList() {
   }, []);
 
   return (
-    <div className="relative flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-col">
       <div
         data-testid="message-list-scroll"
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-        onScroll={handleScroll}
+        className="px-4 py-4 space-y-4"
       >
         {messages.map((message) => {
           const isStreamingMessage =
@@ -111,7 +109,7 @@ export function MessageList() {
       {userHasScrolledUp && (
         <button
           data-testid="scroll-to-bottom-btn"
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs shadow-md"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs shadow-md z-10"
           style={{
             backgroundColor: "var(--color-surface)",
             color: "var(--color-text)",

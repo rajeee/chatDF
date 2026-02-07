@@ -30,7 +30,7 @@ export function AppShell() {
   return (
     <div
       data-testid="app-shell"
-      className="flex flex-col h-screen"
+      className="flex flex-col min-h-screen"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
       <Header />
@@ -46,7 +46,7 @@ export function AppShell() {
 
       <main
         data-testid="main-grid"
-        className="flex flex-1 overflow-hidden"
+        className="flex flex-1"
       >
         <LeftPanel />
         <ChatArea />

@@ -87,9 +87,9 @@ export function ChatArea() {
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* Constrained-width inner container */}
-      <div className="flex flex-col w-full max-w-3xl flex-1 min-h-0">
+      <div className="flex flex-col w-full max-w-3xl flex-1">
         {/* Main content area - conditional rendering */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col">
           {!hasDatasets && !hasMessages && (
             <OnboardingGuide onSendPrompt={handleSend} />
           )}
@@ -104,10 +104,13 @@ export function ChatArea() {
           {hasMessages && <MessageList />}
         </div>
 
-        {/* Chat input - always visible */}
+        {/* Chat input - sticky at bottom */}
         <div
-          className="p-4 border-t"
-          style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+          className="p-4 border-t sticky bottom-0"
+          style={{
+            borderColor: "var(--color-border, #e5e7eb)",
+            backgroundColor: "var(--color-bg)",
+          }}
         >
           <ChatInput onSend={handleSend} onStop={handleStop} />
         </div>

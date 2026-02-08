@@ -707,3 +707,55 @@ describe("Mobile: auto-close left panel on conversation select", () => {
     expect(useChatStore.getState().activeConversationId).toBe("conv-desktop");
   });
 });
+
+describe("CH-9: Last message preview", () => {
+  it("shows last message preview when available", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-preview",
+        title: "Preview Chat",
+        last_message_preview: "What is the average salary?",
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Preview Chat")).toBeInTheDocument();
+    });
+
+    const preview = screen.getByTestId("conversation-preview");
+    expect(preview).toBeInTheDocument();
+    expect(preview.textContent).toBe("What is the average salary?");
+  });
+
+  it("does not show preview when last_message_preview is null", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-no-preview",
+        title: "No Preview Chat",
+        last_message_preview: null,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No Preview Chat")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("conversation-preview")).not.toBeInTheDocument();
+  });
+});

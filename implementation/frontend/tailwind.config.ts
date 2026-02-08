@@ -45,6 +45,10 @@ export default {
           "0%": { opacity: "0", transform: "translateX(100%)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
+        "progress-slide": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(250%)" },
+        },
       },
       animation: {
         "panel-content-fade-in": "panel-content-fade-in 0.3s ease-out",
@@ -52,6 +56,7 @@ export default {
         "toast-in": "toast-in 0.3s ease-out",
         "toast-out": "toast-out 0.2s ease-in",
         "slide-in-right": "slide-in-right 0.3s ease-out",
+        "progress-slide": "progress-slide 1.5s ease-in-out infinite",
       },
     },
   },

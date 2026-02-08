@@ -21,6 +21,7 @@ interface ConversationSummary {
   created_at: string;
   updated_at: string;
   dataset_count: number;
+  last_message_preview: string | null;
 }
 
 interface ConversationsResponse {
@@ -241,6 +242,14 @@ export function ChatHistory() {
                     >
                       {formatRelativeTime(conv.updated_at)}
                     </span>
+                    {conv.last_message_preview && (
+                      <span
+                        className="block text-xs opacity-30 truncate mt-0.5"
+                        data-testid="conversation-preview"
+                      >
+                        {conv.last_message_preview}
+                      </span>
+                    )}
                   </div>
 
                   {confirmingDeleteId === conv.id ? (

@@ -178,6 +178,60 @@ async def test_list_conversations_sorted_by_updated_at(authed_client, fresh_db, 
 
 
 # ---------------------------------------------------------------------------
+# CONV-EP-2b: GET /conversations - last_message_preview
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_list_conversations_includes_last_message_preview(
+    authed_client, fresh_db, test_user
+):
+    """GET /conversations returns last_message_preview from most recent message."""
+    conv = make_conversation(user_id=test_user["id"], title="Preview Conv")
+    await insert_conversation(fresh_db, conv)
+
+    # Add two messages: the newer one's content should appear as the preview
+    now = datetime.utcnow()
+    msg_old = make_message(
+        conversation_id=conv["id"],
+        role="user",
+        content="First message",
+        created_at=(now - timedelta(minutes=5)).isoformat(),
+    )
+    msg_new = make_message(
+        conversation_id=conv["id"],
+        role="assistant",
+        content="This is the latest reply from the assistant",
+        created_at=now.isoformat(),
+    )
+    await insert_message(fresh_db, msg_old)
+    await insert_message(fresh_db, msg_new)
+
+    response = await authed_client.get("/conversations")
+    body = assert_success_response(response, status_code=200)
+    conversations = body["conversations"]
+    assert len(conversations) == 1
+    assert conversations[0]["last_message_preview"] == "This is the latest reply from the assistant"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_list_conversations_last_message_preview_null_when_no_messages(
+    authed_client, fresh_db, test_user
+):
+    """GET /conversations returns null last_message_preview when conversation has no messages."""
+    conv = make_conversation(user_id=test_user["id"], title="Empty Conv")
+    await insert_conversation(fresh_db, conv)
+
+    response = await authed_client.get("/conversations")
+    body = assert_success_response(response, status_code=200)
+    conversations = body["conversations"]
+    assert len(conversations) == 1
+    assert conversations[0]["last_message_preview"] is None
+
+
+# ---------------------------------------------------------------------------
 # CONV-EP-3: GET /conversations/:id - Detail with messages and datasets
 # ---------------------------------------------------------------------------
 

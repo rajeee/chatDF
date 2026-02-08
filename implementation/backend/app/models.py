@@ -82,6 +82,7 @@ class ConversationSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     dataset_count: int
+    last_message_preview: str | None = None
 
 
 class ConversationListResponse(BaseModel):

@@ -15,6 +15,7 @@ export interface ConversationSummary {
   created_at: string;
   updated_at: string;
   dataset_count: number;
+  last_message_preview: string | null;
 }
 
 export interface MessageResponse {
@@ -79,6 +80,7 @@ export function createConversation(
     created_at: now,
     updated_at: now,
     dataset_count: 0,
+    last_message_preview: null,
     ...overrides,
   };
 }

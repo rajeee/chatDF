@@ -167,10 +167,10 @@ function MessageBubbleComponent({
         </button>
       </div>
 
-      {/* Timestamp on hover */}
+      {/* Timestamp */}
       <span
         data-testid={`timestamp-${message.id}`}
-        className="touch-action-btn text-xs mt-1 opacity-0 group-hover:opacity-70 transition-opacity"
+        className="text-xs mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
         style={{ color: "var(--color-text)" }}
       >
         {formatTimestamp(message.created_at)}

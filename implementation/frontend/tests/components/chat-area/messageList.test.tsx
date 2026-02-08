@@ -477,7 +477,7 @@ describe("Touch-friendly: action buttons visible on touch devices", () => {
     expect(copyBtn.className).toContain("hover:opacity-100");
   });
 
-  it("timestamp has touch-action-btn class for touch device visibility", () => {
+  it("timestamp is always visible with subtle opacity", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
     ]);
@@ -485,8 +485,8 @@ describe("Touch-friendly: action buttons visible on touch devices", () => {
     renderWithProviders(<MessageList />);
 
     const timestamp = screen.getByTestId("timestamp-msg-1");
-    expect(timestamp.className).toContain("touch-action-btn");
-    expect(timestamp.className).toContain("opacity-0");
+    expect(timestamp.className).toContain("opacity-30");
+    expect(timestamp.className).toContain("group-hover:opacity-60");
   });
 });
 

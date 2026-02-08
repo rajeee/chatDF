@@ -85,7 +85,8 @@ async def list_conversations(
     """List all conversations for the authenticated user, sorted by updated_at desc."""
     cursor = await db.execute(
         "SELECT c.id, c.title, c.created_at, c.updated_at, "
-        "  (SELECT COUNT(*) FROM datasets d WHERE d.conversation_id = c.id) AS dataset_count "
+        "  (SELECT COUNT(*) FROM datasets d WHERE d.conversation_id = c.id) AS dataset_count, "
+        "  (SELECT SUBSTR(m.content, 1, 100) FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_preview "
         "FROM conversations c "
         "WHERE c.user_id = ? "
         "ORDER BY c.updated_at DESC",
@@ -100,6 +101,7 @@ async def list_conversations(
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             dataset_count=row["dataset_count"],
+            last_message_preview=row["last_message_preview"],
         )
         for row in rows
     ]

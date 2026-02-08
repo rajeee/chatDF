@@ -96,7 +96,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
             style={{ backgroundColor: "var(--color-bg)" }}
           >
             <div
-              className="h-full w-1/2 rounded-full animate-pulse"
+              className="h-full w-2/5 rounded-full animate-progress-slide"
               style={{ backgroundColor: "var(--color-accent)" }}
             />
           </div>

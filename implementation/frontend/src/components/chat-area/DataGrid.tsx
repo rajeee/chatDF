@@ -52,7 +52,11 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
         cell: ({ getValue }) => {
           const value = getValue();
           if (value === null || value === undefined) {
-            return <span className="italic text-gray-400">null</span>;
+            return (
+              <span className="inline-block px-1.5 py-0.5 rounded text-xs italic text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/50">
+                null
+              </span>
+            );
           }
           return String(value);
         },

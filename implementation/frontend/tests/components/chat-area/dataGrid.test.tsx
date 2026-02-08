@@ -247,6 +247,20 @@ describe("DG-NULL-1: Null cells displayed", () => {
     expect(nullCell.tagName).toBe("SPAN");
     expect(nullCell).toHaveClass("italic");
   });
+
+  it("renders null values with background tint for visual distinction", () => {
+    const rows: Record<string, unknown>[] = [
+      { id: 1, name: null, score: 100 },
+    ];
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={rows} totalRows={1} />
+    );
+
+    const nullCell = screen.getByText("null");
+    expect(nullCell).toHaveClass("bg-gray-100");
+    expect(nullCell).toHaveClass("rounded");
+    expect(nullCell).toHaveClass("text-xs");
+  });
 });
 
 describe("DG-EMPTY-1: Empty state", () => {

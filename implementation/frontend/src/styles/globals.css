@@ -60,6 +60,15 @@
   }
 }
 
+/* Theme transition — smooth cross-fade applied only during theme switch.
+   The useTheme hook should add/remove .theme-transitioning class. */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+}
+
 /* Message appear animation */
 @keyframes messageSlideIn {
   from {
@@ -381,5 +390,12 @@ select:focus-visible {
   /* Disable transition-based motion */
   .skip-to-content {
     transition-duration: 0.01s !important;
+  }
+
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: none !important;
   }
 }

@@ -80,7 +80,11 @@ export function useTheme(): ThemeController {
   function setTheme(m: ThemeMode) {
     mode = m;
     persist(m);
+    document.documentElement.classList.add("theme-transitioning");
     applyTheme();
+    setTimeout(() => {
+      document.documentElement.classList.remove("theme-transitioning");
+    }, 250);
   }
 
   function toggleTheme() {

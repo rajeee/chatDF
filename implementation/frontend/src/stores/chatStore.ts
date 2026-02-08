@@ -7,6 +7,7 @@ export interface SqlExecution {
   rows: unknown[][] | null;
   total_rows: number | null;
   error: string | null;
+  execution_time_ms: number | null;
 }
 
 export interface Message {
@@ -37,6 +38,7 @@ export function parseSqlExecutions(sqlQuery: string | null): SqlExecution[] {
           rows: (item.rows as unknown[][] | null) ?? null,
           total_rows: (item.total_rows as number | null) ?? null,
           error: (item.error as string | null) ?? null,
+          execution_time_ms: (item.execution_time_ms as number | null) ?? null,
         }));
       }
     } catch {
@@ -48,6 +50,7 @@ export function parseSqlExecutions(sqlQuery: string | null): SqlExecution[] {
   return trimmed.split("; ").map((q) => ({
     query: q,
     columns: null,
+    execution_time_ms: null,
     rows: null,
     total_rows: null,
     error: null,

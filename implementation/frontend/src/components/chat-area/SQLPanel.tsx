@@ -78,6 +78,14 @@ function SQLQueryBlock({
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
 
+  // Format execution time for display
+  const formatExecutionTime = (ms: number | null | undefined): string => {
+    if (ms == null) return "";
+    if (ms < 1) return `${ms.toFixed(2)}ms`;
+    if (ms < 1000) return `${ms.toFixed(0)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+
   return (
     <div
       className="rounded-lg border"
@@ -91,7 +99,14 @@ function SQLQueryBlock({
         className="flex items-center justify-between px-3 py-2 border-b"
         style={{ borderColor: "var(--color-border)" }}
       >
-        <span className="text-xs font-medium opacity-70">Query {index + 1}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium opacity-70">Query {index + 1}</span>
+          {execution.execution_time_ms != null && (
+            <span className="text-xs opacity-50">
+              ({formatExecutionTime(execution.execution_time_ms)})
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleCopy}

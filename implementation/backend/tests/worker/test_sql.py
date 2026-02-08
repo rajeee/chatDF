@@ -119,3 +119,32 @@ class TestSQLErrors:
 
         assert result["error_type"] == "sql"
         assert "message" in result
+
+
+class TestExecutionTime:
+    """Tests for query execution time tracking."""
+
+    def test_successful_query_includes_execution_time(self, sample_datasets):
+        """Successful query includes execution_time_ms field."""
+        result = execute_query("SELECT * FROM table1", sample_datasets)
+
+        assert "error_type" not in result
+        assert "execution_time_ms" in result
+        assert isinstance(result["execution_time_ms"], float)
+        assert result["execution_time_ms"] >= 0
+
+    def test_failed_query_includes_execution_time(self, sample_datasets):
+        """Failed query includes execution_time_ms field."""
+        result = execute_query("SELEC * FROM table1", sample_datasets)
+
+        assert result["error_type"] == "sql"
+        assert "execution_time_ms" in result
+        assert isinstance(result["execution_time_ms"], float)
+        assert result["execution_time_ms"] >= 0
+
+    def test_execution_time_is_reasonable(self, sample_datasets):
+        """Execution time is within reasonable bounds (< 10 seconds for small dataset)."""
+        result = execute_query("SELECT * FROM table1 LIMIT 5", sample_datasets)
+
+        assert "error_type" not in result
+        assert result["execution_time_ms"] < 10000  # Should be well under 10 seconds

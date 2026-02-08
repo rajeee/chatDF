@@ -88,6 +88,7 @@ class SqlExecution:
     rows: list[list] | None = None
     total_rows: int | None = None
     error: str | None = None
+    execution_time_ms: float | None = None
 
 
 @dataclass
@@ -410,7 +411,9 @@ async def stream_chat(
                     error_msg = query_result.get("message", query_result.get("error", "Unknown error"))
                     tool_result_str = f"Error executing SQL: {error_msg}"
                     result.sql_executions.append(SqlExecution(
-                        query=query, error=error_msg,
+                        query=query,
+                        error=error_msg,
+                        execution_time_ms=query_result.get("execution_time_ms"),
                     ))
 
                     # Check if max SQL retries reached
@@ -435,6 +438,7 @@ async def stream_chat(
                         columns=columns,
                         rows=capped_rows,
                         total_rows=total,
+                        execution_time_ms=query_result.get("execution_time_ms"),
                     ))
                     tool_result_str = (
                         f"Query executed successfully.\n"

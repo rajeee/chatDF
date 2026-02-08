@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 import urllib.error
 import urllib.request
 
@@ -180,9 +181,11 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
             "rows": list[dict],    # up to 1000 rows
             "columns": list[str],  # column names
             "total_rows": int,     # actual total row count
+            "execution_time_ms": float,  # query execution time in milliseconds
         }
-        On error: {"error_type": str, "message": str, "details": str | None}
+        On error: {"error_type": str, "message": str, "details": str | None, "execution_time_ms": float}
     """
+    start_time = time.perf_counter()
     tmp_paths = []
     try:
         import polars as pl
@@ -217,18 +220,23 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
         # Convert to list of dicts
         rows = truncated_df.to_dicts()
 
+        execution_time_ms = (time.perf_counter() - start_time) * 1000
+
         return {
             "rows": rows,
             "columns": columns,
             "total_rows": total_rows,
+            "execution_time_ms": execution_time_ms,
         }
 
     except Exception as exc:
+        execution_time_ms = (time.perf_counter() - start_time) * 1000
         error_msg = str(exc)
         return {
             "error_type": "sql",
             "message": f"SQL execution error: {error_msg}",
             "details": error_msg,
+            "execution_time_ms": execution_time_ms,
         }
     finally:
         for path in tmp_paths:

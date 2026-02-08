@@ -44,6 +44,7 @@ describe("SQLModal", () => {
           ],
           total_rows: 2,
           error: null,
+          execution_time_ms: null,
         },
       ],
     });
@@ -68,6 +69,7 @@ describe("SQLModal", () => {
           rows: largeDataset,
           total_rows: 1000,
           error: null,
+          execution_time_ms: null,
         },
       ],
     });
@@ -91,11 +93,72 @@ describe("SQLModal", () => {
           rows: null,
           total_rows: 0,
           error: "Table not found",
+          execution_time_ms: null,
         },
       ],
     });
 
     render(<SQLModal />);
     expect(screen.getByText("Show Error")).toBeInTheDocument();
+  });
+
+  it("should display execution time for queries", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT * FROM test",
+          columns: ["id"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: 42.5,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+    expect(screen.getByText(/43ms/)).toBeInTheDocument();
+  });
+
+  it("should display execution time in seconds for slow queries", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT * FROM test",
+          columns: ["id"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: 2345.67,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+    expect(screen.getByText(/2\.35s/)).toBeInTheDocument();
+  });
+
+  it("should not display execution time when null", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT * FROM test",
+          columns: ["id"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: null,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+    expect(screen.getByText("Query 1")).toBeInTheDocument();
+    // Should not show execution time (neither ms nor seconds format)
+    expect(screen.queryByText(/\(\d+\.?\d*ms\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\(\d+\.?\d*s\)/)).not.toBeInTheDocument();
   });
 });

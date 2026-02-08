@@ -4,11 +4,12 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
+import { detectChartTypes } from "@/utils/chartDetection";
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,6 +18,7 @@ interface MessageBubbleProps {
   onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
   onCopySQL: (sql: string) => void;
+  onVisualize: (executions: SqlExecution[], index: number) => void;
 }
 
 function formatTimestamp(isoString: string): string {
@@ -38,9 +40,21 @@ function MessageBubbleComponent({
   onShowReasoning,
   onCopy,
   onCopySQL,
+  onVisualize,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const reasoningContent = message.reasoning;
+
+  // Find the first sql_execution that has chartable data
+  const visualizableIndex = useMemo(() => {
+    for (let i = 0; i < message.sql_executions.length; i++) {
+      const exec = message.sql_executions[i];
+      if (exec.columns && exec.rows && detectChartTypes(exec.columns, exec.rows).length > 0) {
+        return i;
+      }
+    }
+    return -1;
+  }, [message.sql_executions]);
 
   return (
     <div
@@ -93,7 +107,7 @@ function MessageBubbleComponent({
 
         {/* Action buttons row */}
         {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0) && (
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
@@ -133,6 +147,28 @@ function MessageBubbleComponent({
                   <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                 </svg>
                 Copy SQL
+              </button>
+            )}
+
+            {/* Visualize button — prominent, shown when results have chartable data */}
+            {visualizableIndex >= 0 && (
+              <button
+                data-testid={`visualize-btn-${message.id}`}
+                className="text-xs px-3 py-1 rounded border font-medium hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
+                style={{
+                  borderColor: "#34d399",
+                  color: "#34d399",
+                  backgroundColor: "rgba(52, 211, 153, 0.1)",
+                }}
+                onClick={() => onVisualize(message.sql_executions, visualizableIndex)}
+                aria-label="Visualize query results"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="12" width="4" height="9" rx="1" />
+                  <rect x="10" y="7" width="4" height="14" rx="1" />
+                  <rect x="17" y="3" width="4" height="18" rx="1" />
+                </svg>
+                Visualize
               </button>
             )}
           </div>

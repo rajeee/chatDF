@@ -601,3 +601,141 @@ describe("Performance: content-visibility optimization", () => {
     expect(messageRow2).toHaveStyle({ containIntrinsicSize: "auto 100px" });
   });
 });
+
+describe("ML-VIZ-1: Visualize button in chat messages", () => {
+  it("renders Visualize button when sql_execution has chartable data", () => {
+    setChatIdle("conv-1", [
+      makeMessage({
+        id: "msg-viz",
+        role: "assistant",
+        content: "Here are the results",
+        sql_executions: [
+          {
+            query: "SELECT category, count FROM data",
+            columns: ["category", "count"],
+            rows: [["A", 10], ["B", 20], ["C", 30]],
+            total_rows: 3,
+            error: null,
+            execution_time_ms: 42,
+          },
+        ],
+      }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const vizBtn = screen.getByTestId("visualize-btn-msg-viz");
+    expect(vizBtn).toBeInTheDocument();
+    expect(vizBtn.textContent).toContain("Visualize");
+  });
+
+  it("does not render Visualize button when sql_execution has no chartable data", () => {
+    setChatIdle("conv-1", [
+      makeMessage({
+        id: "msg-no-viz",
+        role: "assistant",
+        content: "Results",
+        sql_executions: [
+          {
+            query: "SELECT name FROM users",
+            columns: ["name"],
+            rows: [["Alice"], ["Bob"]],
+            total_rows: 2,
+            error: null,
+            execution_time_ms: 10,
+          },
+        ],
+      }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    expect(screen.queryByTestId("visualize-btn-msg-no-viz")).not.toBeInTheDocument();
+  });
+
+  it("does not render Visualize button when sql_execution has error and no data", () => {
+    setChatIdle("conv-1", [
+      makeMessage({
+        id: "msg-err",
+        role: "assistant",
+        content: "Error occurred",
+        sql_executions: [
+          {
+            query: "SELECT * FROM nonexistent",
+            columns: null,
+            rows: null,
+            total_rows: null,
+            error: "Table not found",
+            execution_time_ms: null,
+          },
+        ],
+      }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    expect(screen.queryByTestId("visualize-btn-msg-err")).not.toBeInTheDocument();
+  });
+
+  it("clicking Visualize button opens SQL chart modal with correct state", async () => {
+    const user = userEvent.setup();
+    const executions = [
+      {
+        query: "SELECT category, count FROM data",
+        columns: ["category", "count"],
+        rows: [["A", 10], ["B", 20], ["C", 30]],
+        total_rows: 3,
+        error: null,
+        execution_time_ms: 42,
+      },
+    ];
+
+    setChatIdle("conv-1", [
+      makeMessage({
+        id: "msg-viz-click",
+        role: "assistant",
+        content: "Results",
+        sql_executions: executions,
+      }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const vizBtn = screen.getByTestId("visualize-btn-msg-viz-click");
+    await user.click(vizBtn);
+
+    const state = useUiStore.getState();
+    expect(state.sqlModalOpen).toBe(true);
+    expect(state.activeSqlExecutions).toHaveLength(1);
+    expect(state.sqlResultModalIndex).toBe(0);
+    expect(state.sqlResultViewMode).toBe("chart");
+  });
+
+  it("Visualize button has green styling and chart icon", () => {
+    setChatIdle("conv-1", [
+      makeMessage({
+        id: "msg-style",
+        role: "assistant",
+        content: "Results",
+        sql_executions: [
+          {
+            query: "SELECT x, y FROM data",
+            columns: ["x", "y"],
+            rows: [[1, 2], [3, 4]],
+            total_rows: 2,
+            error: null,
+            execution_time_ms: 5,
+          },
+        ],
+      }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const vizBtn = screen.getByTestId("visualize-btn-msg-style");
+    expect(vizBtn).toHaveStyle({ borderColor: "#34d399", color: "#34d399" });
+    // Has chart icon SVG
+    expect(vizBtn.querySelector("svg")).not.toBeNull();
+    expect(vizBtn).toHaveAttribute("aria-label", "Visualize query results");
+  });
+});

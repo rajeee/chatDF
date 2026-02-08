@@ -497,17 +497,18 @@ export function SQLModal() {
   const { pos, setPos, onMouseDown, justDragged } = useDraggable();
   const { size, onResizeMouseDown, justResized } = useResizable(400, 200, setPos);
 
-  // Local state for error modal and chart mode
+  // Local state for error modal
   const [errorModalIndex, setErrorModalIndex] = useState<number | null>(null);
-  const [resultViewMode, setResultViewMode] = useState<"table" | "chart">("table");
+  // Chart/table view mode from store (allows external control, e.g. Visualize button in chat)
+  const resultViewMode = useUiStore((s) => s.sqlResultViewMode);
 
   const handleViewChart = useCallback((index: number) => {
-    setResultViewMode("chart");
+    useUiStore.setState({ sqlResultViewMode: "chart" });
     openSqlResultModal(index);
   }, [openSqlResultModal]);
 
   const handleViewOutput = useCallback((index: number) => {
-    setResultViewMode("table");
+    useUiStore.setState({ sqlResultViewMode: "table" });
     openSqlResultModal(index);
   }, [openSqlResultModal]);
 

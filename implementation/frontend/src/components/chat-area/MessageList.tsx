@@ -18,6 +18,7 @@ export function MessageList() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
+  const openSqlChartModal = useUiStore((s) => s.openSqlChartModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -98,6 +99,13 @@ export function MessageList() {
     navigator.clipboard.writeText(sql);
   }, []);
 
+  const handleVisualize = useCallback(
+    (executions: SqlExecution[], index: number) => {
+      openSqlChartModal(executions, index);
+    },
+    [openSqlChartModal]
+  );
+
   return (
     <div className="flex flex-col">
       <div
@@ -120,6 +128,7 @@ export function MessageList() {
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}
               onCopySQL={handleCopySQL}
+              onVisualize={handleVisualize}
             />
           );
         })}

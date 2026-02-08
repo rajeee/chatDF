@@ -7,3 +7,4 @@
 - **Zustand selective subscriptions beat React.memo**: Fine-grained state subscriptions prevent re-renders more effectively than memoization.
 - **CSS custom properties for stagger animations**: Use `--stagger-index` via inline style + `animation-delay: calc(var(--stagger-index) * Xms)` — no JS timer logic needed.
 - **Data shape heuristics work for chart detection**: Sample first 50 rows with a 70% threshold for type classification (numeric, date, categorical) to auto-detect chart types. Keep logic in a pure utility for easy testing.
+- **jsdom normalizes hex colors to rgb()**: In test assertions, check for `rgb(r, g, b)` values, not hex like `#7c3aed`. Use `getAttribute("style")` and match on the rgb tuple string (e.g., `"124, 58, 237"`).

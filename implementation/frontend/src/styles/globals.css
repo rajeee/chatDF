@@ -186,6 +186,15 @@ select:focus-visible {
 }
 
 /* Onboarding fade-in for content sections */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

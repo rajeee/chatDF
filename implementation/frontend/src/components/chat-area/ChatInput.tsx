@@ -207,7 +207,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {showCounter && (
           <span
             data-testid="char-counter"
-            className={`text-xs text-right transition-colors duration-300 ${getCounterColor()}`}
+            className={`text-xs text-right transition-all duration-300 animate-fade-in ${getCounterColor()}`}
           >
             {formattedCount} / {formattedLimit}
           </span>

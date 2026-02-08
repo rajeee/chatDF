@@ -426,7 +426,7 @@ export function ChatHistory() {
 
                         {confirmingDeleteId === conv.id ? (
                           <span
-                            className="flex items-center gap-1 text-xs"
+                            className="flex items-center gap-1 text-xs animate-fade-in"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <span>Delete?</span>

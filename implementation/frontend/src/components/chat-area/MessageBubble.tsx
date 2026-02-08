@@ -205,7 +205,7 @@ function MessageBubbleComponent({
         {/* Copy button - always visible at subtle opacity, brightens on hover */}
         <button
           data-testid={`copy-btn-${message.id}`}
-          className="absolute top-1 right-1 p-1 rounded text-xs opacity-40 hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
+          className="touch-action-btn absolute top-1 right-1 p-1 rounded text-xs opacity-40 hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
           style={{ color: isUser ? "var(--color-white)" : "var(--color-text)" }}
           onClick={() => onCopy(message.content)}
           aria-label="Copy message"

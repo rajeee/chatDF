@@ -13,6 +13,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
 import { apiPost, apiPatch } from "@/api/client";
+import { useToastStore } from "@/stores/toastStore";
 import { generateTitle } from "@/utils/generateTitle";
 import { OnboardingGuide } from "./OnboardingGuide";
 import { SuggestedPrompts } from "./SuggestedPrompts";
@@ -131,6 +132,8 @@ export function ChatArea() {
         }
       } catch (err) {
         console.error("Failed to send message:", err);
+        const errorMsg = err instanceof Error ? err.message : "Failed to send message";
+        useToastStore.getState().error(errorMsg);
         setLoadingPhase("idle");
         setStreaming(false);
       }

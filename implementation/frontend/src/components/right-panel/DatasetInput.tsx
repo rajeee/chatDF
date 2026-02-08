@@ -21,6 +21,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const allDatasets = useDatasetStore((s) => s.datasets);
   const datasets = useMemo(
@@ -116,6 +117,8 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
       setUrl("");
       setError(null);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1000);
       success("Dataset added successfully");
     } catch (err: unknown) {
       const message =
@@ -182,9 +185,10 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             className="w-full rounded border px-2 py-1 text-sm disabled:opacity-50"
             style={{
               backgroundColor: "var(--color-surface)",
-              borderColor: "var(--color-border)",
+              borderColor: showSuccess ? "#22c55e" : "var(--color-border)",
               color: "var(--color-text)",
               paddingRight: url && !atLimit && !isSubmitting ? "1.75rem" : undefined,
+              transition: "border-color 300ms ease",
             }}
           />
           {url && !atLimit && !isSubmitting && (
@@ -202,6 +206,13 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             </button>
           )}
         </div>
+        {showSuccess && (
+          <span data-testid="url-success-icon" className="flex items-center text-green-500 animate-fade-in">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        )}
         <button
           onClick={handleSubmit}
           disabled={addDisabled}

@@ -5,6 +5,8 @@
 
 import { useConnectionStore, type ConnectionStatus } from "@/stores/connectionStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
+import { useChatStore } from "@/stores/chatStore";
 
 const statusConfig: Record<ConnectionStatus, { color: string; label: string }> = {
   connected: { color: "#22c55e", label: "Connected" },
@@ -16,6 +18,10 @@ export function Header() {
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const connectionStatus = useConnectionStore((s) => s.status);
   const { color, label } = statusConfig[connectionStatus];
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const readyDatasetCount = filterDatasetsByConversation(allDatasets, activeConversationId)
+    .filter(d => d.status === "ready").length;
 
   return (
     <header
@@ -55,7 +61,7 @@ export function Header() {
       <button
         data-testid="toggle-right-panel"
         onClick={toggleRightPanel}
-        className="lg:hidden p-1.5 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+        className="lg:hidden relative p-1.5 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
         aria-label="Toggle datasets panel"
         title="Datasets"
       >
@@ -72,6 +78,15 @@ export function Header() {
         >
           <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
+        {readyDatasetCount > 0 && (
+          <span
+            data-testid="dataset-count-badge"
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white"
+            style={{ backgroundColor: "var(--color-accent)" }}
+          >
+            {readyDatasetCount}
+          </span>
+        )}
       </button>
     </header>
   );

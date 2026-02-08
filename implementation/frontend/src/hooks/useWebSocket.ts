@@ -14,6 +14,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
+import { useToastStore } from "@/stores/toastStore";
 
 interface WsMessage {
   type: string;
@@ -125,6 +126,9 @@ export function useWebSocket(isAuthenticated: boolean): void {
         case "ce": // chat_error (compressed)
         case "chat_error": {
           const chatStore = useChatStore.getState();
+          // Show error toast to the user
+          const errorMsg = (msg.error || msg.e) as string | undefined;
+          useToastStore.getState().error(errorMsg || "Something went wrong while generating a response");
           // Preserve any partial streaming content before clearing
           if (chatStore.isStreaming) {
             chatStore.finalizeStreamingMessage();

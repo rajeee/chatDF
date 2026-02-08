@@ -21,6 +21,11 @@ Insights accumulated through improvement iterations.
 - **Animation testing**: Test for class presence rather than actual animation behavior - animations are browser-dependent and hard to test reliably in jsdom.
 - **One focused change wins**: Adding animation to message appearance is high impact for minimal effort - users immediately notice and appreciate the polish.
 
+### Iteration 4 (2026-02-08)
+- **Smooth pulsing > bouncing**: Replaced basic bouncing dots with smooth pulsing animation (scale + opacity). Feels more modern and polished like Slack/Discord typing indicators.
+- **CSS animation stagger**: Use nth-child selectors with animation-delay to create staggered wave effect across multiple dots.
+- **Existing tests may cover new implementation**: The streaming-indicator testid was preserved, so existing tests passed. Added specific test for new dot structure.
+
 ---
 
 ## General Principles

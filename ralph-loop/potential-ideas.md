@@ -13,7 +13,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | U5 | Keyboard shortcuts (Cmd+K search, Esc close modals, etc.) | 3 | 3 | 1.0 | pending |
 | U6 | Fix hardcoded colors — use Tailwind theme tokens everywhere | 3 | 2 | 1.5 | pending |
 | U7 | Message appear animation (slide-up fade-in) | 3 | 1 | 3.0 | done |
-| U8 | Typing indicator animation during streaming | 3 | 1 | 3.0 | pending |
+| U8 | Typing indicator animation during streaming | 3 | 1 | 3.0 | done |
 | U9 | Smooth scroll-to-bottom behavior during streaming | 3 | 1 | 3.0 | pending |
 | U10 | Add subtle hover/active states to all interactive elements | 3 | 2 | 1.5 | pending |
 

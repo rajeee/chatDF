@@ -22,3 +22,4 @@ Track each improvement cycle: what was done, what was learned.
 | 16 | 2026-02-08 | Hover/active states | U10 | 356/356 frontend | 7d71492 |
 | 17 | 2026-02-08 | Production build + code splitting | P9 (C3, C8 found pre-existing) | 356/356 frontend | 2ddb601 |
 | 18 | 2026-02-08 | Request timeout handling | C5 | 356/356 frontend | 14f6b13 |
+| 19 | 2026-02-08 | Global keyboard shortcuts | U5 | 367/367 frontend, 64/65 backend | ed445ab |

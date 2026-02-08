@@ -124,6 +124,14 @@ Insights accumulated through improvement iterations.
 - **Testing fetch with AbortController**: MSW and vitest don't play well with mocked fetch + AbortSignal due to signal validation. For timeout features, rely on manual testing or integration tests rather than unit tests with mocked fetch.
 - **Error inheritance simplifies handling**: Since `TimeoutError extends Error`, existing `err instanceof Error` checks work fine. No need to update all error handlers to check for TimeoutError specifically.
 
+### Iteration 19 (2026-02-08)
+- **Global keyboard shortcuts for power users**: Implemented intuitive shortcuts that make the app feel instantly more professional: `/` to focus chat (Discord/Slack pattern), `Ctrl/Cmd+B` to toggle sidebar, `Ctrl/Cmd+Enter` to send message. These are muscle-memory patterns that users already know from other apps.
+- **useImperativeHandle for ref APIs**: When parent needs to call child methods, expose them via `useImperativeHandle` with custom interface (e.g., `ChatInputHandle` with `focus()` and `sendMessage()` methods). This is cleaner than exposing raw DOM refs.
+- **forwardRef with custom handle types**: Pattern: `forwardRef<CustomHandle, Props>()` where CustomHandle defines the imperative API. Export the handle type so consumers can properly type their refs: `useRef<CustomHandle>(null)`.
+- **Global event listeners in hooks**: For keyboard shortcuts, attach listeners to `document` in a custom hook. Check event target to avoid conflicts (e.g., don't trigger `/` focus when user is already in an input).
+- **Test keyboard events**: Create KeyboardEvent with options (`{ key: "/", ctrlKey: true }`) and dispatch to `document`. For testing events from specific elements, use `Object.defineProperty(event, "target", { value: element })` to set the target.
+- **userEvent.setup() pattern**: Always call `userEvent.setup()` before using `userEvent.type()` or other interactions. Use `renderWithProviders()` for components that need Zustand/React Router context.
+
 ---
 
 ## General Principles

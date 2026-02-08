@@ -72,6 +72,13 @@ Insights accumulated through improvement iterations.
 - **Testing loading states**: Use delayed MSW responses (`await new Promise(resolve => setTimeout(resolve, 100))`) to ensure loading state is visible during tests. Query for skeleton testids immediately after render to verify they appear before data loads.
 - **Perceived performance > actual performance**: Skeleton loading makes the app *feel* faster even when actual load time is the same. Users perceive immediate feedback (skeleton) as more responsive than waiting for real data with no visual feedback.
 
+### Iteration 12 (2026-02-08)
+- **Empty states for better UX**: Added empty state to dataset list in RightPanel. Shows friendly icon + message ("No datasets yet" / "Add a dataset to get started") instead of blank space when no datasets are loaded.
+- **SVG icons for empty states**: Using inline SVG (database icon) with reduced opacity (20%) creates subtle, theme-aware empty state visuals without adding image dependencies. Tailwind utility classes make sizing easy (w-16, h-16).
+- **Conditional rendering pattern**: Use ternary in JSX: `{datasets.length === 0 ? <EmptyState /> : datasets.map(...)}` to cleanly handle empty vs populated list states.
+- **ChatHistory already had empty state**: Discovered conversations list already implemented empty state ("No conversations yet"). Always check similar components for existing patterns before implementing new ones.
+- **Test coverage for empty states**: Create dedicated test file for parent components (RightPanel.test.tsx) to test empty state rendering and transition to populated state when data exists.
+
 ---
 
 ## General Principles

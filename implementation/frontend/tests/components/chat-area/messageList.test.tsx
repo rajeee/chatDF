@@ -281,42 +281,6 @@ describe("ML-SQL-1: Show SQL button opens SQL panel", () => {
     );
   });
 
-  it("renders 'Copy SQL' button when message has sql_executions", () => {
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-2",
-        role: "assistant",
-        content: "Here are the results",
-        sql_query: "SELECT * FROM users",
-        sql_executions: [{ query: "SELECT * FROM users", columns: null, rows: null, total_rows: null, error: null }],
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    expect(screen.getByTestId("copy-sql-btn-msg-2")).toBeInTheDocument();
-  });
-
-  it("clicking 'Copy SQL' button copies all SQL queries to clipboard", () => {
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-2",
-        role: "assistant",
-        content: "Results",
-        sql_executions: [
-          { query: "SELECT * FROM users", columns: null, rows: null, total_rows: null, error: null },
-          { query: "SELECT * FROM orders", columns: null, rows: null, total_rows: null, error: null },
-        ],
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const copySqlBtn = screen.getByTestId("copy-sql-btn-msg-2");
-    fireEvent.click(copySqlBtn);
-
-    expect(writeTextMock).toHaveBeenCalledWith("SELECT * FROM users\n\nSELECT * FROM orders");
-  });
 });
 
 describe("ML-COPY-1: Copy button copies message content", () => {

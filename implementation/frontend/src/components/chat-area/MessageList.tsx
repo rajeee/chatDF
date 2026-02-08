@@ -95,10 +95,6 @@ export function MessageList() {
     navigator.clipboard.writeText(content);
   }, []);
 
-  const handleCopySQL = useCallback((sql: string) => {
-    navigator.clipboard.writeText(sql);
-  }, []);
-
   const handleVisualize = useCallback(
     (executions: SqlExecution[], index: number) => {
       openSqlChartModal(executions, index);
@@ -127,7 +123,6 @@ export function MessageList() {
               onShowSQL={handleShowSQL}
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}
-              onCopySQL={handleCopySQL}
               onVisualize={handleVisualize}
             />
           );

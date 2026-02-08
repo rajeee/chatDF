@@ -339,6 +339,31 @@ describe("ChatInput accessibility and focus", () => {
   });
 });
 
+describe("ChatInput focus-visible (global CSS)", () => {
+  it("textarea relies on global focus-visible styles, not inline overrides", () => {
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput onSend={onSend} onStop={onStop} />);
+
+    const textarea = screen.getByRole("textbox", { name: /message input/i });
+    // focus:outline-none and focus:ring-* are handled globally via CSS focus-visible
+    expect(textarea.className).not.toContain("focus:outline-none");
+    expect(textarea.className).not.toContain("focus:ring-");
+  });
+
+  it("send button relies on global focus-visible styles", () => {
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput onSend={onSend} onStop={onStop} />);
+
+    const sendButton = screen.getByRole("button", { name: /send message/i });
+    expect(sendButton.className).not.toContain("focus:outline-none");
+    expect(sendButton.className).not.toContain("focus:ring-");
+  });
+});
+
 describe("ChatInput responsive layout", () => {
   it("textarea has responsive padding classes", () => {
     const onSend = vi.fn();

@@ -117,6 +117,22 @@
   outline-offset: 2px;
 }
 
+/* Focus-visible outlines for keyboard navigation.
+   Shows a consistent accent-colored ring ONLY when using keyboard (Tab/Shift+Tab),
+   not on mouse click. Covers buttons, links, inputs, selects, textareas. */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Inputs and textareas get a ring instead of outline for cleaner look */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
 /* Touch device support: show action buttons that are normally hover-only.
    On devices without hover (phones, tablets), these buttons would be permanently
    invisible since there's no hover state. Show them at subtle opacity instead. */

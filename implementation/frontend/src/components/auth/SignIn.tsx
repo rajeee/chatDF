@@ -47,7 +47,7 @@ export function SignIn() {
             placeholder="Enter referral key"
             value={referralKey}
             onChange={(e) => setReferralKey(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md bg-surface text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full px-3 py-2 border rounded-md bg-surface text-foreground placeholder:text-muted-foreground"
           />
 
           <button

@@ -218,7 +218,7 @@ export function ChatHistory() {
                   onChange={(e) => setEditingTitle(e.target.value)}
                   onBlur={() => handleRenameSubmit(conv.id)}
                   onKeyDown={(e) => handleRenameKeyDown(e, conv.id)}
-                  className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm outline-none"
+                  className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (

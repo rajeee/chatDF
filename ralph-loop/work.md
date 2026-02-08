@@ -5,7 +5,6 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 
 ## Tasks
 
-- [x] Simplify welcome/onboarding screen: Remove the numbered 1-2-3 step list. The welcome screen should just be: "chatDF" title, a [Try with preset sources] button, and a line saying "...or load your own data". Rename "Try with sample data" to "Try with preset sources" everywhere. *(Done: iteration 53, commit af6d022)*
 - [ ] Fix per-conversation dataset state: When switching to a new chat, the right-side dataset panel should start empty. When switching back to a previous chat, show the datasets that were loaded in that session. Currently the loaded datasets don't change when switching conversations.
 - [ ] Fix preset sources modal checkbox click targets: Clicking directly on the checkbox doesn't toggle it, only clicking on the name works. The entire row (including the checkbox itself) should be clickable.
 - [ ] Fix schema viewer in dataset panel: When opening a dataset from the right panel, it only shows number of rows and columns but doesn't list column names and types. Even clicking "Refresh schema" doesn't show columns. The schema viewer must display each column's name and data type.

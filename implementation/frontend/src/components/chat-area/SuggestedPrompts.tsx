@@ -4,6 +4,7 @@
 // Displays contextual prompt suggestions based on loaded dataset schemas.
 // Uses column names and types to generate smart, schema-aware questions.
 
+import { useCallback, useRef, useState } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 
 interface SchemaColumn {
@@ -133,6 +134,34 @@ export function SuggestedPrompts({
   onSendPrompt,
 }: SuggestedPromptsProps) {
   const suggestions = buildSmartSuggestions(datasets);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (suggestions.length === 0) return;
+
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const next =
+          focusedIndex < 0 ? 0 : (focusedIndex + 1) % suggestions.length;
+        setFocusedIndex(next);
+        chipRefs.current[next]?.focus();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev =
+          focusedIndex <= 0
+            ? suggestions.length - 1
+            : focusedIndex - 1;
+        setFocusedIndex(prev);
+        chipRefs.current[prev]?.focus();
+      } else if (e.key === "Enter" && focusedIndex >= 0) {
+        e.preventDefault();
+        onSendPrompt(suggestions[focusedIndex]);
+      }
+    },
+    [focusedIndex, suggestions, onSendPrompt]
+  );
 
   return (
     <div
@@ -145,11 +174,23 @@ export function SuggestedPrompts({
       >
         Try asking a question about your data
       </p>
-      <div className="flex flex-wrap gap-2 justify-center max-w-lg onboarding-fade-in-delayed">
-        {suggestions.map((suggestion) => (
+      <div
+        role="listbox"
+        aria-label="Suggested prompts"
+        onKeyDown={handleKeyDown}
+        className="flex flex-wrap gap-2 justify-center max-w-lg onboarding-fade-in-delayed"
+      >
+        {suggestions.map((suggestion, index) => (
           <button
             key={suggestion}
+            ref={(el) => {
+              chipRefs.current[index] = el;
+            }}
+            role="option"
+            aria-selected={focusedIndex === index}
+            tabIndex={focusedIndex === index || (focusedIndex < 0 && index === 0) ? 0 : -1}
             onClick={() => onSendPrompt(suggestion)}
+            onFocus={() => setFocusedIndex(index)}
             className="prompt-chip px-4 py-2 rounded-full text-sm cursor-pointer"
             style={{
               backgroundColor: "var(--color-surface)",

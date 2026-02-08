@@ -8,10 +8,12 @@
 // SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
-import { apiPost } from "@/api/client";
+import { apiPost, apiPatch } from "@/api/client";
+import { generateTitle } from "@/utils/generateTitle";
 import { OnboardingGuide } from "./OnboardingGuide";
 import { SuggestedPrompts } from "./SuggestedPrompts";
 import { MessageList } from "./MessageList";
@@ -21,6 +23,7 @@ import { ChartModal } from "./ChartModal";
 import { ReasoningModal } from "./ReasoningModal";
 
 export function ChatArea() {
+  const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
   const addMessage = useChatStore((s) => s.addMessage);
   const setStreaming = useChatStore((s) => s.setStreaming);
@@ -68,6 +71,9 @@ export function ChatArea() {
 
   const handleSend = useCallback(
     async (text: string) => {
+      // Check if this is the first message BEFORE adding it to the store
+      const isFirstMessage = messages.length === 0;
+
       // Optimistic: show user message immediately
       const userMessage = {
         id: `msg-${Date.now()}`,
@@ -98,13 +104,37 @@ export function ChatArea() {
 
         // Backend acknowledged — streaming will begin via WS (chat_token events).
         // The WS chat_token handler sets streaming=true on the first token.
+
+        // Auto-generate conversation title from the first user message
+        if (isFirstMessage) {
+          const title = generateTitle(text);
+          // Fire-and-forget: don't block on the title update
+          apiPatch(`/conversations/${convId}`, { title }).then(() => {
+            // Optimistically update the conversation list cache so the
+            // left panel reflects the new title immediately
+            queryClient.setQueryData<{ conversations: Array<{ id: string; title: string }> }>(
+              ["conversations"],
+              (old) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  conversations: old.conversations.map((c) =>
+                    c.id === convId ? { ...c, title } : c
+                  ),
+                };
+              }
+            );
+          }).catch((err) => {
+            console.error("Failed to auto-generate conversation title:", err);
+          });
+        }
       } catch (err) {
         console.error("Failed to send message:", err);
         setLoadingPhase("idle");
         setStreaming(false);
       }
     },
-    [addMessage, setStreaming, setLoadingPhase, activeConversationId, setActiveConversation]
+    [addMessage, setStreaming, setLoadingPhase, activeConversationId, setActiveConversation, queryClient, messages]
   );
 
   // Enable global keyboard shortcuts

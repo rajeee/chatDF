@@ -209,9 +209,9 @@ describe("OB-5: SuggestedPrompts shown when datasets exist but no messages", () 
     );
 
     expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
-    // Should have clickable prompt suggestions
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
+    // Should have clickable prompt suggestions (role="option" in listbox)
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBeGreaterThan(0);
   });
 
   it("includes dataset name in at least one suggestion", () => {
@@ -253,9 +253,9 @@ describe("OB-ANIM: Prompt chips and onboarding have animation classes", () => {
       />
     );
 
-    const buttons = screen.getAllByRole("button");
-    for (const button of buttons) {
-      expect(button).toHaveClass("prompt-chip");
+    const options = screen.getAllByRole("option");
+    for (const option of options) {
+      expect(option).toHaveClass("prompt-chip");
     }
   });
 
@@ -317,8 +317,8 @@ describe("OB-6: Clicking prompt chip calls onSendPrompt", () => {
       />
     );
 
-    const buttons = screen.getAllByRole("button");
-    await user.click(buttons[0]);
+    const options = screen.getAllByRole("option");
+    await user.click(options[0]);
 
     expect(onSendPrompt).toHaveBeenCalledTimes(1);
     expect(typeof onSendPrompt.mock.calls[0][0]).toBe("string");

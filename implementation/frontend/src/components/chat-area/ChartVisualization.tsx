@@ -33,8 +33,8 @@ function extractColumn(
   rows: unknown[][],
   colIdx: number,
   columns: string[],
-): unknown[] {
-  return rows.map((row) => cellValueRaw(row, colIdx, columns));
+): (string | number | Date | null)[] {
+  return rows.map((row) => cellValueRaw(row, colIdx, columns) as string | number | Date | null);
 }
 
 /** Build Plotly trace(s) and layout for a given chart recommendation */

@@ -7,7 +7,7 @@
 // ChatInput is always visible at the bottom.
 // SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
@@ -79,6 +79,17 @@ export function ChatArea() {
   useKeyboardShortcuts({
     chatInputRef,
   });
+
+  // Auto-focus chat input when switching conversations
+  useEffect(() => {
+    if (activeConversationId && chatInputRef.current) {
+      // Small delay to allow the conversation to load before focusing
+      const timer = setTimeout(() => {
+        chatInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeConversationId]);
 
   const handleStop = useCallback(async () => {
     if (!activeConversationId) return;

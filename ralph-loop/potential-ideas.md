@@ -50,4 +50,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | U11 | Toast fade-out animation on dismiss | 3 | 1 | 3.0 | done |
 | C12 | SQL query history with quick re-run | 4 | 3 | 1.33 | done |
 | U12 | Progressive color warning for character counter (gray→orange→red) | 3 | 1 | 3.0 | done |
-| U13 | Add Cmd/Ctrl+K shortcut to focus chat input (industry standard) | 4 | 1 | 4.0 | pending |
+| U13 | Add Cmd/Ctrl+K shortcut to focus chat input (industry standard) | 4 | 1 | 4.0 | done |

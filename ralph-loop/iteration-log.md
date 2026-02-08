@@ -32,3 +32,4 @@ Track each improvement cycle: what was done, what was learned.
 | 26 | 2026-02-08 | Toast fade-out animation | U11 | 325/375 frontend, backend unchanged | 58daf51 |
 | 27 | 2026-02-08 | SQL query history with quick re-run | C12 | 325/376 frontend, 64/65 backend | 7a2992a |
 | 28 | 2026-02-08 | Progressive color warning for character counter | U12 | 325/380 frontend, backend unchanged | c6a578f |
+| 29 | 2026-02-08 | Cmd/Ctrl+K keyboard shortcut | U13 | 328/383 frontend, backend unchanged | 455ebb4 |

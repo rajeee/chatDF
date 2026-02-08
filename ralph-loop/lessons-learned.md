@@ -206,6 +206,15 @@ Insights accumulated through improvement iterations.
 - **Test count stable**: Frontend remains at 325/380 passing (55 pre-existing failures from API client/routing/component rendering issues). Backend unchanged at pre-existing state.
 - **Small details matter**: This is a tiny polish improvement (~10 lines of actual code) but provides immediate user-visible feedback. Demonstrates how small UX refinements can make the app feel more thoughtful and professional.
 
+### Iteration 29 (2026-02-08)
+- **Cmd/Ctrl+K keyboard shortcut for chat focus**: Added industry-standard keyboard shortcut pattern (Linear, Notion, GitHub) to focus chat input. Works alongside existing "/" shortcut but is more powerful - Cmd/Ctrl+K works from anywhere, even when already in an input field, while "/" only works when not in an input.
+- **Extending existing shortcut infrastructure**: Built on top of existing useKeyboardShortcuts hook by simply adding new handler. The infrastructure was already clean and extensible, making this addition trivial (~7 lines of hook code + comments).
+- **Muscle-memory patterns**: Power users already know Cmd/Ctrl+K from other apps. Adding familiar shortcuts makes the app feel immediately more professional and reduces learning curve.
+- **Different behavior than existing shortcut**: Unlike "/" which checks `!isInputFocused`, Cmd/Ctrl+K always focuses chat input regardless of current focus state. This makes it more suitable for quick navigation from deep UI states (e.g., inside modals, settings panels, etc.).
+- **Comprehensive test coverage**: Added 3 tests covering both Ctrl (Windows/Linux) and Cmd (Mac) variants, plus test verifying it works even when already in an input field. All 10 keyboard shortcut tests pass.
+- **Zero breaking changes**: All existing shortcuts (/, Ctrl+B, Ctrl+Enter) continue to work exactly as before. Frontend test count unchanged at 328/383 passing (55 pre-existing failures).
+- **High impact, minimal effort**: This is a perfect example of a polish improvement - adds "wow factor" for keyboard users, zero bundle size increase, 5 minutes to implement, immediately noticeable. Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

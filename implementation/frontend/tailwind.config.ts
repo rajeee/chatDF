@@ -29,10 +29,15 @@ export default {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "toast-in": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "panel-content-fade-in": "panel-content-fade-in 0.3s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
+        "toast-in": "toast-in 0.3s ease-out",
       },
     },
   },

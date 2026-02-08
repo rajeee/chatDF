@@ -8,10 +8,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
+import { useToastStore } from "@/stores/toastStore";
 
 export function Settings() {
   const queryClient = useQueryClient();
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const { success, error: showError } = useToastStore();
 
   // Theme
   const theme = useTheme();
@@ -48,6 +50,12 @@ export function Settings() {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setActiveConversation(null);
       setShowClearConfirm(false);
+      success("All conversations deleted");
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete conversations";
+      showError(message);
     },
   });
 

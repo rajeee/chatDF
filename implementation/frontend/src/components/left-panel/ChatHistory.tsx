@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiDelete, apiPost } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
+import { useToastStore } from "@/stores/toastStore";
 
 interface ConversationSummary {
   id: string;
@@ -28,6 +29,7 @@ export function ChatHistory() {
   const queryClient = useQueryClient();
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const { success, error: showError } = useToastStore();
 
   const { data } = useQuery({
     queryKey: ["conversations"],
@@ -57,6 +59,12 @@ export function ChatHistory() {
       apiPatch(`/conversations/${id}`, { title }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      success("Conversation renamed");
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to rename conversation";
+      showError(message);
     },
     onSettled: () => {
       setEditingId(null);
@@ -70,6 +78,12 @@ export function ChatHistory() {
       if (activeConversationId === id) {
         setActiveConversation(null);
       }
+      success("Conversation deleted");
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete conversation";
+      showError(message);
     },
     onSettled: () => {
       setConfirmingDeleteId(null);

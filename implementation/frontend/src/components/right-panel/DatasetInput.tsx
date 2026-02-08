@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useToastStore } from "@/stores/toastStore";
 import { apiPost } from "@/api/client";
 
 const URL_REGEX = /^https?:\/\/[^/]+\.[^/]+/;
@@ -25,6 +26,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const addDataset = useDatasetStore((s) => s.addDataset);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const openPresetModal = useUiStore((s) => s.openPresetModal);
+  const { success, error: showError } = useToastStore();
 
   const atLimit = datasetCount >= 50;
 
@@ -112,10 +114,12 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
       setUrl("");
       setError(null);
+      success("Dataset added successfully");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to add dataset";
       setError(message);
+      showError(message);
     } finally {
       setIsSubmitting(false);
     }

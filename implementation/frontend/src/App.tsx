@@ -8,19 +8,23 @@ import { Routes, Route } from "react-router-dom";
 import { SignIn } from "@/components/auth/SignIn";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
+import { ToastContainer } from "@/components/common/ToastContainer";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/sign-in" element={<SignIn />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppShell />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      <ToastContainer />
+    </>
   );
 }

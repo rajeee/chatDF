@@ -291,7 +291,7 @@ export function PresetSourcesModal() {
                   style={{ borderColor: "var(--color-border)" }}
                   onClick={() => !isLoading && toggleSelection(idx)}
                 >
-                  <td className="py-1.5">
+                  <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selected.has(idx)}

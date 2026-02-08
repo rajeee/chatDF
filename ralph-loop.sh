@@ -50,14 +50,13 @@ warn(){ echo -e "${YELLOW}[ralph $(date +%H:%M:%S)] !${NC} $*"; }
 
 # Count completed iterations from log
 get_iteration_number() {
+  local count=0
   if [[ -f "$LOOP_DIR/iteration-log.md" ]]; then
-    # Count table rows (lines starting with |, excluding header and separator)
-    local count
-    count=$(grep -c '^| [0-9]' "$LOOP_DIR/iteration-log.md" 2>/dev/null || echo "0")
-    echo $((count + 1))
-  else
-    echo 1
+    count=$(grep -c '^| [0-9]' "$LOOP_DIR/iteration-log.md" 2>/dev/null || true)
+    # grep -c may return empty string on no match
+    count=${count:-0}
   fi
+  echo $((count + 1))
 }
 
 # Build the prompt for Claude

@@ -11,6 +11,11 @@ Insights accumulated through improvement iterations.
 - **Backend pytest needs uv pip install**: The venv doesn't have pip, use `uv pip install` instead.
 - **Backend has pre-existing test failure**: `test_messages_table_structure` fails — not related to frontend changes. Tracked separately.
 
+### Iteration 2 (2026-02-08)
+- **Zustand persist middleware**: Use `partialize` option to selectively persist only certain state fields. Perfect for separating persistent UI preferences from ephemeral modal state.
+- **localStorage test pattern**: Access persisted data via `JSON.parse(localStorage.getItem("store-name") || "{}").state.fieldName` in tests.
+- **uv.lock from previous session**: Found uncommitted `uv.lock` change from prior work. Committed alongside iteration changes per workflow rules.
+
 ---
 
 ## General Principles

@@ -7,6 +7,7 @@
 // OB-4: Hidden when messages exist
 // OB-5: SuggestedPrompts shown when datasets exist but no messages
 // OB-6: Clicking prompt chip calls onSendPrompt
+// OB-7: Smart schema-based suggestions
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderWithProviders, screen, userEvent } from "../../helpers/render";
@@ -18,7 +19,7 @@ import {
 } from "../../helpers/stores";
 import { useChatStore } from "@/stores/chatStore";
 import { OnboardingGuide } from "@/components/chat-area/OnboardingGuide";
-import { SuggestedPrompts } from "@/components/chat-area/SuggestedPrompts";
+import { SuggestedPrompts, buildSmartSuggestions } from "@/components/chat-area/SuggestedPrompts";
 import { ChatArea } from "@/components/chat-area/ChatArea";
 import { useUiStore } from "@/stores/uiStore";
 import { SAMPLE_DATASET_URL, SAMPLE_PROMPT_CHIPS } from "@/lib/constants";
@@ -30,7 +31,43 @@ const IRIS_DATASET: Dataset = {
   name: "iris",
   row_count: 150,
   column_count: 5,
-  schema_json: '{"columns":["sepal_length","sepal_width","petal_length","petal_width","species"]}',
+  schema_json: '[{"name":"sepal_length","type":"Float64"},{"name":"sepal_width","type":"Float64"},{"name":"petal_length","type":"Float64"},{"name":"petal_width","type":"Float64"},{"name":"species","type":"String"}]',
+  status: "ready",
+  error_message: null,
+};
+
+const LEGACY_SCHEMA_DATASET: Dataset = {
+  id: "ds-legacy",
+  conversation_id: "conv-1",
+  url: "https://example.com/data.parquet",
+  name: "legacy",
+  row_count: 100,
+  column_count: 3,
+  schema_json: '{"columns":["col_a","col_b","col_c"]}',
+  status: "ready",
+  error_message: null,
+};
+
+const TIMESERIES_DATASET: Dataset = {
+  id: "ds-ts",
+  conversation_id: "conv-1",
+  url: "https://example.com/timeseries.parquet",
+  name: "sales",
+  row_count: 10000,
+  column_count: 4,
+  schema_json: '[{"name":"date","type":"Date"},{"name":"revenue","type":"Float64"},{"name":"units_sold","type":"Int64"},{"name":"region","type":"String"}]',
+  status: "ready",
+  error_message: null,
+};
+
+const NUMERIC_ONLY_DATASET: Dataset = {
+  id: "ds-num",
+  conversation_id: "conv-1",
+  url: "https://example.com/metrics.parquet",
+  name: "metrics",
+  row_count: 500,
+  column_count: 3,
+  schema_json: '[{"name":"temperature","type":"Float64"},{"name":"pressure","type":"Float32"},{"name":"humidity","type":"Int32"}]',
   status: "ready",
   error_message: null,
 };
@@ -166,7 +203,7 @@ describe("OB-5: SuggestedPrompts shown when datasets exist but no messages", () 
 
     renderWithProviders(
       <SuggestedPrompts
-        datasetNames={[IRIS_DATASET.name]}
+        datasets={[IRIS_DATASET]}
         onSendPrompt={onSendPrompt}
       />
     );
@@ -183,7 +220,7 @@ describe("OB-5: SuggestedPrompts shown when datasets exist but no messages", () 
 
     renderWithProviders(
       <SuggestedPrompts
-        datasetNames={[IRIS_DATASET.name]}
+        datasets={[IRIS_DATASET]}
         onSendPrompt={onSendPrompt}
       />
     );
@@ -211,7 +248,7 @@ describe("OB-ANIM: Prompt chips and onboarding have animation classes", () => {
 
     renderWithProviders(
       <SuggestedPrompts
-        datasetNames={[IRIS_DATASET.name]}
+        datasets={[IRIS_DATASET]}
         onSendPrompt={onSendPrompt}
       />
     );
@@ -243,7 +280,7 @@ describe("OB-ANIM: Prompt chips and onboarding have animation classes", () => {
 
     renderWithProviders(
       <SuggestedPrompts
-        datasetNames={[IRIS_DATASET.name]}
+        datasets={[IRIS_DATASET]}
         onSendPrompt={onSendPrompt}
       />
     );
@@ -275,7 +312,7 @@ describe("OB-6: Clicking prompt chip calls onSendPrompt", () => {
 
     renderWithProviders(
       <SuggestedPrompts
-        datasetNames={[IRIS_DATASET.name]}
+        datasets={[IRIS_DATASET]}
         onSendPrompt={onSendPrompt}
       />
     );
@@ -285,5 +322,79 @@ describe("OB-6: Clicking prompt chip calls onSendPrompt", () => {
 
     expect(onSendPrompt).toHaveBeenCalledTimes(1);
     expect(typeof onSendPrompt.mock.calls[0][0]).toBe("string");
+  });
+});
+
+describe("OB-7: Smart schema-based suggestions", () => {
+  it("returns empty array for no datasets", () => {
+    expect(buildSmartSuggestions([])).toEqual([]);
+  });
+
+  it("generates suggestions mentioning numeric column names for numeric+categorical schema", () => {
+    const suggestions = buildSmartSuggestions([IRIS_DATASET]);
+
+    // Should reference actual column names
+    expect(suggestions.some((s) => s.includes("sepal length"))).toBe(true);
+    // Should reference the categorical column
+    expect(suggestions.some((s) => s.includes("species"))).toBe(true);
+    // Should have "average ... by ..." pattern
+    expect(suggestions.some((s) => /average.*by/i.test(s))).toBe(true);
+  });
+
+  it("generates trend suggestion for date + numeric schema", () => {
+    const suggestions = buildSmartSuggestions([TIMESERIES_DATASET]);
+
+    // Should have a trend suggestion mentioning the date column
+    expect(suggestions.some((s) => s.includes("trend"))).toBe(true);
+    expect(suggestions.some((s) => s.includes("date"))).toBe(true);
+  });
+
+  it("generates min/max/average for numeric-only schema", () => {
+    const suggestions = buildSmartSuggestions([NUMERIC_ONLY_DATASET]);
+
+    // Should suggest min, max, average since no categorical cols
+    expect(suggestions.some((s) => /min.*max.*average/i.test(s))).toBe(true);
+  });
+
+  it("generates distribution suggestion for categorical columns", () => {
+    const suggestions = buildSmartSuggestions([IRIS_DATASET]);
+
+    expect(suggestions.some((s) => s.includes("distribution"))).toBe(true);
+  });
+
+  it("falls back to generic suggestions when schema is unparseable", () => {
+    const badSchemaDataset: Dataset = {
+      ...IRIS_DATASET,
+      schema_json: "not-json",
+    };
+    const suggestions = buildSmartSuggestions([badSchemaDataset]);
+
+    expect(suggestions).toContain("Show me the first 5 rows of iris");
+    expect(suggestions).toContain("How many rows are in iris?");
+  });
+
+  it("falls back to generic suggestions for legacy schema format (string-only columns)", () => {
+    const suggestions = buildSmartSuggestions([LEGACY_SCHEMA_DATASET]);
+
+    // Legacy format has array of strings, not {name, type} objects - treated as empty
+    expect(suggestions).toContain("Show me the first 5 rows of legacy");
+    expect(suggestions).toContain("How many rows are in legacy?");
+  });
+
+  it("returns at most 4 suggestions", () => {
+    const suggestions = buildSmartSuggestions([TIMESERIES_DATASET]);
+    expect(suggestions.length).toBeLessThanOrEqual(4);
+  });
+
+  it("always starts with a preview suggestion", () => {
+    const suggestions = buildSmartSuggestions([IRIS_DATASET]);
+    expect(suggestions[0]).toBe("Show me the first 5 rows of iris");
+  });
+
+  it("formats underscored column names with spaces", () => {
+    const suggestions = buildSmartSuggestions([IRIS_DATASET]);
+    // "sepal_length" should appear as "sepal length"
+    expect(suggestions.some((s) => s.includes("sepal length"))).toBe(true);
+    expect(suggestions.some((s) => s.includes("sepal_length"))).toBe(false);
   });
 });

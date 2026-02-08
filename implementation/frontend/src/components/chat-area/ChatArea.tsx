@@ -122,7 +122,7 @@ export function ChatArea() {
 
           {hasDatasets && !hasMessages && (
             <SuggestedPrompts
-              datasetNames={datasets.map((d) => d.name)}
+              datasets={datasets}
               onSendPrompt={handleSend}
             />
           )}

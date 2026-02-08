@@ -74,9 +74,43 @@ export function RightPanel() {
           datasetCount={datasets.length}
         />
         <div className="mt-4 flex flex-col gap-2 overflow-y-auto">
-          {datasets.map((dataset) => (
-            <DatasetCard key={dataset.id} dataset={dataset} />
-          ))}
+          {datasets.length === 0 ? (
+            <div
+              data-testid="datasets-empty-state"
+              className="flex flex-col items-center justify-center py-12 px-4 text-center"
+            >
+              <svg
+                className="w-16 h-16 mb-4 opacity-20"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
+              <p
+                className="text-sm font-medium mb-1"
+                style={{ color: "var(--color-text)" }}
+              >
+                No datasets yet
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Add a dataset to get started
+              </p>
+            </div>
+          ) : (
+            datasets.map((dataset) => (
+              <DatasetCard key={dataset.id} dataset={dataset} />
+            ))
+          )}
         </div>
       </div>
       <SchemaModal />

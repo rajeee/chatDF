@@ -8,16 +8,20 @@ export interface Toast {
   message: string;
   type: ToastType;
   duration?: number; // ms, defaults to 5000
+  dismissing?: boolean; // true when fade-out animation is playing
 }
 
 interface ToastState {
   toasts: Toast[];
   addToast: (message: string, type: ToastType, duration?: number) => void;
+  dismissToast: (id: string) => void;
   removeToast: (id: string) => void;
   success: (message: string, duration?: number) => void;
   error: (message: string, duration?: number) => void;
   info: (message: string, duration?: number) => void;
 }
+
+const FADE_OUT_DURATION = 200; // ms, must match tailwind animation duration
 
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
@@ -30,17 +34,30 @@ export const useToastStore = create<ToastState>((set) => ({
       toasts: [...state.toasts, toast],
     }));
 
-    // Auto-remove after duration
+    // Auto-dismiss after duration (triggers fade-out animation)
     if (duration > 0) {
       setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        }));
+        useToastStore.getState().dismissToast(id);
       }, duration);
     }
   },
 
+  dismissToast: (id) => {
+    // Mark as dismissing to trigger fade-out animation
+    set((state) => ({
+      toasts: state.toasts.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
+    }));
+
+    // Remove from store after animation completes
+    setTimeout(() => {
+      set((state) => ({
+        toasts: state.toasts.filter((t) => t.id !== id),
+      }));
+    }, FADE_OUT_DURATION);
+  },
+
   removeToast: (id) => {
+    // Immediate removal (no animation) - kept for backwards compatibility
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     }));

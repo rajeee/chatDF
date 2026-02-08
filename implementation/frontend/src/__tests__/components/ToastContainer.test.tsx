@@ -74,9 +74,9 @@ describe("ToastContainer", () => {
     const closeButton = screen.getByLabelText("Close");
     await user.click(closeButton);
 
-    // Toast should be removed from store
+    // Toast should be marked as dismissing first
     const { toasts } = useToastStore.getState();
-    expect(toasts).toHaveLength(0);
+    expect(toasts[0]?.dismissing).toBe(true);
   });
 
   it("should have correct classes for animation", () => {
@@ -87,6 +87,21 @@ describe("ToastContainer", () => {
 
     const toast = screen.getByTestId("toast-success");
     expect(toast.className).toContain("animate-toast-in");
+  });
+
+  it("should apply fade-out animation when dismissing", async () => {
+    const user = userEvent.setup();
+    const { success } = useToastStore.getState();
+    success("Dismissing toast");
+
+    render(<ToastContainer />);
+
+    const closeButton = screen.getByLabelText("Close");
+    await user.click(closeButton);
+
+    // Toast should have fade-out animation class
+    const toast = screen.getByTestId("toast-success");
+    expect(toast.className).toContain("animate-toast-out");
   });
 
   it("should display toast container in fixed bottom-right position", () => {

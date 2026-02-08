@@ -2,6 +2,7 @@
 // - Registers @testing-library/jest-dom matchers (toBeInTheDocument, etc.)
 // - Starts/stops MSW server for network mocking
 // - Mocks WebSocket to prevent real connections in test environment
+// - Patches Request constructor for Bun/jsdom AbortSignal compatibility
 // - Cleans up after each test
 
 import "@testing-library/jest-dom/vitest";
@@ -9,6 +10,34 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, afterAll } from "vitest";
 import { server } from "./helpers/mocks/server";
 import { resetIdCounter } from "./helpers/mocks/data";
+
+// Patch Request to work around Bun + jsdom AbortSignal incompatibility.
+// Under Bun, the native AbortController produces an AbortSignal that jsdom's
+// Request constructor rejects with "signal is not of type AbortSignal".
+// This happens because jsdom's Request (from undici) performs a strict type
+// check that fails across Bun/jsdom realms. MSW's fetch interceptor constructs
+// new Request objects with the original signal, triggering this error.
+// Fix: wrap Request to strip the signal from init, then re-attach it to the
+// instance so code that reads request.signal still gets a value.
+const OriginalRequest = globalThis.Request;
+class PatchedRequest extends OriginalRequest {
+  constructor(input: RequestInfo | URL, init?: RequestInit) {
+    if (init?.signal) {
+      const { signal, ...rest } = init;
+      super(input, rest);
+      // Expose the original signal on the instance for code that reads it
+      Object.defineProperty(this, "signal", {
+        get: () => signal,
+        configurable: true,
+      });
+    } else {
+      super(input, init);
+    }
+  }
+}
+// Preserve prototype chain so instanceof checks work
+Object.defineProperty(PatchedRequest, "name", { value: "Request" });
+globalThis.Request = PatchedRequest as typeof Request;
 
 // Mock WebSocket to prevent real connections in tests.
 // The jsdom/ws WebSocket tries to connect to ws://localhost:3000/ws

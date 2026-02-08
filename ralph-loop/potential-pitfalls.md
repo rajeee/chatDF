@@ -5,7 +5,6 @@ Risks and traps to watch for during improvement iterations.
 ## Architecture
 - **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
-- **Backend response model != frontend type assumption**: Always verify actual serialized JSON shape, not what the DB stores.
 
 ## Frontend
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).

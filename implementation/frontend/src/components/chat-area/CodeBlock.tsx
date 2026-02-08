@@ -1,7 +1,9 @@
 // Custom code block component for ReactMarkdown
-// Adds a copy button to code blocks in assistant messages
+// Adds a copy button and lightweight syntax highlighting to code blocks
 
+import { useMemo } from "react";
 import { useToastStore } from "@/stores/toastStore";
+import { tokenize } from "@/utils/syntaxHighlight";
 
 interface CodeBlockProps {
   inline?: boolean;
@@ -18,6 +20,12 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
   // Get the text content
   const codeText = String(children).replace(/\n$/, "");
 
+  // Memoize tokenization to avoid re-computing on every render
+  const highlightedTokens = useMemo(() => {
+    if (inline || !language) return null;
+    return tokenize(codeText, language);
+  }, [codeText, language, inline]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(codeText);
@@ -27,7 +35,7 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
     }
   };
 
-  // Inline code - render as simple <code> tag
+  // Inline code - render as simple <code> tag (no highlighting)
   if (inline) {
     return (
       <code className={className} {...props}>
@@ -36,7 +44,7 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
     );
   }
 
-  // Block code - render with copy button
+  // Block code - render with copy button and syntax highlighting
   return (
     <div className="relative group/code my-2">
       <div className="flex items-center justify-between px-3 py-1.5 text-xs rounded-t" style={{ backgroundColor: "var(--color-surface-hover)" }}>
@@ -56,7 +64,17 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
       </div>
       <pre className="m-0 p-3 overflow-x-auto rounded-b" style={{ backgroundColor: "var(--color-surface-hover)" }}>
         <code className={className} {...props}>
-          {children}
+          {highlightedTokens
+            ? highlightedTokens.map((token, i) =>
+                token.type === "plain" ? (
+                  token.text
+                ) : (
+                  <span key={i} className={`syntax-${token.type}`}>
+                    {token.text}
+                  </span>
+                )
+              )
+            : children}
         </code>
       </pre>
     </div>

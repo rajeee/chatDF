@@ -15,6 +15,7 @@ export interface ConversationSummary {
   created_at: string;
   updated_at: string;
   dataset_count: number;
+  message_count: number;
   last_message_preview: string | null;
   is_pinned?: boolean;
 }
@@ -81,6 +82,7 @@ export function createConversation(
     created_at: now,
     updated_at: now,
     dataset_count: 0,
+    message_count: 0,
     last_message_preview: null,
     is_pinned: false,
     ...overrides,

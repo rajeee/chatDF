@@ -194,7 +194,7 @@ export function ChatArea() {
             </div>
           )}
 
-          {hasMessages && <MessageList />}
+          {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} />}
         </div>
 
         {/* Chat input - sticky at bottom */}

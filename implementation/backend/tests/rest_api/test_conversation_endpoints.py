@@ -232,6 +232,51 @@ async def test_list_conversations_last_message_preview_null_when_no_messages(
 
 
 # ---------------------------------------------------------------------------
+# CONV-EP-2c: GET /conversations - message_count
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_list_conversations_includes_message_count(
+    authed_client, fresh_db, test_user
+):
+    """GET /conversations returns message_count for each conversation."""
+    now = datetime.utcnow()
+
+    conv_with_msgs = make_conversation(
+        user_id=test_user["id"], title="With Messages"
+    )
+    conv_no_msgs = make_conversation(
+        user_id=test_user["id"], title="No Messages"
+    )
+    await insert_conversation(fresh_db, conv_with_msgs)
+    await insert_conversation(fresh_db, conv_no_msgs)
+
+    # Add 3 messages to the first conversation
+    for i in range(3):
+        msg = make_message(
+            conversation_id=conv_with_msgs["id"],
+            role="user" if i % 2 == 0 else "assistant",
+            content=f"Message {i}",
+            created_at=(now - timedelta(minutes=10 - i)).isoformat(),
+        )
+        await insert_message(fresh_db, msg)
+
+    response = await authed_client.get("/conversations")
+    body = assert_success_response(response, status_code=200)
+    conversations = body["conversations"]
+    assert len(conversations) == 2
+
+    # Find each by title
+    with_msgs = next(c for c in conversations if c["title"] == "With Messages")
+    no_msgs = next(c for c in conversations if c["title"] == "No Messages")
+
+    assert with_msgs["message_count"] == 3
+    assert no_msgs["message_count"] == 0
+
+
+# ---------------------------------------------------------------------------
 # CONV-EP-3: GET /conversations/:id - Detail with messages and datasets
 # ---------------------------------------------------------------------------
 

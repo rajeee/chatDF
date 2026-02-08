@@ -21,6 +21,13 @@
     --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.08);
     --color-backdrop: rgba(0, 0, 0, 0.5);
+
+    /* Syntax highlighting (light theme) */
+    --syntax-keyword: #a626a4;
+    --syntax-string: #50a14f;
+    --syntax-number: #986801;
+    --syntax-comment: #a0a1a7;
+    --syntax-operator: #4078f2;
   }
 
   /* Smooth scrolling for better UX */
@@ -43,6 +50,13 @@
     --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.3);
     --color-backdrop: rgba(0, 0, 0, 0.5);
+
+    /* Syntax highlighting (dark theme) */
+    --syntax-keyword: #c678dd;
+    --syntax-string: #98c379;
+    --syntax-number: #d19a66;
+    --syntax-comment: #5c6370;
+    --syntax-operator: #56b6c2;
   }
 }
 
@@ -221,20 +235,36 @@ select:focus-visible {
 }
 
 /* Exit animation for SuggestedPrompts / OnboardingGuide when first message is sent */
-@keyframes fadeOutDown {
+@keyframes fadeOutUp {
   from {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(-16px) scale(0.97);
   }
 }
 
 .onboarding-exit {
-  animation: fadeOutDown 0.3s ease-in forwards;
+  animation: fadeOutUp 0.3s ease-in forwards;
   pointer-events: none;
+}
+
+/* First message entrance — slightly more dramatic than normal message-appear */
+@keyframes firstMessageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.first-message-entrance {
+  animation: firstMessageSlideIn 0.4s ease-out 0.15s both;
 }
 
 /* Modal entrance animations — scale + fade for a polished feel */
@@ -273,6 +303,13 @@ select:focus-visible {
   animation: fadeInUp 0.35s ease-out forwards;
   animation-delay: calc(var(--stagger-index, 0) * 60ms);
 }
+
+/* Syntax highlighting classes for code blocks */
+.syntax-keyword { color: var(--syntax-keyword, #a626a4); }
+.syntax-string { color: var(--syntax-string, #50a14f); }
+.syntax-number { color: var(--syntax-number, #986801); }
+.syntax-comment { color: var(--syntax-comment, #a0a1a7); font-style: italic; }
+.syntax-operator { color: var(--syntax-operator, #4078f2); }
 
 /* Touch device support: show action buttons that are normally hover-only.
    On devices without hover (phones, tablets), these buttons would be permanently

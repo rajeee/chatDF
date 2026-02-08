@@ -88,6 +88,7 @@ class ConversationSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     dataset_count: int
+    message_count: int = 0
     last_message_preview: str | None = None
     is_pinned: bool = False
 

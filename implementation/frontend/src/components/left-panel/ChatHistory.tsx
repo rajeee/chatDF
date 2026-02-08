@@ -23,6 +23,7 @@ interface ConversationSummary {
   created_at: string;
   updated_at: string;
   dataset_count: number;
+  message_count: number;
   last_message_preview: string | null;
   is_pinned?: boolean;
 }
@@ -408,11 +409,36 @@ export function ChatHistory() {
                             )}
                             {conv.title || "Untitled"}
                           </span>
-                          <span
-                            className="block text-xs opacity-40 truncate"
-                            data-testid="conversation-time"
-                          >
-                            {formatRelativeTime(conv.updated_at)}
+                          <span className="flex items-center gap-1.5 text-xs opacity-40">
+                            <span
+                              className="truncate"
+                              data-testid="conversation-time"
+                            >
+                              {formatRelativeTime(conv.updated_at)}
+                            </span>
+                            {conv.message_count > 0 && (
+                              <span
+                                data-testid="message-count-badge"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] leading-4 font-medium shrink-0"
+                                style={{
+                                  backgroundColor: "var(--color-border)",
+                                  color: "var(--color-text-muted, var(--color-text))",
+                                }}
+                              >
+                                <svg
+                                  className="w-2.5 h-2.5"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                </svg>
+                                {conv.message_count}
+                              </span>
+                            )}
                           </span>
                           {conv.last_message_preview && (
                             <span

@@ -759,3 +759,93 @@ describe("CH-9: Last message preview", () => {
     expect(screen.queryByTestId("conversation-preview")).not.toBeInTheDocument();
   });
 });
+
+describe("CH-10: Message count badge", () => {
+  it("shows message count badge when message_count > 0", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-with-msgs",
+        title: "Chat With Messages",
+        message_count: 12,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat With Messages")).toBeInTheDocument();
+    });
+
+    const badge = screen.getByTestId("message-count-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain("12");
+  });
+
+  it("does not show message count badge when message_count is 0", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-no-msgs",
+        title: "Empty Chat",
+        message_count: 0,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Empty Chat")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("message-count-badge")).not.toBeInTheDocument();
+  });
+
+  it("shows correct count for multiple conversations", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-a",
+        title: "Chat A",
+        message_count: 5,
+      }),
+      createConversation({
+        id: "conv-b",
+        title: "Chat B",
+        message_count: 0,
+      }),
+      createConversation({
+        id: "conv-c",
+        title: "Chat C",
+        message_count: 42,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat A")).toBeInTheDocument();
+    });
+
+    const badges = screen.getAllByTestId("message-count-badge");
+    // Only 2 badges (Chat A: 5, Chat C: 42) — Chat B has 0 messages
+    expect(badges).toHaveLength(2);
+    expect(badges[0].textContent).toContain("5");
+    expect(badges[1].textContent).toContain("42");
+  });
+});

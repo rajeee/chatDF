@@ -87,7 +87,8 @@ async def list_conversations(
     cursor = await db.execute(
         "SELECT c.id, c.title, c.created_at, c.updated_at, c.is_pinned, "
         "  (SELECT COUNT(*) FROM datasets d WHERE d.conversation_id = c.id) AS dataset_count, "
-        "  (SELECT SUBSTR(m.content, 1, 100) FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_preview "
+        "  (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count, "
+        "  (SELECT SUBSTR(m2.content, 1, 100) FROM messages m2 WHERE m2.conversation_id = c.id ORDER BY m2.created_at DESC LIMIT 1) AS last_message_preview "
         "FROM conversations c "
         "WHERE c.user_id = ? "
         "ORDER BY c.is_pinned DESC, c.updated_at DESC",
@@ -102,6 +103,7 @@ async def list_conversations(
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             dataset_count=row["dataset_count"],
+            message_count=row["message_count"],
             last_message_preview=row["last_message_preview"],
             is_pinned=bool(row["is_pinned"]),
         )

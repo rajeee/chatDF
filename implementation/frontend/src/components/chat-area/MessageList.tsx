@@ -13,7 +13,12 @@ import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
-export function MessageList() {
+interface MessageListProps {
+  /** When true, the first message gets a more dramatic entrance animation */
+  isFirstMessageEntrance?: boolean;
+}
+
+export function MessageList({ isFirstMessageEntrance = false }: MessageListProps) {
   const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
@@ -171,7 +176,7 @@ export function MessageList() {
 
       <div
         data-testid="message-list-scroll"
-        className="px-2 py-2 sm:px-4 sm:py-4 space-y-3 sm:space-y-4"
+        className={`px-2 py-2 sm:px-4 sm:py-4 space-y-3 sm:space-y-4${isFirstMessageEntrance ? " first-message-entrance" : ""}`}
         role="log"
         aria-live="polite"
         aria-label="Chat messages"

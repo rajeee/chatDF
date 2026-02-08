@@ -22,6 +22,7 @@ interface ToastState {
 }
 
 const FADE_OUT_DURATION = 200; // ms, must match tailwind animation duration
+const MAX_TOTAL_TOASTS = 10; // Cap total stored toasts to prevent memory leaks
 
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
@@ -30,9 +31,15 @@ export const useToastStore = create<ToastState>((set) => ({
     const id = `toast-${Date.now()}-${Math.random()}`;
     const toast: Toast = { id, message, type, duration };
 
-    set((state) => ({
-      toasts: [...state.toasts, toast],
-    }));
+    set((state) => {
+      const updated = [...state.toasts, toast];
+      return {
+        toasts:
+          updated.length > MAX_TOTAL_TOASTS
+            ? updated.slice(-MAX_TOTAL_TOASTS)
+            : updated,
+      };
+    });
 
     // Auto-dismiss after duration (triggers fade-out animation)
     if (duration > 0) {

@@ -71,15 +71,12 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
     setError(null);
   }
 
-  async function handleSubmit() {
-    // Run validation synchronously (skip debounce).
-    const validationError = validate(url);
+  async function submitUrl(urlToSubmit: string) {
+    if (urlToSubmit.trim() === "" || isSubmitting) return;
+
+    const validationError = validate(urlToSubmit);
     if (validationError) {
       setError(validationError);
-      return;
-    }
-
-    if (url.trim() === "" || isSubmitting) {
       return;
     }
 
@@ -95,7 +92,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
       const response = await apiPost<{ dataset_id: string; status: string }>(
         `/conversations/${convId}/datasets`,
-        { url }
+        { url: urlToSubmit }
       );
 
       // Add a loading-state dataset entry to the store, unless
@@ -107,7 +104,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         addDataset({
           id: response.dataset_id,
           conversation_id: convId,
-          url,
+          url: urlToSubmit,
           name: "",
           row_count: 0,
           column_count: 0,
@@ -127,6 +124,23 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
       showError(message);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSubmit() {
+    await submitUrl(url);
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pastedText = e.clipboardData.getData("text").trim();
+    if (
+      pastedText &&
+      URL_REGEX.test(pastedText) &&
+      !datasets.some((d) => d.url === pastedText)
+    ) {
+      e.preventDefault();
+      setUrl(pastedText);
+      submitUrl(pastedText);
     }
   }
 
@@ -161,6 +175,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
           value={url}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
           disabled={atLimit || isSubmitting}
           className="flex-1 rounded border px-2 py-1 text-sm disabled:opacity-50"

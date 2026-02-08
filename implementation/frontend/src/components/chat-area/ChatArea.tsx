@@ -21,6 +21,7 @@ import { ChatInput } from "./ChatInput";
 import { SQLModal } from "./SQLPanel";
 import { ChartModal } from "./ChartModal";
 import { ReasoningModal } from "./ReasoningModal";
+import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -216,6 +217,9 @@ export function ChatArea() {
 
       {/* Reasoning Modal */}
       <ReasoningModal />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal />
     </section>
   );
 }

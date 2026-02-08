@@ -1,6 +1,8 @@
 // Toast notification container that displays toasts in bottom-right corner
 import { useToastStore } from "@/stores/toastStore";
 
+const MAX_VISIBLE_TOASTS = 3;
+
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts);
   const dismissToast = useToastStore((s) => s.dismissToast);
@@ -9,12 +11,15 @@ export function ToastContainer() {
     return null;
   }
 
+  // Show only the most recent toasts to prevent screen coverage
+  const visibleToasts = toasts.slice(-MAX_VISIBLE_TOASTS);
+
   return (
     <div
       data-testid="toast-container"
       className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
     >
-      {toasts.map((toast) => (
+      {visibleToasts.map((toast) => (
         <div
           key={toast.id}
           data-testid={`toast-${toast.type}`}

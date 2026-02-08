@@ -17,6 +17,7 @@ interface UiState {
   presetModalOpen: boolean;
   reasoningModalOpen: boolean;
   activeReasoning: string;
+  shortcutsModalOpen: boolean;
 }
 
 interface UiActions {
@@ -37,6 +38,8 @@ interface UiActions {
   closePresetModal: () => void;
   openReasoningModal: (reasoning: string) => void;
   closeReasoningModal: () => void;
+  openShortcutsModal: () => void;
+  closeShortcutsModal: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()(
@@ -55,6 +58,7 @@ export const useUiStore = create<UiState & UiActions>()(
       presetModalOpen: false,
       reasoningModalOpen: false,
       activeReasoning: "",
+      shortcutsModalOpen: false,
 
       toggleLeftPanel: () =>
         set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -106,6 +110,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeReasoningModal: () =>
         set({ reasoningModalOpen: false, activeReasoning: "" }),
+
+      openShortcutsModal: () =>
+        set({ shortcutsModalOpen: true }),
+
+      closeShortcutsModal: () =>
+        set({ shortcutsModalOpen: false }),
     }),
     {
       name: "chatdf-ui-preferences",

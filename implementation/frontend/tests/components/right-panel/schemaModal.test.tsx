@@ -247,4 +247,18 @@ describe("SM-CLOSE-2: Backdrop click closes modal", () => {
 
     expect(useUiStore.getState().schemaModalDatasetId).toBeNull();
   });
+
+  it("close button renders X icon SVG instead of text", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const closeBtn = screen.getByRole("button", { name: /close/i });
+    const svg = closeBtn.querySelector("svg");
+
+    expect(svg).toBeInTheDocument();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 20 20");
+  });
 });

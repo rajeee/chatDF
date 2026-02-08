@@ -55,3 +55,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | U15 | Add down arrow icon to "Scroll to bottom" button for better visual recognition | 4 | 1 | 4.0 | done |
 | U16 | Add keyboard shortcuts hint to chat input placeholder (⏎ to send • ⇧⏎ for new line) | 3 | 1 | 3.0 | done |
 | U17 | Add plus icon to "New Chat" button for better visual recognition | 4 | 1 | 4.0 | done |
+| U18 | Replace "X" text with trash icon on delete buttons for better visual recognition | 4 | 1 | 4.0 | pending |

@@ -79,4 +79,44 @@ describe("DatasetCard - Interactive States", () => {
     expect(retryButton.className).toContain("active:scale-95");
     expect(retryButton.className).toContain("hover:bg-accent/10");
   });
+
+  it("should render trash icon in remove button for ready state", () => {
+    const dataset: Dataset = {
+      id: "test-1",
+      url: "https://example.com/data.parquet",
+      name: "Test Dataset",
+      row_count: 1000,
+      column_count: 10,
+      schema_json: JSON.stringify([{ name: "col1", type: "String" }]),
+      status: "ready",
+      error_message: null,
+    };
+
+    render(<DatasetCard dataset={dataset} />);
+    const removeButton = screen.getByLabelText("Remove dataset");
+    const svg = removeButton.querySelector("svg");
+
+    expect(svg).toBeTruthy();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 24 24");
+  });
+
+  it("should render trash icon in remove button for error state", () => {
+    const dataset: Dataset = {
+      id: "test-1",
+      url: "https://example.com/data.parquet",
+      name: "Test Dataset",
+      row_count: 0,
+      column_count: 0,
+      schema_json: "{}",
+      status: "error",
+      error_message: "Failed to load",
+    };
+
+    render(<DatasetCard dataset={dataset} />);
+    const removeButton = screen.getByLabelText("Remove dataset");
+    const svg = removeButton.querySelector("svg");
+
+    expect(svg).toBeTruthy();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 24 24");
+  });
 });

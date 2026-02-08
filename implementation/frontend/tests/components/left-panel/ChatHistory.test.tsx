@@ -395,7 +395,7 @@ describe("CH-6: Empty state", () => {
 });
 
 describe("CH-7: New Chat button", () => {
-  it("renders a New Chat button", async () => {
+  it("renders a New Chat button with icon", async () => {
     server.use(
       http.get("/conversations", () => {
         return HttpResponse.json({ conversations: [] });
@@ -407,6 +407,11 @@ describe("CH-7: New Chat button", () => {
     await waitFor(() => {
       expect(screen.getByTestId("new-chat-button")).toBeInTheDocument();
     });
+
+    const button = screen.getByTestId("new-chat-button");
+    // Button should contain an SVG icon (plus symbol)
+    expect(button.querySelector("svg")).toBeInTheDocument();
+    expect(button.textContent).toContain("New Chat");
   });
 
   it("clicking New Chat creates a new conversation and selects it", async () => {

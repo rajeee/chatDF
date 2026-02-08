@@ -47,6 +47,40 @@ describe("useKeyboardShortcuts", () => {
     document.body.removeChild(textarea);
   });
 
+  it("focuses chat input when Ctrl+K is pressed", () => {
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+
+    const event = new KeyboardEvent("keydown", { key: "k", ctrlKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockFocus).toHaveBeenCalledOnce();
+  });
+
+  it("focuses chat input when Cmd+K is pressed (Mac)", () => {
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+
+    const event = new KeyboardEvent("keydown", { key: "k", metaKey: true });
+    document.dispatchEvent(event);
+
+    expect(mockFocus).toHaveBeenCalledOnce();
+  });
+
+  it("focuses chat input with Ctrl+K even when already in an input", () => {
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+
+    // Create a fake input and dispatch from it
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
+
+    const event = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true });
+    Object.defineProperty(event, "target", { value: input, enumerable: true });
+    document.dispatchEvent(event);
+
+    expect(mockFocus).toHaveBeenCalledOnce();
+    document.body.removeChild(input);
+  });
+
   it("toggles left panel when Ctrl+B is pressed", () => {
     renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
 

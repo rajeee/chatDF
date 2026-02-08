@@ -1,5 +1,6 @@
 // Global keyboard shortcuts for ChatDF
 // - "/" - Focus chat input (like Discord/Slack)
+// - "Ctrl/Cmd+K" - Focus chat input (industry standard like Linear, Notion, GitHub)
 // - "Ctrl/Cmd+B" - Toggle left sidebar
 // - "Ctrl/Cmd+Enter" - Send message (when chat input is focused)
 
@@ -30,6 +31,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
       // "/" - Focus chat input (when not already in an input)
       if (e.key === "/" && !isInputFocused && chatInputRef?.current) {
+        e.preventDefault();
+        chatInputRef.current.focus();
+        return;
+      }
+
+      // Ctrl/Cmd+K - Focus chat input (industry standard pattern)
+      if ((e.ctrlKey || e.metaKey) && e.key === "k" && chatInputRef?.current) {
         e.preventDefault();
         chatInputRef.current.focus();
         return;

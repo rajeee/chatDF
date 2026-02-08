@@ -5,7 +5,7 @@
 // Supports pinning conversations to the top of the sidebar.
 // Virtualizes the list when 40+ conversations for scroll performance.
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   useQuery,
   useMutation,
@@ -241,6 +241,87 @@ export function ChatHistory() {
   const editInputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
 
+  const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      setActiveConversation(id);
+      // On mobile (<1024px), close the left panel overlay after selecting
+      if (leftPanelOpen && window.innerWidth < 1024) {
+        toggleLeftPanel();
+      }
+    },
+    [setActiveConversation, leftPanelOpen, toggleLeftPanel],
+  );
+
+  // Keyboard navigation state
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
+  const conversationIds = useMemo(
+    () =>
+      flatItems
+        .filter((i): i is Extract<FlatItem, { type: "conversation" }> => i.type === "conversation")
+        .map((i) => i.conv.id),
+    [flatItems],
+  );
+
+  // Reset focused index when the list or search changes
+  useEffect(() => {
+    setFocusedIndex(null);
+  }, [searchQuery, flatItems]);
+
+  // Keyboard handler for the list
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLUListElement>) => {
+      if (conversationIds.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          if (prev === null) return 0;
+          return Math.min(prev + 1, conversationIds.length - 1);
+        });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          if (prev === null) return 0;
+          return Math.max(prev - 1, 0);
+        });
+      } else if (e.key === "Enter") {
+        if (focusedIndex !== null && focusedIndex < conversationIds.length) {
+          handleSelect(conversationIds[focusedIndex]);
+        }
+      } else if (e.key === "Escape") {
+        setFocusedIndex(null);
+      }
+    },
+    [conversationIds, focusedIndex, handleSelect],
+  );
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex !== null && focusedIndex < conversationIds.length) {
+      const el = itemRefs.current.get(conversationIds[focusedIndex]);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }, [focusedIndex, conversationIds]);
+
+  // On list focus, set focusedIndex to the active conversation or first item
+  const handleListFocus = useCallback(() => {
+    if (focusedIndex !== null) return; // already has focus position
+    if (activeConversationId) {
+      const idx = conversationIds.indexOf(activeConversationId);
+      if (idx !== -1) {
+        setFocusedIndex(idx);
+        return;
+      }
+    }
+    // Don't auto-set — wait for arrow key
+  }, [focusedIndex, activeConversationId, conversationIds]);
+
   useEffect(() => {
     if (editingId && editInputRef.current) {
       editInputRef.current.focus();
@@ -319,17 +400,6 @@ export function ChatHistory() {
       setSearchQuery("");
     },
   });
-
-  const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
-  const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
-
-  function handleSelect(id: string) {
-    setActiveConversation(id);
-    // On mobile (<1024px), close the left panel overlay after selecting
-    if (leftPanelOpen && window.innerWidth < 1024) {
-      toggleLeftPanel();
-    }
-  }
 
   function handleDoubleClick(conv: ConversationSummary) {
     setEditingId(conv.id);
@@ -474,7 +544,7 @@ export function ChatHistory() {
           No matches
         </div>
       ) : (
-        <ul ref={listRef} className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversations">
+        <ul ref={listRef} className="flex-1 overflow-y-auto outline-none" role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={handleListKeyDown} onFocus={handleListFocus}>
           {topPadding > 0 && <li aria-hidden="true" style={{ height: topPadding }} />}
           {flatItems.slice(startIndex, endIndex).map((item) => {
             if (item.type === "header") {
@@ -487,6 +557,7 @@ export function ChatHistory() {
               );
             }
             const conv = item.conv;
+            const isKeyboardFocused = focusedIndex !== null && conversationIds[focusedIndex] === conv.id;
             return (
               <li
                 key={conv.id}
@@ -497,6 +568,7 @@ export function ChatHistory() {
                 data-testid="conversation-item"
                 data-pinned={conv.is_pinned ? "true" : "false"}
                 data-active={activeConversationId === conv.id ? "true" : "false"}
+                data-keyboard-focus={isKeyboardFocused ? "true" : undefined}
                 aria-current={activeConversationId === conv.id ? "page" : undefined}
                 className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 border-l-2 ${
                   activeConversationId === conv.id
@@ -504,7 +576,7 @@ export function ChatHistory() {
                     : conv.is_pinned
                       ? "border-blue-400/50 hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
                       : "border-transparent hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
-                }`}
+                }${isKeyboardFocused ? " ring-1 ring-[var(--color-accent)]/40" : ""}`}
                 onClick={() => handleSelect(conv.id)}
               >
                 {editingId === conv.id ? (

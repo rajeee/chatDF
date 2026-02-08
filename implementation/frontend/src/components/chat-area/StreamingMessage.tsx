@@ -2,7 +2,7 @@
 // Subscribes ONLY to streaming-related state to minimize re-renders.
 // During streaming, only this component re-renders on each token, not the entire MessageList.
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import ReactMarkdown from "react-markdown";
 import { CodeBlock } from "./CodeBlock";
@@ -19,6 +19,8 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
   const isReasoning = useChatStore((s) => s.isReasoning);
   const streamingReasoning = useChatStore((s) => s.streamingReasoning);
 
+  const [reasoningCollapsed, setReasoningCollapsed] = useState(false);
+
   const isThisMessageStreaming = isStreaming && messageId === streamingMessageId;
 
   if (!isThisMessageStreaming) {
@@ -28,19 +30,41 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
   return (
     <>
       {/* Streaming reasoning display */}
-      {isReasoning && streamingReasoning && (
+      {streamingReasoning && (
         <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border)" }}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs font-medium opacity-60">Thinking...</span>
-            <span className="inline-flex gap-0.5">
-              <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "0ms" }}>.</span>
-              <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "150ms" }}>.</span>
-              <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "300ms" }}>.</span>
+          <button
+            onClick={() => setReasoningCollapsed(!reasoningCollapsed)}
+            className="flex items-center gap-1.5 mb-1 w-full text-left hover:opacity-80 transition-opacity"
+            data-testid="reasoning-toggle"
+            aria-expanded={!reasoningCollapsed}
+          >
+            <svg
+              className={`w-3 h-3 transition-transform duration-200 ${reasoningCollapsed ? "" : "rotate-90"}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <span className="text-xs font-medium opacity-60">
+              {isReasoning ? "Thinking..." : "Reasoning"}
             </span>
-          </div>
-          <div className="text-xs italic opacity-50 max-h-40 overflow-y-auto">
-            {streamingReasoning}
-          </div>
+            {isReasoning && (
+              <span className="inline-flex gap-0.5">
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "0ms" }}>.</span>
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "150ms" }}>.</span>
+                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "300ms" }}>.</span>
+              </span>
+            )}
+          </button>
+          {!reasoningCollapsed && (
+            <div className="text-xs italic opacity-50 max-h-40 overflow-y-auto">
+              {streamingReasoning}
+            </div>
+          )}
         </div>
       )}
 

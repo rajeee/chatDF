@@ -317,6 +317,34 @@ describe("DG-COPY-1: Copy as TSV", () => {
   });
 });
 
+describe("DG-HOVER-1: Row hover highlight", () => {
+  it("applies hover highlight classes to data rows", () => {
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const tbody = screen.getByTestId("data-grid-body");
+    const dataRows = within(tbody).getAllByRole("row");
+
+    for (const row of dataRows) {
+      expect(row.className).toContain("hover:bg-black/[0.04]");
+      expect(row.className).toContain("dark:hover:bg-white/[0.06]");
+      expect(row.className).toContain("transition-colors");
+    }
+  });
+
+  it("does not apply hover classes to the empty state row", () => {
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={[]} totalRows={0} />
+    );
+
+    const tbody = screen.getByTestId("data-grid-body");
+    const rows = within(tbody).getAllByRole("row");
+    // The empty state row should not have hover classes
+    expect(rows[0].className).not.toContain("hover:bg-black");
+  });
+});
+
 describe("Numeric alignment", () => {
   it("right-aligns numeric values", () => {
     const rows: Record<string, unknown>[] = [

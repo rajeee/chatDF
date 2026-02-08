@@ -372,7 +372,7 @@ function SQLResultModal({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <div className="flex border-b text-xs" style={{ borderColor: "var(--color-border)" }}>
+                    <div className="flex border-b text-xs transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]" style={{ borderColor: "var(--color-border)" }}>
                       {columns.map((_col, colIdx) => (
                         <div
                           key={colIdx}

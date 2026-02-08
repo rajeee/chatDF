@@ -50,3 +50,4 @@ Track each improvement cycle: what was done, what was learned.
 | 44 | 2026-02-08 | Skip-to-content link for keyboard users | A3 | 372/437 frontend, 64/65 backend | 60570a5 |
 | 45 | 2026-02-08 | Connection status indicator in header | U22 | 383/448 frontend, 64/65 backend | 7763a8b |
 | 46 | 2026-02-08 | Global focus-visible outlines for keyboard accessibility | A4 | 385/450 frontend, 64/65 backend | ec47677 |
+| 47 | 2026-02-08 | Prompt chip hover effects, onboarding entrance animations, floating empty state | U24 | 392/457 frontend, 64/65 backend | f8b80ac |

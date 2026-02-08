@@ -173,7 +173,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} role="row" className="border-b" style={{ borderColor: "var(--color-border)" }}>
+                <tr key={row.id} role="row" className="border-b transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]" style={{ borderColor: "var(--color-border)" }}>
                   {row.getVisibleCells().map((cell) => {
                     const isNumeric = numericColumns.has(cell.column.id);
                     return (

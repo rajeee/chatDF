@@ -7,3 +7,4 @@
 - **Zustand selective subscriptions beat React.memo**: Fine-grained state subscriptions prevent re-renders more effectively than memoization.
 - **Data shape heuristics work for chart detection**: Sample first 50 rows with a 70% threshold for type classification (numeric, date, categorical) to auto-detect chart types. Keep logic in a pure utility for easy testing.
 - **Simplify onboarding by reusing existing features**: Instead of building a new flow, wire CTAs to open existing modals. Less code, fewer tests, more consistent UX.
+- **Lift local state to store for external control**: When a modal's internal state (like view mode) needs to be set from outside (e.g., "open in chart view"), move that state to the Zustand store so any component can trigger the desired behavior.

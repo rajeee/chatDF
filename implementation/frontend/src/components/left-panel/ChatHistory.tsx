@@ -230,14 +230,39 @@ export function ChatHistory() {
                     >
                       <span>Delete?</span>
                       <button
-                        className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150"
+                        data-testid={`confirm-delete-${conv.id}`}
+                        className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150 flex items-center gap-1"
                         onClick={() => handleConfirmDelete(conv.id)}
+                        disabled={deleteMutation.isPending}
                       >
-                        Yes
+                        {deleteMutation.isPending && deleteMutation.variables === conv.id ? (
+                          <svg
+                            className="w-3 h-3 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeOpacity="0.25"
+                            />
+                            <path
+                              d="M12 2 A10 10 0 0 1 22 12"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        ) : null}
+                        <span>Yes</span>
                       </button>
                       <button
                         className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
                         onClick={handleCancelDelete}
+                        disabled={deleteMutation.isPending}
                       >
                         No
                       </button>

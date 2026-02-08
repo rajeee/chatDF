@@ -353,6 +353,85 @@ describe("CH-5: Delete with confirmation", () => {
       expect(useChatStore.getState().activeConversationId).toBeNull();
     });
   });
+
+  it("shows loading spinner on confirm delete button during deletion", async () => {
+    const conversations = [
+      createConversation({ id: "conv-spinner", title: "Loading Test" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      }),
+      http.delete("/conversations/:id", async () => {
+        // Delay to ensure spinner is visible
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return HttpResponse.json({ success: true });
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Loading Test")).toBeInTheDocument();
+    });
+
+    const item = screen.getByTestId("conversation-item");
+    await user.hover(item);
+
+    const deleteBtn = screen.getByTestId("delete-conversation-conv-spinner");
+    await user.click(deleteBtn);
+
+    const confirmBtn = screen.getByTestId("confirm-delete-conv-spinner");
+    await user.click(confirmBtn);
+
+    // Spinner should appear in the confirm button
+    await waitFor(() => {
+      const spinner = confirmBtn.querySelector(".animate-spin");
+      expect(spinner).toBeInTheDocument();
+    });
+  });
+
+  it("disables both Yes and No buttons during deletion", async () => {
+    const conversations = [
+      createConversation({ id: "conv-disable", title: "Disable Test" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      }),
+      http.delete("/conversations/:id", async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return HttpResponse.json({ success: true });
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Disable Test")).toBeInTheDocument();
+    });
+
+    const item = screen.getByTestId("conversation-item");
+    await user.hover(item);
+
+    const deleteBtn = screen.getByTestId("delete-conversation-conv-disable");
+    await user.click(deleteBtn);
+
+    const yesBtn = screen.getByText("Yes");
+    const noBtn = screen.getByText("No");
+
+    await user.click(yesBtn);
+
+    // Both buttons should be disabled during deletion
+    await waitFor(() => {
+      expect(yesBtn).toBeDisabled();
+      expect(noBtn).toBeDisabled();
+    });
+  });
 });
 
 describe("CH-6: Empty state", () => {

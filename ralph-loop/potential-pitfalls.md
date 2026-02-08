@@ -11,6 +11,7 @@ Risks and traps to watch for during improvement iterations.
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Plotly.js is heavy (~1MB)**: Always lazy-load via `React.lazy()`. Mock with `vi.mock("react-plotly.js", ...)` in tests.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
+- **Inline styles block Tailwind hover**: Setting `backgroundColor: "transparent"` inline overrides Tailwind's `hover:bg-*` classes. Use `undefined` instead.
 
 ## Testing
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.

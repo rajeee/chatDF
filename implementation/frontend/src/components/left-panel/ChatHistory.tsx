@@ -31,7 +31,7 @@ export function ChatHistory() {
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const { success, error: showError } = useToastStore();
 
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["conversations"],
     queryFn: () => apiGet<ConversationsResponse>("/conversations"),
     staleTime: 30_000,
@@ -152,7 +152,25 @@ export function ChatHistory() {
         + New Chat
       </button>
 
-      {conversations.length === 0 ? (
+      {isPending ? (
+        <ul className="flex-1 overflow-y-auto space-y-0.5">
+          {[...Array(3)].map((_, i) => (
+            <li
+              key={`skeleton-${i}`}
+              data-testid="conversation-skeleton"
+              className="px-2 py-1.5 rounded"
+            >
+              <div
+                className="h-5 rounded animate-pulse"
+                style={{
+                  backgroundColor: "var(--color-border)",
+                  width: `${70 + Math.random() * 30}%`,
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : conversations.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-sm opacity-50">
           No conversations yet
         </div>

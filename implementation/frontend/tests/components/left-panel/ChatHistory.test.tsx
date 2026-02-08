@@ -356,6 +356,29 @@ describe("CH-5: Delete with confirmation", () => {
 });
 
 describe("CH-6: Empty state", () => {
+  it("shows skeleton loading state while fetching", async () => {
+    server.use(
+      http.get("/conversations", async () => {
+        // Delay response to ensure skeleton is visible
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return HttpResponse.json({ conversations: [] });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    // Should show skeleton items immediately
+    const skeletons = screen.getAllByTestId("conversation-skeleton");
+    expect(skeletons).toHaveLength(3);
+    expect(skeletons[0].querySelector(".animate-pulse")).toBeInTheDocument();
+
+    // After loading, should show empty state
+    await waitFor(() => {
+      expect(screen.queryByTestId("conversation-skeleton")).not.toBeInTheDocument();
+      expect(screen.getByText("No conversations yet")).toBeInTheDocument();
+    });
+  });
+
   it("shows 'No conversations yet' when list is empty", async () => {
     server.use(
       http.get("/conversations", () => {

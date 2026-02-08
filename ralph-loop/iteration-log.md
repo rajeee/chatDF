@@ -56,3 +56,4 @@ Track each improvement cycle: what was done, what was learned.
 | 50 | 2026-02-08 | Stagger entrance animation for dataset cards | U27 | 399/464 frontend, 64/65 backend | 4643e4a |
 | 51 | 2026-02-08 | Interactive chart visualization (Plotly.js) | work.md task | 421/486 frontend (40 new pass), 64/65 backend | 0de7a09 |
 | 52 | 2026-02-08 | Color-coded loading phase visual hierarchy | U28 | 429/494 frontend (8 new pass), 64/65 backend | 4ad6961 |
+| 53 | 2026-02-08 | Simplify welcome screen, preset sources button | work.md task | 428/493 frontend (19 onboarding pass), 64/65 backend | af6d022 |

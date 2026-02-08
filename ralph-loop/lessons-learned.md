@@ -186,6 +186,16 @@ Insights accumulated through improvement iterations.
 - **Animation direction matters**: Fade-in slides up from bottom (feels like rising), fade-out slides right (feels like being swept away). Different directions for enter/exit makes the animation feel more intentional and polished.
 - **Test count stable**: Frontend still 325/375 passing. Added test for fade-out animation class. Pre-existing test failures unchanged.
 
+### Iteration 27 (2026-02-08)
+- **SQL query history for power users**: Added dropdown button next to chat input showing last 20 unique SQL queries with timestamps. Users can click any query to instantly populate the input field - a standard feature in professional SQL tools (pgAdmin, DataGrip, etc.) that significantly improves productivity.
+- **localStorage persistence with Zustand**: Created dedicated `queryHistoryStore` with Zustand persist middleware. Stores queries across sessions with automatic deduplication (case-insensitive), most-recent-first ordering, and 20-query limit.
+- **Automatic query capture in WebSocket handler**: Hook into `chat_complete` event to save SQL queries to history when executions finish. This ensures all executed queries are captured without requiring manual intervention.
+- **Smart button state**: History button is disabled when no queries exist or when chat is disabled/streaming. Clear visual feedback with clock icon and tooltip.
+- **Dropdown UX patterns**: Click outside or press Escape to close, queries show full SQL with timestamp, "Clear All" button to reset history. All standard dropdown interactions users expect.
+- **useImperativeHandle for parent control**: Extended ChatInputHandle interface with `setInputValue()` method so parent components can programmatically populate the input. This keeps the component API clean and testable.
+- **Test count increased**: Added 12 tests for query history store and 10 tests for dropdown component. Frontend now 325/376 passing (same 51 pre-existing failures). Backend tests unchanged at 64/65 passing.
+- **High-impact completeness feature**: Query history is a quality-of-life improvement that power users immediately notice and appreciate. Makes ChatDF feel more like a professional SQL tool rather than just a chat interface.
+
 ---
 
 ## General Principles

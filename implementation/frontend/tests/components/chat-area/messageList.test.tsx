@@ -186,6 +186,42 @@ describe("ML-SCROLL-1: Auto-scroll to bottom", () => {
 
     expect(screen.getByTestId("scroll-sentinel")).toBeInTheDocument();
   });
+
+  it("uses requestAnimationFrame for smooth scrolling during streaming", async () => {
+    // Mock requestAnimationFrame
+    const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+    rafSpy.mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    // Start with an initial message
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "assistant", content: "Initial" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    // Simulate streaming by updating tokens
+    act(() => {
+      useChatStore.setState({
+        isStreaming: true,
+        streamingMessageId: "msg-streaming",
+        streamingTokens: "New streaming content",
+        messages: [
+          ...useChatStore.getState().messages,
+          makeMessage({ id: "msg-streaming", role: "assistant", content: "" }),
+        ],
+      });
+    });
+
+    // Wait for effect to run
+    await waitFor(() => {
+      expect(rafSpy).toHaveBeenCalled();
+    });
+
+    rafSpy.mockRestore();
+  });
 });
 
 describe("ML-SQL-1: Show SQL button opens SQL panel", () => {

@@ -23,6 +23,7 @@ export function MessageList() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const scrollRafRef = useRef<number | null>(null);
 
   // Check if user is near bottom of page
   const isNearBottom = useCallback(() => {
@@ -42,15 +43,36 @@ export function MessageList() {
   }, [isNearBottom]);
 
   // Auto-scroll to bottom when new content arrives
+  // Uses requestAnimationFrame for smoother performance during streaming
   useEffect(() => {
     if (!userHasScrolledUp && sentinelRef.current) {
-      sentinelRef.current.scrollIntoView?.({ behavior: "smooth" });
+      // Cancel any pending scroll animation
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+
+      // Schedule scroll on next animation frame for smooth performance
+      scrollRafRef.current = requestAnimationFrame(() => {
+        sentinelRef.current?.scrollIntoView?.({ behavior: "smooth" });
+        scrollRafRef.current = null;
+      });
     }
+
+    // Cleanup: cancel pending animation on unmount
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+    };
   }, [messages, streamingTokens, streamingReasoning, userHasScrolledUp]);
 
   const scrollToBottom = useCallback(() => {
     setUserHasScrolledUp(false);
-    sentinelRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    // Use requestAnimationFrame for smooth scroll on manual button click too
+    requestAnimationFrame(() => {
+      sentinelRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    });
   }, []);
 
   const handleShowSQL = useCallback(

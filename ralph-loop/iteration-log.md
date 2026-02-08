@@ -39,3 +39,4 @@ Track each improvement cycle: what was done, what was learned.
 | 33 | 2026-02-08 | Plus icon on New Chat button | U17 | 330/387 frontend, 64/65 backend | 1d6b0d6 |
 | 34 | 2026-02-08 | Trash/close icons on buttons | U18 | 331/388 frontend, 64/65 backend | 3b1be33 |
 | 35 | 2026-02-08 | Loading spinner on delete button | U19 | 331/390 frontend, 64/65 backend | dbba128 |
+| 36 | 2026-02-08 | Loading spinner on retry button | U20 | 333/392 frontend, 64/65 backend | 8d7439b |

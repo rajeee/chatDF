@@ -268,6 +268,15 @@ Insights accumulated through improvement iterations.
 - **Test count stable**: Frontend remains at 331/390 passing (59 pre-existing failures from API client/routing issues). Added 2 new ChatHistory tests that pass. Backend unchanged at 64/65 passing (1 pre-existing schema test failure).
 - **Micro-interactions create polish**: This ~20 line change (add spinner SVG, check isPending, disable buttons, add testids) provides immediate user-visible feedback during a common action. Small details like this differentiate "functional" from "polished". Priority score 4.0 (impact 4, effort 1).
 
+### Iteration 36 (2026-02-08)
+- **Retry button loading spinner for dataset errors**: Added inline spinner to DatasetCard retry button when users click to retry failed dataset loads. This provides immediate visual feedback that the retry action was registered, matching the pattern established in iteration 35 for delete buttons.
+- **Local component state for transient UI**: Used local `isRetrying` state with useState instead of tracking in global store. When retry is clicked, set `isRetrying: true`, trigger action, then reset after 300ms timeout. This approach works well because the dataset status will change from "error" to "loading" shortly after, causing a full re-render anyway.
+- **State transitions with setTimeout**: The retry button shows spinner briefly (300ms) before the dataset status changes to "loading" and the entire error block is replaced with the loading block. This brief window is exactly where users need reassurance that their click registered.
+- **Test file organization**: Discovered test files go in `tests/` directory (not `src/__tests__/`). Vitest config specifies `include: ["tests/**/*.test.{ts,tsx}"]`. Always check existing test structure before creating new files - found `tests/components/right-panel/datasetCard.test.tsx` already existed.
+- **Fake timers and userEvent don't mix**: Initial tests used `vi.useFakeTimers()` with `userEvent.setup()`, causing 5-second timeouts. Solution: removed fake timers, tested the immediate state (spinner appears, button disabled) without trying to test the timeout completion.
+- **Test count increased**: Added 2 new tests for retry button loading state. Frontend now 333/392 passing (+2 from iteration 35). Backend unchanged at 64/65 passing. All DatasetCard tests (14/14) pass.
+- **Consistency across similar actions**: This improvement extends the loading feedback pattern from delete buttons (iteration 35) to retry buttons. Consistent patterns across the UI create a cohesive, professional feel. Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

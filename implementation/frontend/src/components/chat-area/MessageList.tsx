@@ -13,11 +13,10 @@ const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
 export function MessageList() {
   const messages = useChatStore((s) => s.messages);
+  // Only subscribe to isStreaming for scroll behavior - not streamingTokens
+  // This prevents MessageList from re-rendering on every token during streaming
   const isStreaming = useChatStore((s) => s.isStreaming);
-  const isReasoning = useChatStore((s) => s.isReasoning);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
-  const streamingTokens = useChatStore((s) => s.streamingTokens);
-  const streamingReasoning = useChatStore((s) => s.streamingReasoning);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
 
@@ -44,6 +43,8 @@ export function MessageList() {
 
   // Auto-scroll to bottom when new content arrives
   // Uses requestAnimationFrame for smoother performance during streaming
+  // Note: We don't depend on streamingTokens here to avoid re-running on every token.
+  // Scrolling is handled by the browser's smooth scroll behavior and triggered on message changes.
   useEffect(() => {
     if (!userHasScrolledUp && sentinelRef.current) {
       // Cancel any pending scroll animation
@@ -65,7 +66,7 @@ export function MessageList() {
         scrollRafRef.current = null;
       }
     };
-  }, [messages, streamingTokens, streamingReasoning, userHasScrolledUp]);
+  }, [messages, userHasScrolledUp]);
 
   const scrollToBottom = useCallback(() => {
     setUserHasScrolledUp(false);
@@ -106,20 +107,12 @@ export function MessageList() {
         {messages.map((message) => {
           const isStreamingMessage =
             isStreaming && message.id === streamingMessageId;
-          // For the streaming message, display streamingTokens instead of (possibly empty) content
-          const displayContent = isStreamingMessage
-            ? streamingTokens
-            : message.content;
 
           return (
             <MessageBubble
               key={message.id}
               message={message}
-              displayContent={displayContent}
               isCurrentlyStreaming={isStreamingMessage}
-              isShowingReasoning={isStreamingMessage && isReasoning}
-              streamingReasoningContent={isStreamingMessage ? streamingReasoning : ""}
-              reasoningContent={message.reasoning}
               onShowSQL={handleShowSQL}
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}

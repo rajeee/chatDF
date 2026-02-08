@@ -8,14 +8,11 @@ import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { CodeBlock } from "./CodeBlock";
+import { StreamingMessage } from "./StreamingMessage";
 
 interface MessageBubbleProps {
   message: Message;
-  displayContent: string;
   isCurrentlyStreaming: boolean;
-  isShowingReasoning: boolean;
-  streamingReasoningContent: string;
-  reasoningContent: string | null;
   onShowSQL: (executions: SqlExecution[]) => void;
   onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
@@ -36,17 +33,14 @@ function formatTimestamp(isoString: string): string {
 
 function MessageBubbleComponent({
   message,
-  displayContent,
   isCurrentlyStreaming,
-  isShowingReasoning,
-  streamingReasoningContent,
-  reasoningContent,
   onShowSQL,
   onShowReasoning,
   onCopy,
   onCopySQL,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const reasoningContent = message.reasoning;
 
   return (
     <div
@@ -67,26 +61,11 @@ function MessageBubbleComponent({
           boxShadow: isUser ? "none" : "0 1px 2px var(--color-shadow)",
         }}
       >
-        {/* Streaming reasoning display */}
-        {isShowingReasoning && streamingReasoningContent && (
-          <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border)" }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs font-medium opacity-60">Thinking...</span>
-              <span className="inline-flex gap-0.5">
-                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "0ms" }}>.</span>
-                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "150ms" }}>.</span>
-                <span className="animate-bounce text-xs opacity-40" style={{ animationDelay: "300ms" }}>.</span>
-              </span>
-            </div>
-            <div className="text-xs italic opacity-50 max-h-40 overflow-y-auto">
-              {streamingReasoningContent}
-            </div>
-          </div>
-        )}
-
-        {/* Message content */}
+        {/* Message content - use StreamingMessage component for active streaming, otherwise show finalized content */}
         {isUser ? (
-          <span>{displayContent}</span>
+          <span>{message.content}</span>
+        ) : isCurrentlyStreaming ? (
+          <StreamingMessage messageId={message.id} />
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown
@@ -107,18 +86,9 @@ function MessageBubbleComponent({
                 },
               }}
             >
-              {displayContent}
+              {message.content}
             </ReactMarkdown>
           </div>
-        )}
-
-        {/* Streaming indicator */}
-        {isCurrentlyStreaming && !isShowingReasoning && (
-          <span data-testid="streaming-indicator" className="inline-flex gap-1 ml-2 align-middle" style={{ opacity: 0.6 }}>
-            <span className="typing-dot"></span>
-            <span className="typing-dot"></span>
-            <span className="typing-dot"></span>
-          </span>
         )}
 
         {/* Action buttons row */}

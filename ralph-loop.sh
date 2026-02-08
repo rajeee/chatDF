@@ -149,146 +149,29 @@ run_claude() {
   return $rc
 }
 
-# ─── Build the main iteration prompt ───
+# ─── Build prompts from external files ───
+# Edit ralph-loop/prompt.md and ralph-loop/prune-prompt.md to change prompts
+# without restarting the loop.
+PROMPT_FILE="$LOOP_DIR/prompt.md"
+PRUNE_PROMPT_FILE="$LOOP_DIR/prune-prompt.md"
+
 build_prompt() {
   local iter_num="$1"
-  cat <<'PROMPT_EOF'
-You are the Ralph-Loop autonomous improvement agent for the ChatDF project.
-
-## Your Mission
-Make ONE focused improvement to the ChatDF codebase per iteration. The goal is to make the app feel faster, sleeker, and more polished — while using minimal resources. Think "wow factor" — speed, smoothness, visual delight.
-
-## Project Context
-- Project root: /home/ubuntu/chatDF
-- Frontend: React + Vite + Tailwind at implementation/frontend/
-- Backend: FastAPI + Python at implementation/backend/
-- Tests: Vitest (frontend), Pytest (backend) — 319+ tests currently passing
-- Bun runtime (no node/npm) — use ~/.bun/bin/bun
-- Backend venv: implementation/backend/.venv/
-
-## Knowledge Files (READ THESE FIRST — in this order)
-1. /home/ubuntu/chatDF/ralph-loop/work.md — **PRIORITY QUEUE from the human**. Check this FIRST every iteration. If there are pending tasks here, do the top one BEFORE anything from ideas.md. When done, mark the task `[x]` completed.
-2. /home/ubuntu/chatDF/ralph-loop/vision.md — **North star**. Read this to understand where the product is heading. Use it to generate new ideas and prioritize existing ones. All improvements should move toward this vision.
-3. /home/ubuntu/chatDF/ralph-loop/potential-ideas.md — ranked ideas with priority scores
-4. /home/ubuntu/chatDF/ralph-loop/potential-pitfalls.md — traps to avoid
-5. /home/ubuntu/chatDF/ralph-loop/lessons-learned.md — accumulated wisdom
-6. /home/ubuntu/chatDF/ralph-loop/iteration-log.md — history of past iterations
-
-## Your Process (follow exactly)
-
-### Step 1: Read Knowledge Files
-Read ALL 6 knowledge files above. Start with work.md and vision.md.
-
-### Step 2: Pick What to Work On
-**Priority order:**
-1. **work.md first**: If there are unchecked `[ ]` tasks in work.md, do the FIRST one. These are human-injected and always take priority.
-2. **vision-aligned ideas**: If work.md is empty/all done, pick the highest-priority PENDING idea from potential-ideas.md. Prefer ideas that align with vision.md.
-3. **New ideas**: If you spot a new high-impact idea inspired by vision.md, add it to potential-ideas.md and pick it if it's highest priority.
-
-Do NOT add features that increase scope beyond what vision.md describes.
-
-### Step 3: Implement
-- Read the relevant source files first
-- Make the implementation change — plan and then implement
-- Keep changes minimal and focused — one task per iteration
-- Follow existing code patterns and style
-- Do NOT over-engineer
-
-### Step 4: Write or Update Tests
-- Add unit tests for any new logic
-- For frontend: add to existing test files or create new ones under implementation/frontend/tests/
-- For backend: add to existing test files under implementation/backend/tests/
-- Tests should be meaningful, not just coverage padding
-
-### Step 5: Run ALL Tests
-- Frontend: cd /home/ubuntu/chatDF/implementation/frontend && ~/.bun/bin/bun run test -- --run 2>&1
-- Backend: cd /home/ubuntu/chatDF/implementation/backend && .venv/bin/python3 -m pytest tests/ -x -q --ignore=tests/worker/test_timeout.py 2>&1
-  - Note: tests/worker/test_timeout.py has a pre-existing import error — ignore it
-  - Note: test_messages_table_structure has a pre-existing failure — ignore it
-  - If you need to install backend test deps: uv pip install pytest pytest-asyncio --python .venv/bin/python3
-- If ANY NEW test fails (caused by your changes): fix the issue and re-run. Do NOT proceed with failing tests.
-- If you cannot fix a test after 2 attempts: revert your changes and skip this idea (mark it "blocked" in ideas file)
-
-### Step 6: Commit and Push
-- Stage only your changed files (git add specific files, not git add -A)
-- Write a clear commit message describing the improvement
-- Push to origin main
-- Format:
-  git commit -m "$(cat <<'EOF'
-  <commit message>
-
-  Ralph-Loop iteration <N>
-  Co-Authored-By: Claude <noreply@anthropic.com>
-  EOF
-  )"
-  git push origin main
-
-### Step 7: Update Knowledge Files
-- **work.md**: If you completed a work.md task, mark it `[x]` with a brief note of what was done
-- **potential-ideas.md**: Mark completed ideas as "done". Add any new ideas inspired by vision.md.
-- **lessons-learned.md**: Add what you learned during this iteration
-- **potential-pitfalls.md**: Add any new pitfalls discovered
-- **iteration-log.md**: Add a row with iteration number, date, focus, ideas completed, test status, commit hash
-
-## Rules
-- NEVER skip tests. All existing tests must pass before committing.
-- NEVER use git add -A or git add . (could include secrets/db files)
-- NEVER modify .env files or credentials
-- NEVER install new heavyweight dependencies (>50KB gzipped) without justification
-- ONE improvement per iteration, keep it focused
-- If something breaks, revert and try a different idea
-- Always read files before editing them
-
-PROMPT_EOF
+  if [[ ! -f "$PROMPT_FILE" ]]; then
+    err "Prompt file not found: $PROMPT_FILE"
+    exit 1
+  fi
+  cat "$PROMPT_FILE"
   echo ""
   echo "This is iteration #${iter_num}. Begin now."
 }
 
-# ─── Build the pruning prompt ───
 build_prune_prompt() {
-  cat <<'PRUNE_EOF'
-You are a knowledge file maintainer. Your job is to keep the ralph-loop knowledge files compact and useful. Ruthlessly prune fluff.
-
-Read these 4 files and rewrite each one in place:
-
-1. /home/ubuntu/chatDF/ralph-loop/potential-ideas.md
-2. /home/ubuntu/chatDF/ralph-loop/potential-pitfalls.md
-3. /home/ubuntu/chatDF/ralph-loop/lessons-learned.md
-4. /home/ubuntu/chatDF/ralph-loop/work.md
-
-## Rules for each file:
-
-### potential-ideas.md
-- DELETE all rows with status "done" or "blocked" — they are finished
-- Keep all "pending" ideas
-- If there are more than 30 pending ideas, remove the lowest-priority ones (priority < 1.0)
-- Keep the table format intact
-
-### potential-pitfalls.md
-- REMOVE one-off issues that only applied to a single iteration and wouldn't recur
-- REMOVE obvious things (e.g. "run tests before committing", "read files before editing")
-- KEEP only pitfalls that are non-obvious, structural, or would waste >30 minutes if hit again
-- Aim for under 20 bullet points total. Be ruthless about removing noise.
-
-### lessons-learned.md
-- DELETE individual iteration entries (### Iteration N sections) — these are ephemeral
-- KEEP only genuinely reusable, non-obvious lessons under "## General Principles" or similar headers
-- A good lesson saves future time. A bad lesson is just "I learned X" — obvious in hindsight.
-- If a lesson is really a pitfall, move it to pitfalls.md instead of keeping it here
-- Aim for under 15 bullet points total. Quality over quantity.
-
-### work.md
-- DELETE all completed `[x]` tasks — they are done, no history needed
-- Keep all unchecked `[ ]` tasks exactly as they are
-- Keep the file structure/headers intact
-
-## Process
-1. Read all 4 files
-2. Rewrite each one in place according to rules above
-3. Stage and commit: git add ralph-loop/potential-ideas.md ralph-loop/potential-pitfalls.md ralph-loop/lessons-learned.md ralph-loop/work.md && git commit -m "Prune knowledge files" && git push origin main
-
-Do NOT modify vision.md or iteration-log.md.
-PRUNE_EOF
+  if [[ ! -f "$PRUNE_PROMPT_FILE" ]]; then
+    warn "Prune prompt file not found: $PRUNE_PROMPT_FILE — skipping prune"
+    return 1
+  fi
+  cat "$PRUNE_PROMPT_FILE"
 }
 
 # ─── Main Loop ───

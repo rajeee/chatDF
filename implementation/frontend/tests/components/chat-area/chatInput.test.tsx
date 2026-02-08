@@ -338,3 +338,19 @@ describe("ChatInput accessibility and focus", () => {
     );
   });
 });
+
+describe("ChatInput responsive layout", () => {
+  it("textarea has responsive padding classes", () => {
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput onSend={onSend} onStop={onStop} />);
+
+    const textarea = screen.getByRole("textbox", { name: /message input/i });
+    // Mobile-first: tighter padding on small screens, larger on sm+
+    expect(textarea.className).toContain("px-2");
+    expect(textarea.className).toContain("py-1.5");
+    expect(textarea.className).toContain("sm:px-3");
+    expect(textarea.className).toContain("sm:py-2");
+  });
+});

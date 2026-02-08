@@ -126,7 +126,7 @@ export function ChatArea() {
 
         {/* Chat input - sticky at bottom */}
         <div
-          className="p-4 border-t sticky bottom-0"
+          className="p-2 sm:p-4 border-t sticky bottom-0"
           style={{
             borderColor: "var(--color-border)",
             backgroundColor: "var(--color-bg)",

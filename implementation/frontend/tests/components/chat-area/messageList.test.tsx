@@ -552,6 +552,35 @@ describe("Touch-friendly: action buttons visible on touch devices", () => {
   });
 });
 
+describe("Responsive layout: mobile-friendly padding", () => {
+  it("message list has responsive padding classes", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const scrollContainer = screen.getByTestId("message-list-scroll");
+    // Mobile-first: tighter padding on small screens, larger on sm+
+    expect(scrollContainer.className).toContain("px-2");
+    expect(scrollContainer.className).toContain("py-2");
+    expect(scrollContainer.className).toContain("sm:px-4");
+    expect(scrollContainer.className).toContain("sm:py-4");
+  });
+
+  it("message list has responsive spacing between messages", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const scrollContainer = screen.getByTestId("message-list-scroll");
+    expect(scrollContainer.className).toContain("space-y-3");
+    expect(scrollContainer.className).toContain("sm:space-y-4");
+  });
+});
+
 describe("Performance: content-visibility optimization", () => {
   it("applies content-visibility: auto to message rows for off-screen rendering optimization", () => {
     setChatIdle("conv-1", [

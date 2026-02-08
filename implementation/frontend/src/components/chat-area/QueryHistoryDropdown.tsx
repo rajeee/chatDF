@@ -83,7 +83,7 @@ export function QueryHistoryDropdown({ onSelectQuery, disabled }: QueryHistoryDr
       {isOpen && (
         <div
           data-testid="query-history-dropdown"
-          className="absolute bottom-full mb-2 right-0 w-96 max-h-96 overflow-y-auto rounded-lg border shadow-lg z-50"
+          className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] sm:w-96 max-h-96 overflow-y-auto rounded-lg border shadow-lg z-50"
           style={{
             backgroundColor: "var(--color-surface)",
             borderColor: "var(--color-border)",

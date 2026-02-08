@@ -102,7 +102,7 @@ export function MessageList() {
     <div className="flex flex-col">
       <div
         data-testid="message-list-scroll"
-        className="px-4 py-4 space-y-4"
+        className="px-2 py-2 sm:px-4 sm:py-4 space-y-3 sm:space-y-4"
         role="log"
         aria-live="polite"
         aria-label="Chat messages"

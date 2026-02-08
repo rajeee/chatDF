@@ -38,3 +38,4 @@ Track each improvement cycle: what was done, what was learned.
 | 32 | 2026-02-08 | Keyboard shortcuts hint in placeholder | U16 | 330/387 frontend, 64/65 backend | de0b719 |
 | 33 | 2026-02-08 | Plus icon on New Chat button | U17 | 330/387 frontend, 64/65 backend | 1d6b0d6 |
 | 34 | 2026-02-08 | Trash/close icons on buttons | U18 | 331/388 frontend, 64/65 backend | 3b1be33 |
+| 35 | 2026-02-08 | Loading spinner on delete button | U19 | 331/390 frontend, 64/65 backend | dbba128 |

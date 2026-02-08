@@ -259,6 +259,15 @@ Insights accumulated through improvement iterations.
 - **Test existing files before creating new ones**: Discovered test files already existed in `tests/components/` directory. Always search for existing test files before creating duplicates in `src/__tests__/`.
 - **High-impact micro-improvements**: This change touched 3 components but is immediately noticeable. Users see these buttons constantly (deleting conversations, removing datasets, closing modals). Making them visually recognizable improves the entire app's perceived quality. Priority score 4.0 (impact 4, effort 1).
 
+### Iteration 35 (2026-02-08)
+- **Loading spinner for immediate feedback on async actions**: Added spinning icon to "Yes" confirmation button during conversation deletion. This addresses a common UX gap - users need immediate visual feedback that their action was registered, especially on slower connections where the API call might take a moment.
+- **TanStack Query mutation state**: Used `deleteMutation.isPending` to detect when the API call is in progress, and `deleteMutation.variables` to check which specific conversation is being deleted. This ensures the spinner only shows for the correct button if multiple delete confirmations are somehow open simultaneously.
+- **Disable all action buttons during async operations**: Disabled both "Yes" and "No" buttons during deletion to prevent users from changing their mind mid-deletion or accidentally double-clicking. This is standard UX for confirmation dialogs - once committed, the action can't be interrupted.
+- **Inline SVG spinner animation**: Used a simple SVG circle with stroke animation (`animate-spin` class) for the loading indicator. Kept it small (w-3 h-3) to fit inline with the "Yes" text. Partial circle path with `strokeOpacity` creates the classic spinner appearance.
+- **Flex layout for icon + text**: Changed button to `flex items-center gap-1` so the spinner icon sits nicely next to the "Yes" text. This is cleaner than trying to position the icon absolutely or using margins.
+- **Test count stable**: Frontend remains at 331/390 passing (59 pre-existing failures from API client/routing issues). Added 2 new ChatHistory tests that pass. Backend unchanged at 64/65 passing (1 pre-existing schema test failure).
+- **Micro-interactions create polish**: This ~20 line change (add spinner SVG, check isPending, disable buttons, add testids) provides immediate user-visible feedback during a common action. Small details like this differentiate "functional" from "polished". Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

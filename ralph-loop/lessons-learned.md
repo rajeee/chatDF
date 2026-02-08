@@ -138,6 +138,13 @@ Insights accumulated through improvement iterations.
 - **Blocked ideas need clear documentation**: When an idea is blocked due to infrastructure issues, document the reason in the ideas file so future iterations don't waste time retrying.
 - **Test count regression signals bigger problems**: When test count drops significantly between iterations (367 → 317), it's a sign of systemic test infrastructure issues, not just a fluke. These need to be fixed before new features can be reliably tested.
 
+### Iteration 21 (2026-02-08)
+- **SQLite connection pooling for concurrent reads**: Implemented DatabasePool class with 5 read connections + 1 dedicated write connection. SQLite with WAL mode allows multiple concurrent readers, so pooling read connections improves throughput for concurrent GET requests. Write connection is kept separate since SQLite is single-writer.
+- **Async generator dependencies in FastAPI**: Changed `get_db()` from returning `Connection` to returning `AsyncIterator[Connection]`. FastAPI handles async generators as dependencies via context managers - they yield once, then clean up in finally block. Tests need to manually call `__anext__()` to consume the generator.
+- **Backward compatibility pattern for pooled resources**: Made pool optional with `isinstance()` check. If `app.state.db_pool` exists and is a DatabasePool, use it. Otherwise fall back to `app.state.db` for tests. This allows gradual adoption without breaking existing tests.
+- **Connection pool lifecycle management**: Pool initialization in lifespan creates all connections upfront. Must set `_write_conn = None` on close to prevent stale references. Use asyncio.Queue for simple, thread-safe connection pooling - no need for complex libraries.
+- **Backend tests mostly stable**: Backend tests show 356/402 passing (excluding worker tests and known failures). Frontend tests unchanged at 317/367 passing. Pre-existing infrastructure issues persist but this improvement doesn't make them worse.
+
 ---
 
 ## General Principles

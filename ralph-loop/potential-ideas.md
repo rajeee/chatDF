@@ -27,7 +27,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | P4 | Add React.memo to expensive components (MessageBubble, DatasetCard) | 3 | 1 | 3.0 | done |
 | P5 | Debounce search inputs (ChatHistory search) | 2 | 1 | 2.0 | blocked (no search feature exists yet) |
 | P6 | Optimize re-renders: extract streaming token display to isolated component | 4 | 2 | 2.0 | done |
-| P7 | Backend: connection pool for SQLite (reduce open/close overhead) | 2 | 2 | 1.0 | pending |
+| P7 | Backend: connection pool for SQLite (reduce open/close overhead) | 2 | 2 | 1.0 | done |
 | P8 | Compress WS messages (shorter event names, minimal payload) | 2 | 2 | 1.0 | pending |
 | P9 | Production build with code splitting (Vite chunks) | 4 | 2 | 2.0 | done |
 | P10 | Use CSS `content-visibility: auto` for off-screen message bubbles | 3 | 1 | 3.0 | done |

@@ -12,6 +12,7 @@ interface UiState {
   activeSqlExecutions: SqlExecution[];
   sqlResultModalIndex: number | null;
   sqlResultViewMode: "table" | "chart";
+  chartModalExecution: SqlExecution | null;
   schemaModalDatasetId: string | null;
   presetModalOpen: boolean;
   reasoningModalOpen: boolean;
@@ -28,6 +29,8 @@ interface UiActions {
   openSqlResultModal: (index: number) => void;
   closeSqlResultModal: () => void;
   openSqlChartModal: (executions: SqlExecution[], index: number) => void;
+  openChartModal: (execution: SqlExecution) => void;
+  closeChartModal: () => void;
   openSchemaModal: (datasetId: string) => void;
   closeSchemaModal: () => void;
   openPresetModal: () => void;
@@ -47,6 +50,7 @@ export const useUiStore = create<UiState & UiActions>()(
       activeSqlExecutions: [],
       sqlResultModalIndex: null,
       sqlResultViewMode: "table" as const,
+      chartModalExecution: null,
       schemaModalDatasetId: null,
       presetModalOpen: false,
       reasoningModalOpen: false,
@@ -78,6 +82,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       openSqlChartModal: (executions, index) =>
         set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: index, sqlResultViewMode: "chart" }),
+
+      openChartModal: (execution) =>
+        set({ chartModalExecution: execution }),
+
+      closeChartModal: () =>
+        set({ chartModalExecution: null }),
 
       openSchemaModal: (datasetId) =>
         set({ schemaModalDatasetId: datasetId }),

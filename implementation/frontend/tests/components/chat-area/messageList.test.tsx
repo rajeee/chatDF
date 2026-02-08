@@ -644,10 +644,9 @@ describe("ML-VIZ-1: Visualize button in chat messages", () => {
     await user.click(vizBtn);
 
     const state = useUiStore.getState();
-    expect(state.sqlModalOpen).toBe(true);
-    expect(state.activeSqlExecutions).toHaveLength(1);
-    expect(state.sqlResultModalIndex).toBe(0);
-    expect(state.sqlResultViewMode).toBe("chart");
+    expect(state.chartModalExecution).not.toBeNull();
+    expect(state.chartModalExecution!.query).toBe("SELECT category, count FROM data");
+    expect(state.chartModalExecution!.columns).toEqual(["category", "count"]);
   });
 
   it("Visualize button has green styling and chart icon", () => {

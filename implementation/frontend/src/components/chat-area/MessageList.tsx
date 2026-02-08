@@ -18,7 +18,7 @@ export function MessageList() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
-  const openSqlChartModal = useUiStore((s) => s.openSqlChartModal);
+  const openChartModal = useUiStore((s) => s.openChartModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -97,9 +97,11 @@ export function MessageList() {
 
   const handleVisualize = useCallback(
     (executions: SqlExecution[], index: number) => {
-      openSqlChartModal(executions, index);
+      if (executions[index]) {
+        openChartModal(executions[index]);
+      }
     },
-    [openSqlChartModal]
+    [openChartModal]
   );
 
   return (

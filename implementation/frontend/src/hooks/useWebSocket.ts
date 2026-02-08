@@ -102,6 +102,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
                 rows: (ex.rows as unknown[][] | null) ?? null,
                 total_rows: (ex.total_rows as number | null) ?? null,
                 error: (ex.error as string | null) ?? null,
+                execution_time_ms: (ex.execution_time_ms as number | null) ?? null,
               }))
             : [];
           chatStore.finalizeStreamingMessage({

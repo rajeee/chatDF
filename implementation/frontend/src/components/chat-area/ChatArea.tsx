@@ -17,6 +17,7 @@ import { SuggestedPrompts } from "./SuggestedPrompts";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { SQLModal } from "./SQLPanel";
+import { ChartModal } from "./ChartModal";
 import { ReasoningModal } from "./ReasoningModal";
 
 export function ChatArea() {
@@ -179,6 +180,9 @@ export function ChatArea() {
 
       {/* SQL Modal (self-managed visibility via uiStore) */}
       <SQLModal />
+
+      {/* Direct Chart Modal (opened by Visualize button in chat) */}
+      <ChartModal />
 
       {/* Reasoning Modal */}
       <ReasoningModal />

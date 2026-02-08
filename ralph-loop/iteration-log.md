@@ -64,3 +64,5 @@ Track each improvement cycle: what was done, what was learned.
 | 58 | 2026-02-08 | Pulsing cursor for streaming messages | U33 | 462/526 frontend (+6 from relocated tests), 64/65 backend | c9343e9 |
 | 59 | 2026-02-08 | Smooth exit animation for SuggestedPrompts | U32 | 465/529 frontend (3 new pass), 64/65 backend | 0d509bc |
 | 60 | 2026-02-08 | Remove redundant Copy SQL button from chat bubbles | work.md task | 463/527 frontend (-2 removed tests), 64/65 backend | 4007735 |
+| 61 | 2026-02-08 | Conversation preview, always-visible timestamps, smooth loading bar | U34, U35, U36 | 490/556 frontend (+27 pass, +29 total), 64/65 backend (+2 new pass) | 5a5dab5 |
+| 62 | 2026-02-08 | Markdown export, date-grouped sidebar, inline SQL preview | U38, U39, U40 | 530/596 frontend (+40 pass), 64/65 backend | 050e113 |

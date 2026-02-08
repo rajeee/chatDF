@@ -6,7 +6,6 @@ Risks and traps to watch for during improvement iterations.
 - **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
 - **No node binary**: System uses Bun exclusively. All scripts must use `~/.bun/bin/bun`.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
-- **SQLite single-writer**: Only one write transaction at a time. Concurrent writes will queue/fail.
 
 ## Frontend
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).

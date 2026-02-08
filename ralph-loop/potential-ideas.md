@@ -6,7 +6,6 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
-| U22 | Connection status indicator in header (connected/disconnected/reconnecting) | 4 | 2 | 2.0 | done (iter 45) |
 
 ## Performance & Resource Efficiency
 

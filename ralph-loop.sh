@@ -27,20 +27,19 @@ DRY_RUN=false
 
 # ─── Cleanup on Ctrl+C / kill ───
 WATCHDOG_PID=""
-TAIL_PID=""
 CLAUDE_PID=""
 
 cleanup() {
   echo ""
   echo -e "\033[1;33m[ralph] Caught signal — shutting down...\033[0m"
-  # Kill Claude if running
+  # Kill Claude/script if running
   [[ -n "$CLAUDE_PID" ]] && kill "$CLAUDE_PID" 2>/dev/null
-  # Kill tail follower if running
-  [[ -n "$TAIL_PID" ]] && kill "$TAIL_PID" 2>/dev/null
   # Kill watchdog if running
   [[ -n "$WATCHDOG_PID" ]] && kill "$WATCHDOG_PID" 2>/dev/null
   # Kill any remaining children
   pkill -P $$ 2>/dev/null || true
+  # Clean up temp files
+  rm -f /tmp/ralph-prompt-*.txt /tmp/ralph-wrapper-*.sh
   sleep 1
   echo -e "\033[0;32m[ralph] Stopped.\033[0m"
   exit 0
@@ -129,6 +128,41 @@ stop_watchdog() {
     wait "$WATCHDOG_PID" 2>/dev/null || true
     WATCHDOG_PID=""
   fi
+}
+
+# ─── Run Claude with PTY (so output streams to terminal) ───
+# Uses `script` to allocate a pseudo-TTY. Claude sees a terminal,
+# streams tokens live. Output goes to both terminal and log file.
+# Runs in background + wait so Ctrl+C interrupts immediately.
+run_claude() {
+  local log_file="$1"
+  local budget="$2"
+  local model="$3"
+  local prompt="$4"
+
+  # Write prompt to temp file (avoids quoting issues with script -c)
+  local prompt_file
+  prompt_file=$(mktemp /tmp/ralph-prompt-XXXXX.txt)
+  printf '%s' "$prompt" > "$prompt_file"
+
+  # Create wrapper script that reads prompt from file
+  local wrapper
+  wrapper=$(mktemp /tmp/ralph-wrapper-XXXXX.sh)
+  cat > "$wrapper" <<WEOF
+#!/bin/bash
+exec $CLAUDE_BIN --print --model $model --dangerously-skip-permissions --max-budget-usd $budget --verbose "\$(<"$prompt_file")"
+WEOF
+
+  # script -qf: quiet + flush every write (real-time streaming)
+  # Allocates PTY so Claude streams tokens; output goes to terminal + log
+  script -qfc "bash $wrapper" "$log_file" < /dev/null &
+  CLAUDE_PID=$!
+  wait "$CLAUDE_PID" 2>/dev/null
+  local rc=$?
+  CLAUDE_PID=""
+
+  rm -f "$prompt_file" "$wrapper"
+  return $rc
 }
 
 # ─── Build the main iteration prompt ───
@@ -339,28 +373,10 @@ while true; do
   touch "$log_file"
   start_watchdog "$log_file"
 
-  # Stream log to terminal via background tail
-  tail -f "$log_file" &
-  TAIL_PID=$!
-
-  # Run Claude in BACKGROUND + wait (wait is interruptible by SIGINT, unlike foreground)
+  # Run Claude with PTY streaming (output goes to terminal + log file)
   cd "$PROJECT_DIR"
-  $CLAUDE_BIN \
-    --print \
-    --model "$MODEL" \
-    --dangerously-skip-permissions \
-    --max-budget-usd "$MAX_BUDGET" \
-    --verbose \
-    "$prompt" \
-    >> "$log_file" 2>&1 &
-  CLAUDE_PID=$!
-  wait "$CLAUDE_PID" 2>/dev/null
+  run_claude "$log_file" "$MAX_BUDGET" "$MODEL" "$prompt"
   exit_code=$?
-  CLAUDE_PID=""
-
-  # Stop tail follower
-  kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null || true
-  TAIL_PID=""
 
   # Stop watchdog
   stop_watchdog
@@ -387,25 +403,8 @@ while true; do
   prune_prompt=$(build_prune_prompt)
   prune_log="$LOG_DIR/prune-${iter_num}-$(date +%Y%m%d-%H%M%S).log"
 
-  touch "$prune_log"
-  tail -f "$prune_log" &
-  TAIL_PID=$!
-
-  $CLAUDE_BIN \
-    --print \
-    --model "$PRUNE_MODEL" \
-    --dangerously-skip-permissions \
-    --max-budget-usd 0.50 \
-    --verbose \
-    "$prune_prompt" \
-    >> "$prune_log" 2>&1 &
-  CLAUDE_PID=$!
-  wait "$CLAUDE_PID" 2>/dev/null
+  run_claude "$prune_log" "0.50" "$PRUNE_MODEL" "$prune_prompt"
   prune_exit=$?
-  CLAUDE_PID=""
-
-  kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null || true
-  TAIL_PID=""
 
   echo ""
   if [[ $prune_exit -eq 0 ]]; then

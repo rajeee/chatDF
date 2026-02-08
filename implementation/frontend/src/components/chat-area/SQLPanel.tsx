@@ -6,118 +6,16 @@
 // Both modals are draggable (via header) and resizable (via corner handle).
 // Result modal supports sortable columns and CSV download.
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUiStore } from "@/stores/uiStore";
 import { useCodeMirror } from "@/hooks/useCodeMirror";
+import { useDraggable } from "@/hooks/useDraggable";
+import { useResizable } from "@/hooks/useResizable";
+import { useSortedRows } from "@/hooks/useSortedRows";
+import { cellValue } from "@/utils/tableUtils";
+import { downloadCsv } from "@/utils/csvExport";
 import type { SqlExecution } from "@/stores/chatStore";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface SortKey {
-  colIdx: number;
-  dir: "asc" | "desc";
-}
-
-// ---------------------------------------------------------------------------
-// useDraggable — drag a modal by its header
-// ---------------------------------------------------------------------------
-
-function useDraggable() {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const dragging = useRef(false);
-  const justDragged = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("button")) return;
-    dragging.current = true;
-    const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
-    offset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    e.preventDefault();
-  }, []);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      setPos({ x: e.clientX - offset.current.x, y: e.clientY - offset.current.y });
-    };
-    const onMouseUp = () => {
-      if (dragging.current) {
-        dragging.current = false;
-        justDragged.current = true;
-        requestAnimationFrame(() => { justDragged.current = false; });
-      }
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-  }, []);
-
-  return { pos, setPos, onMouseDown, justDragged };
-}
-
-// ---------------------------------------------------------------------------
-// useResizable — resize a modal from the bottom-right corner
-// ---------------------------------------------------------------------------
-
-function useResizable(
-  minW: number,
-  minH: number,
-  setPos?: (pos: { x: number; y: number }) => void,
-) {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const resizing = useRef(false);
-  const justResized = useRef(false);
-  const startData = useRef({ mouseX: 0, mouseY: 0, w: 0, h: 0 });
-
-  const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    resizing.current = true;
-    const modal = e.currentTarget.parentElement as HTMLElement;
-    const rect = modal.getBoundingClientRect();
-    startData.current = { mouseX: e.clientX, mouseY: e.clientY, w: rect.width, h: rect.height };
-    // Pin top-left so flex-center doesn't reposition on size change
-    if (setPos) {
-      setPos({ x: rect.left, y: rect.top });
-    }
-    e.preventDefault();
-    e.stopPropagation();
-  }, [setPos]);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!resizing.current) return;
-      const dx = e.clientX - startData.current.mouseX;
-      const dy = e.clientY - startData.current.mouseY;
-      setSize({
-        w: Math.max(minW, startData.current.w + dx),
-        h: Math.max(minH, startData.current.h + dy),
-      });
-    };
-    const onMouseUp = () => {
-      if (resizing.current) {
-        resizing.current = false;
-        justResized.current = true;
-        requestAnimationFrame(() => { justResized.current = false; });
-      }
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [minW, minH]);
-
-  return { size, onResizeMouseDown, justResized };
-}
 
 // ---------------------------------------------------------------------------
 // ResizeHandle — corner grip widget
@@ -139,77 +37,6 @@ function ResizeHandle({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => v
 }
 
 // ---------------------------------------------------------------------------
-// cellValue / cellValueRaw — extract cell values from row data
-// ---------------------------------------------------------------------------
-
-function cellValueRaw(row: unknown, colIdx: number, columns: string[]): unknown {
-  if (Array.isArray(row)) return row[colIdx];
-  if (row && typeof row === "object") return (row as Record<string, unknown>)[columns[colIdx]];
-  return null;
-}
-
-function cellValue(row: unknown, colIdx: number, columns: string[]): string {
-  const v = cellValueRaw(row, colIdx, columns);
-  return v != null ? String(v) : "null";
-}
-
-// ---------------------------------------------------------------------------
-// compareValues — null-safe, numeric-aware comparator
-// ---------------------------------------------------------------------------
-
-function compareValues(a: unknown, b: unknown): number {
-  if (a == null && b == null) return 0;
-  if (a == null) return 1;
-  if (b == null) return -1;
-  if (typeof a === "number" && typeof b === "number") return a - b;
-  return String(a).localeCompare(String(b), undefined, { numeric: true });
-}
-
-// ---------------------------------------------------------------------------
-// useSortedRows — multi-key column sorting
-// ---------------------------------------------------------------------------
-
-function useSortedRows(rows: unknown[], columns: string[]) {
-  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
-
-  const toggleSort = useCallback((colIdx: number) => {
-    setSortKeys((prev) => {
-      const existingIdx = prev.findIndex((k) => k.colIdx === colIdx);
-      if (existingIdx === 0) {
-        // Already first key — toggle direction
-        const toggled = { ...prev[0], dir: prev[0].dir === "asc" ? "desc" as const : "asc" as const };
-        return [toggled, ...prev.slice(1)];
-      }
-      if (existingIdx > 0) {
-        // Elsewhere in keys — move to front
-        const key = prev[existingIdx];
-        return [key, ...prev.slice(0, existingIdx), ...prev.slice(existingIdx + 1)];
-      }
-      // New key — add to front as asc
-      return [{ colIdx, dir: "asc" as const }, ...prev];
-    });
-  }, []);
-
-  const clearSort = useCallback(() => setSortKeys([]), []);
-
-  const sortedRows = useMemo(() => {
-    if (sortKeys.length === 0) return rows;
-    return [...rows].sort((a, b) => {
-      for (const key of sortKeys) {
-        const cmp = compareValues(
-          cellValueRaw(a, key.colIdx, columns),
-          cellValueRaw(b, key.colIdx, columns),
-        );
-        if (cmp !== 0) return key.dir === "asc" ? cmp : -cmp;
-      }
-      return 0;
-    });
-  }, [rows, columns, sortKeys]);
-
-  return { sortKeys, sortedRows, toggleSort, clearSort };
-}
-
-// ---------------------------------------------------------------------------
 // SortIndicator — arrow + rank badge
 // ---------------------------------------------------------------------------
 
@@ -220,37 +47,6 @@ function SortIndicator({ dir, rank }: { dir: "asc" | "desc"; rank: number }) {
       {rank > 1 && <sup className="text-[8px] ml-[1px]">{rank}</sup>}
     </span>
   );
-}
-
-// ---------------------------------------------------------------------------
-// downloadCsv — export rows as CSV
-// ---------------------------------------------------------------------------
-
-function downloadCsv(columns: string[], rows: unknown[], filename: string) {
-  function escape(val: unknown): string {
-    if (val == null) return "";
-    const s = String(val);
-    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  }
-
-  const header = columns.map(escape).join(",");
-  const body = rows.map((row) =>
-    columns.map((_, i) => escape(cellValueRaw(row, i, columns))).join(","),
-  ).join("\n");
-  const csv = header + "\n" + body;
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------

@@ -170,6 +170,14 @@ Insights accumulated through improvement iterations.
 - **Module boundaries matter**: Hooks (stateful, React-specific) go in `hooks/`, pure functions go in `utils/`. Keep interfaces clean - e.g., `useSortedRows` returns toggleSort/clearSort functions, not raw state setters.
 - **All tests remain stable**: Frontend 322/372 passing (same as iteration 23), backend tests unchanged. Refactoring that doesn't break tests is good refactoring.
 
+### Iteration 25 (2026-02-08)
+- **SQL execution time tracking**: Added `time.perf_counter()` in backend `execute_query()` to track query execution time. Simple, built-in Python function for high-precision timing - no external dependencies needed.
+- **Execution time on both success and error paths**: Track time from start of function to end, capturing it in both success return and exception handler. This ensures every query (successful or failed) reports execution time.
+- **Smart time formatting for UX**: Format <1ms with 2 decimals (0.42ms), <1000ms as integer ms (42ms), ≥1000ms as seconds with 2 decimals (2.35s). Users get precise feedback for fast queries and readable format for slow ones.
+- **Professional SQL tool feature**: Execution time display is a standard feature in professional SQL tools (pgAdmin, MySQL Workbench, DataGrip). Adding this makes ChatDF feel more polished and trustworthy.
+- **Minimal implementation, high impact**: Total change was ~30 lines of actual code (excluding tests). Simple addition of timing, passing through dataclass, and formatting in UI. High user-visible impact for minimal complexity.
+- **Test count increased**: Added 3 backend tests (successful query, failed query, reasonable bounds) and 3 frontend tests (display ms, display seconds, hide when null). Frontend now 325/375 passing (+3), backend worker tests 14/14 passing (+3).
+
 ---
 
 ## General Principles

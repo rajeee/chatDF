@@ -46,3 +46,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | C8 | Confirmation dialogs for destructive actions (delete conversation/dataset) | 3 | 2 | 1.5 | done (pre-existing) |
 | C9 | Rate limit warning banner with remaining tokens | 2 | 1 | 2.0 | blocked (UsageStats component tests broken - pre-existing issue) |
 | C10 | Favicon and proper meta tags | 2 | 1 | 2.0 | done |
+| C11 | SQL query execution time display | 4 | 1 | 4.0 | done |

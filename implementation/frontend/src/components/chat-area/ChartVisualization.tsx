@@ -19,13 +19,51 @@ import {
 // Lazy-load Plotly to keep initial bundle small (~1MB)
 const Plot = lazy(() => import("react-plotly.js"));
 
-const CHART_ICONS: Record<ChartType, string> = {
-  bar: "|||",
-  line: "~",
-  scatter: ":::",
-  histogram: "|||",
-  pie: "O",
-  box: "[ ]",
+const CHART_ICONS: Record<ChartType, React.ReactNode> = {
+  bar: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <rect x="1" y="6" width="3" height="7" rx="0.5" strokeWidth="1.2" />
+      <rect x="5.5" y="2" width="3" height="11" rx="0.5" strokeWidth="1.2" />
+      <rect x="10" y="4" width="3" height="9" rx="0.5" strokeWidth="1.2" />
+    </svg>
+  ),
+  line: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <polyline points="1,11 5,7 9,4 13,2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  scatter: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="shrink-0">
+      <circle cx="3" cy="4" r="1.3" />
+      <circle cx="7" cy="9" r="1.3" />
+      <circle cx="10" cy="3" r="1.3" />
+      <circle cx="5" cy="11" r="1.3" />
+      <circle cx="11" cy="7" r="1.3" />
+    </svg>
+  ),
+  histogram: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <rect x="0.5" y="7" width="3" height="6" strokeWidth="1.2" />
+      <rect x="3.5" y="3" width="3" height="10" strokeWidth="1.2" />
+      <rect x="6.5" y="5" width="3" height="8" strokeWidth="1.2" />
+      <rect x="9.5" y="8" width="3" height="5" strokeWidth="1.2" />
+    </svg>
+  ),
+  pie: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <circle cx="7" cy="7" r="5.5" strokeWidth="1.2" />
+      <line x1="7" y1="7" x2="7" y2="1.5" strokeWidth="1.2" />
+      <line x1="7" y1="7" x2="12" y2="9.5" strokeWidth="1.2" />
+    </svg>
+  ),
+  box: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <line x1="7" y1="1" x2="7" y2="3.5" strokeWidth="1.2" />
+      <rect x="3" y="3.5" width="8" height="7" rx="0.5" strokeWidth="1.2" />
+      <line x1="3" y1="7" x2="11" y2="7" strokeWidth="1.2" />
+      <line x1="7" y1="10.5" x2="7" y2="13" strokeWidth="1.2" />
+    </svg>
+  ),
 };
 
 /** Extract column data as an array of raw values */
@@ -253,9 +291,7 @@ export function ChartVisualization({
                 color: isActive ? "#fff" : "var(--color-text-secondary)",
               }}
             >
-              <span className="font-mono text-[10px] opacity-70">
-                {CHART_ICONS[rec.type]}
-              </span>
+              {CHART_ICONS[rec.type]}
               {rec.label}
             </button>
           );

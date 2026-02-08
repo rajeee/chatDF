@@ -10,6 +10,7 @@ Provides:
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -22,6 +23,14 @@ from pydantic import BaseModel
 
 TOKEN_LIMIT = 5_000_000
 WARNING_THRESHOLD_PERCENT = 80
+_CACHE_TTL_SECONDS = 60
+
+# ---------------------------------------------------------------------------
+# In-memory TTL cache for check_limit results
+# Maps user_id -> (RateLimitStatus, expiry_timestamp)
+# ---------------------------------------------------------------------------
+
+_cache: dict[str, tuple[RateLimitStatus, float]] = {}
 
 # ---------------------------------------------------------------------------
 # Response model
@@ -49,7 +58,18 @@ async def check_limit(db: aiosqlite.Connection, user_id: str) -> RateLimitStatus
     """Check the current token usage for *user_id* in the rolling 24h window.
 
     Implements: spec/backend/rate_limiting/plan.md#rolling-24h-window-query
+
+    Results are cached in-memory for up to ``_CACHE_TTL_SECONDS`` (60 s) to
+    avoid redundant SQLite queries when the same user triggers multiple
+    rate-limit checks within a short window (e.g. pre-check + post-check).
     """
+    # Fast path: return cached result if still valid
+    cached = _cache.get(user_id)
+    if cached is not None:
+        result, expiry = cached
+        if time.time() < expiry:
+            return result
+
     now = datetime.utcnow()
     window_start = (now - timedelta(hours=24)).isoformat()
 
@@ -78,7 +98,7 @@ async def check_limit(db: aiosqlite.Connection, user_id: str) -> RateLimitStatus
         expires_at = oldest_dt + timedelta(hours=24)
         resets_in_seconds = max(0, int((expires_at - now).total_seconds()))
 
-    return RateLimitStatus(
+    status = RateLimitStatus(
         allowed=allowed,
         usage_tokens=total_tokens,
         limit_tokens=TOKEN_LIMIT,
@@ -87,6 +107,11 @@ async def check_limit(db: aiosqlite.Connection, user_id: str) -> RateLimitStatus
         resets_in_seconds=resets_in_seconds,
         warning=warning,
     )
+
+    # Store in cache with TTL
+    _cache[user_id] = (status, time.time() + _CACHE_TTL_SECONDS)
+
+    return status
 
 
 async def record_usage(
@@ -111,3 +136,11 @@ async def record_usage(
         (usage_id, user_id, conversation_id, model_name, input_tokens, output_tokens, 0.0, now),
     )
     await db.commit()
+
+    # Invalidate cached check_limit result so next call sees fresh data
+    _cache.pop(user_id, None)
+
+
+def clear_cache() -> None:
+    """Clear the entire rate-limit cache.  Intended for testing."""
+    _cache.clear()

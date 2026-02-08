@@ -320,6 +320,16 @@ select:focus-visible {
 .syntax-comment { color: var(--syntax-comment, #a0a1a7); font-style: italic; }
 .syntax-operator { color: var(--syntax-operator, #4078f2); }
 
+/* Hide number-input spin buttons for clean inline page-jump input */
+.hide-spin-buttons::-webkit-inner-spin-button,
+.hide-spin-buttons::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.hide-spin-buttons {
+  -moz-appearance: textfield;
+}
+
 /* Touch device support: show action buttons that are normally hover-only.
    On devices without hover (phones, tablets), these buttons would be permanently
    invisible since there's no hover state. Show them at subtle opacity instead. */

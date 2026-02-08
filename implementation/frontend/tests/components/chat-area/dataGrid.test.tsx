@@ -166,13 +166,16 @@ describe("DG-PAGE-1: Pagination at 50 rows", () => {
     expect(dataRows).toHaveLength(50);
   });
 
-  it("shows page indicator", () => {
+  it("shows page indicator with jump-to-page input", () => {
     const manyRows = generateRows(120, sampleColumns);
     renderWithProviders(
       <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
     );
 
-    expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
+    const pageInput = screen.getByLabelText("Go to page");
+    expect(pageInput).toBeInTheDocument();
+    expect(pageInput).toHaveValue(1);
+    expect(screen.getByText(/of 3/)).toBeInTheDocument();
   });
 
   it("shows row count indicator", () => {
@@ -195,7 +198,9 @@ describe("DG-PAGE-1: Pagination at 50 rows", () => {
     const nextBtn = screen.getByRole("button", { name: /next/i });
     await user.click(nextBtn);
 
-    expect(screen.getByText(/Page 2 of 3/)).toBeInTheDocument();
+    const pageInput = screen.getByLabelText("Go to page");
+    expect(pageInput).toHaveValue(2);
+    expect(screen.getByText(/of 3/)).toBeInTheDocument();
   });
 
   it("disables Previous button on first page", () => {
@@ -356,6 +361,131 @@ describe("DG-HOVER-1: Row hover highlight", () => {
     const rows = within(tbody).getAllByRole("row");
     // The empty state row should not have hover classes
     expect(rows[0].className).not.toContain("hover:bg-black");
+  });
+});
+
+describe("DG-PAGE-JUMP: Jump-to-page input", () => {
+  it("renders page input when there are multiple pages", () => {
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    expect(pageInput).toBeInTheDocument();
+    expect(pageInput).toHaveAttribute("type", "number");
+    expect(pageInput).toHaveValue(1);
+  });
+
+  it("does not render page input when data fits on one page", () => {
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    expect(screen.queryByLabelText("Go to page")).not.toBeInTheDocument();
+  });
+
+  it("navigates to entered page on Enter key", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    await user.clear(pageInput);
+    await user.type(pageInput, "3");
+    await user.keyboard("{Enter}");
+
+    expect(pageInput).toHaveValue(3);
+    // Verify last page content: rows 101-120
+    const tbody = screen.getByTestId("data-grid-body");
+    const dataRows = within(tbody).getAllByRole("row");
+    expect(dataRows).toHaveLength(20); // 120 - 100 = 20 rows on page 3
+  });
+
+  it("navigates to entered page on blur", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    await user.clear(pageInput);
+    await user.type(pageInput, "2");
+    await user.tab(); // blur
+
+    expect(pageInput).toHaveValue(2);
+  });
+
+  it("clamps values above pageCount to the last page", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    await user.clear(pageInput);
+    await user.type(pageInput, "99");
+    await user.keyboard("{Enter}");
+
+    // Should clamp to page 3 (the max)
+    expect(pageInput).toHaveValue(3);
+  });
+
+  it("clamps values below 1 to the first page", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    await user.clear(pageInput);
+    await user.type(pageInput, "0");
+    await user.keyboard("{Enter}");
+
+    // Should clamp to page 1 (the min)
+    expect(pageInput).toHaveValue(1);
+  });
+
+  it("clamps negative values to the first page", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    await user.clear(pageInput);
+    await user.type(pageInput, "-5");
+    await user.keyboard("{Enter}");
+
+    expect(pageInput).toHaveValue(1);
+  });
+
+  it("syncs input value when navigating via Previous/Next buttons", async () => {
+    const user = userEvent.setup();
+    const manyRows = generateRows(120, sampleColumns);
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={manyRows} totalRows={120} />
+    );
+
+    const pageInput = screen.getByLabelText("Go to page");
+    expect(pageInput).toHaveValue(1);
+
+    const nextBtn = screen.getByRole("button", { name: /next/i });
+    await user.click(nextBtn);
+    expect(pageInput).toHaveValue(2);
+
+    await user.click(nextBtn);
+    expect(pageInput).toHaveValue(3);
+
+    const prevBtn = screen.getByRole("button", { name: /previous/i });
+    await user.click(prevBtn);
+    expect(pageInput).toHaveValue(2);
   });
 });
 

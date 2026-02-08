@@ -123,6 +123,72 @@ describe("CH-3: Active conversation highlighting", () => {
     const activeItem = items.find((el) => el.textContent?.includes("Active Chat"));
     expect(activeItem).toHaveAttribute("data-active", "true");
   });
+
+  it("active conversation has accent left border class", async () => {
+    const conversations = [
+      createConversation({ id: "conv-active", title: "Active Chat" }),
+      createConversation({ id: "conv-other", title: "Other Chat" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    useChatStore.setState({ activeConversationId: "conv-active" });
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Active Chat")).toBeInTheDocument();
+    });
+
+    const items = screen.getAllByTestId("conversation-item");
+    const activeItem = items.find((el) => el.textContent?.includes("Active Chat"));
+    const otherItem = items.find((el) => el.textContent?.includes("Other Chat"));
+
+    // Active item should have accent border
+    expect(activeItem?.className).toContain("border-l-2");
+    expect(activeItem?.className).toContain("border-[var(--color-accent)]");
+
+    // Inactive item should have transparent border
+    expect(otherItem?.className).toContain("border-l-2");
+    expect(otherItem?.className).toContain("border-transparent");
+  });
+
+  it("active+pinned conversation uses accent border instead of pinned blue border", async () => {
+    const conversations = [
+      createConversation({ id: "conv-pinned-active", title: "Pinned Active", is_pinned: true }),
+      createConversation({ id: "conv-pinned-only", title: "Pinned Only", is_pinned: true }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    useChatStore.setState({ activeConversationId: "conv-pinned-active" });
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pinned Active")).toBeInTheDocument();
+    });
+
+    const items = screen.getAllByTestId("conversation-item");
+    const pinnedActiveItem = items.find((el) => el.textContent?.includes("Pinned Active"));
+    const pinnedOnlyItem = items.find((el) => el.textContent?.includes("Pinned Only"));
+
+    // Active+pinned should use accent color, NOT blue-400
+    expect(pinnedActiveItem?.className).toContain("border-[var(--color-accent)]");
+    expect(pinnedActiveItem?.className).not.toContain("border-blue-400/50");
+
+    // Pinned-only should use blue-400
+    expect(pinnedOnlyItem?.className).toContain("border-blue-400/50");
+    expect(pinnedOnlyItem?.className).not.toContain("border-[var(--color-accent)]");
+  });
 });
 
 describe("CH-4: Inline rename via double-click", () => {

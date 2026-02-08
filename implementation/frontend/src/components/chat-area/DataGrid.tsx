@@ -3,7 +3,7 @@
 // TanStack Table integration with sorting, resizing, pagination,
 // null cell display, numeric alignment, copy as TSV.
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -86,6 +86,24 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   const startRow = (currentPage - 1) * pageSize + 1;
   const endRow = Math.min(currentPage * pageSize, totalRows);
   const showPagination = totalRows > pageSize;
+
+  const [pageInput, setPageInput] = useState(String(currentPage));
+
+  // Sync input value when current page changes (e.g. via Previous/Next buttons)
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  const goToPage = useCallback(() => {
+    const num = Number(pageInput);
+    if (Number.isNaN(num) || pageCount === 0) {
+      setPageInput(String(currentPage));
+      return;
+    }
+    const clamped = Math.max(1, Math.min(pageCount, Math.round(num)));
+    table.setPageIndex(clamped - 1);
+    setPageInput(String(clamped));
+  }, [pageInput, pageCount, currentPage, table]);
 
   const handleCopy = useCallback(async () => {
     const headerRow = columns.join("\t");
@@ -217,7 +235,25 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
             >
               Previous
             </button>
-            <span>Page {currentPage} of {pageCount}</span>
+            <span className="flex items-center gap-1">
+              Page{" "}
+              <input
+                type="number"
+                aria-label="Go to page"
+                min={1}
+                max={pageCount}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onBlur={goToPage}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="w-12 text-center bg-transparent border border-[var(--color-border)] rounded px-1 py-0.5 text-xs hide-spin-buttons"
+              />{" "}
+              of {pageCount}
+            </span>
             <button
               type="button"
               aria-label="Next page"

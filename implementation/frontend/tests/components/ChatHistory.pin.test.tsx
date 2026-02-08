@@ -224,7 +224,7 @@ describe("PIN-FE-4: Pinned conversation has visual indicator", () => {
     expect(item.className).toContain("border-l-2");
   });
 
-  it("unpinned conversation item does not have the left border indicator", () => {
+  it("unpinned conversation item has a transparent left border (no visible indicator)", () => {
     const conversations = [
       createConversation({ id: "conv-normal", title: "Normal Chat", is_pinned: false }),
     ];
@@ -235,6 +235,8 @@ describe("PIN-FE-4: Pinned conversation has visual indicator", () => {
     expect(screen.getByText("Normal Chat")).toBeInTheDocument();
 
     const item = screen.getByTestId("conversation-item");
-    expect(item.className).not.toContain("border-l-2");
+    // All items have border-l-2 for consistent layout, but unpinned inactive items use transparent
+    expect(item.className).toContain("border-l-2");
+    expect(item.className).toContain("border-transparent");
   });
 });

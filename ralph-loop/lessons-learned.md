@@ -79,6 +79,14 @@ Insights accumulated through improvement iterations.
 - **ChatHistory already had empty state**: Discovered conversations list already implemented empty state ("No conversations yet"). Always check similar components for existing patterns before implementing new ones.
 - **Test coverage for empty states**: Create dedicated test file for parent components (RightPanel.test.tsx) to test empty state rendering and transition to populated state when data exists.
 
+### Iteration 13 (2026-02-08)
+- **Isolate streaming re-renders for performance**: Extracted streaming token display into dedicated `StreamingMessage` component that only subscribes to streaming state (`streamingTokens`, `streamingReasoning`, `isReasoning`). This prevents `MessageList` from re-rendering on every token during streaming.
+- **Subscription optimization pattern**: Parent component (`MessageList`) subscribes to coarse-grained state (messages, isStreaming), child component (`StreamingMessage`) subscribes to fine-grained state (streamingTokens). Only the child re-renders on frequent updates.
+- **Dramatic re-render reduction**: For a conversation with 50 messages, we go from 50+ component re-renders per token to just 1 re-render per token. The parent list stays stable while only the streaming message updates.
+- **Zustand selective subscriptions**: Use multiple `useChatStore()` calls with different selectors to create precise subscriptions. Components only re-render when their specific subscribed state changes.
+- **Test streaming components in isolation**: Create dedicated test file for StreamingMessage to verify it only renders when appropriate (matching message ID, isStreaming true).
+- **Performance wins from architecture**: React.memo prevents re-renders from props, but doesn't help if parent re-renders due to unrelated state. Isolating subscriptions at the component level is more powerful than memoization alone.
+
 ---
 
 ## General Principles

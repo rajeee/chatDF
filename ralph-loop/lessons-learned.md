@@ -50,6 +50,13 @@ Insights accumulated through improvement iterations.
 - **Staggered animation timing**: Combine width transition (transition-all on container) with content fade-in animation (animate-* on content wrapper) for layered polish effect. Content should animate slightly after container starts transitioning.
 - **Testing for CSS classes**: Verify transitions by checking `className.includes()` for Tailwind utility classes. Don't test actual animation behavior (browser-dependent), just test that the right classes are applied.
 
+### Iteration 9 (2026-02-08)
+- **Toast notifications for UX feedback**: Implemented lightweight toast system using Zustand store + pure CSS animations. Provides non-intrusive success/error/info feedback that significantly improves user experience without cluttering the UI.
+- **Toast positioning**: Fixed bottom-right corner positioning with `pointer-events-none` on container and `pointer-events-auto` on individual toasts allows click-through on empty space while keeping toasts interactive.
+- **Auto-removal pattern**: Using setTimeout to auto-remove toasts after configurable duration (default 5s) keeps UI clean without requiring user action. Duration of 0 makes toasts persistent until manually closed.
+- **Helper methods on store**: Providing convenience methods (`success()`, `error()`, `info()`) directly on the store makes toast usage simple and consistent across components. No need to call `addToast()` directly.
+- **Integration best practices**: Add toast notifications to mutation callbacks (`onSuccess`, `onError`) in TanStack Query for automatic feedback on async operations. Shows both inline validation errors AND toast notifications for comprehensive user feedback.
+
 ---
 
 ## General Principles

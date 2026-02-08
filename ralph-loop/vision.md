@@ -27,12 +27,10 @@ The UI should feel instant. Every interaction — loading a dataset, sending a q
 - Immediate visual feedback on every click (loading states, animations, optimistic UI)
 - Sub-second page loads, tiny bundle, fast cold start
 - Smart query execution: predicate pushdown, column pruning, result pagination
-- The "wow" moment: paste a URL, get your first insight in under 15 seconds
 
 ### 2. Radical Simplicity
 Every pixel earns its place. The interface should feel obvious to a first-time user and powerful to an expert. This means:
-- Three-panel layout: conversations (left), chat (center), datasets (right). That's it.
-- No configuration screens, no settings menus, no onboarding wizards
+- Three-panel layout: conversations (left), chat (center), datasets (right). 
 - Keyboard-first for power users, mouse-friendly for everyone else
 - Dark/light mode that both look intentionally designed
 - The codebase stays small, readable, one-person-maintainable
@@ -43,7 +41,6 @@ This runs great on a $5/mo VPS. No Kubernetes, no Redis, no Elasticsearch. One F
 - SQLite for everything (sessions, conversations, metadata)
 - Worker pool for heavy queries (non-blocking, bounded concurrency)
 - No heavy JS dependencies — CSS solutions over JS libraries
-- Production bundle under 500KB gzipped
 
 ### 4. Delight in Details
 The difference between "fine" and "wow" is in the micro-interactions:
@@ -54,11 +51,9 @@ The difference between "fine" and "wow" is in the micro-interactions:
 - Toast notifications that inform without interrupting
 
 ## What Success Looks Like (v1)
-- A user pastes a Parquet URL and gets their first insight in **under 15 seconds**
 - Querying a 100M-row dataset feels as fast as querying 1,000 rows
 - The interface feels like a native app, not a web app
 - Works beautifully on desktop and mobile
-- Power users never touch the mouse — full keyboard navigation
 - When something goes wrong, the user knows exactly what happened and what to do
 - Someone technical looks at the code and thinks "this is clean"
 
@@ -70,17 +65,17 @@ The difference between "fine" and "wow" is in the micro-interactions:
 - "Just chatdf it" becomes a verb in data communities
 
 ## What We DON'T Want
-- **Feature creep**: No dashboards, no chart builders, no collaboration features, no user management beyond basic auth
 - **Heavy infrastructure**: No Docker, no Kubernetes, no message queues, no caching layers
 - **Slow iteration**: No complex build systems, no monorepo tools, no CI/CD pipelines (yet)
 - **Format sprawl**: No CSV parsing, no Excel support, no JSON APIs (yet). Parquet/Iceberg first, do it perfectly, then expand.
 - **Complexity debt**: Every line of code we add is a line we have to maintain. When in doubt, leave it out.
 
 ## Near-Term Focus Areas
-1. **Streaming UX polish** — Make streaming feel buttery smooth. Every token should flow naturally.
+1. **Streaming UX polish** — Make streaming feel buttery smooth. Every token should flow naturally. User should start seeing activity immediately.
 2. **Large dataset performance** — Virtualized tables, pagination, predicate pushdown. 100M rows should feel effortless.
 3. **Error recovery** — Network drops, API timeouts, malformed data. Handle it all gracefully.
 4. **Mobile experience** — Touch-friendly, responsive layout that actually works on phones.
 5. **Accessibility** — Keyboard navigation, screen reader support, ARIA labels everywhere.
 6. **Smart suggestions** — After loading a dataset, suggest interesting questions based on the schema.
 7. **Query explanation** — Show what SQL was generated and why, so users learn as they explore.
+8. **Result Visualization** — Add "Visualize this" option in query results so users can view data as bar graphs, box plots, or other common chart types.

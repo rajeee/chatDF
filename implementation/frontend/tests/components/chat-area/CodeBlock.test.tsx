@@ -87,4 +87,16 @@ describe("CodeBlock", () => {
 
     expect(screen.getByText("code")).toBeInTheDocument();
   });
+
+  it("copy button has touch-action-btn class for touch device visibility", () => {
+    render(
+      <CodeBlock className="language-js">
+        const x = 42;
+      </CodeBlock>
+    );
+
+    const copyButton = screen.getByLabelText(/copy code/i);
+    expect(copyButton.className).toContain("touch-action-btn");
+    expect(copyButton.className).toContain("opacity-0");
+  });
 });

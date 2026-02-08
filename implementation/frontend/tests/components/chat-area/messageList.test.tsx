@@ -525,6 +525,33 @@ describe("Accessibility: ARIA attributes", () => {
   });
 });
 
+describe("Touch-friendly: action buttons visible on touch devices", () => {
+  it("copy button has touch-action-btn class for touch device visibility", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const copyBtn = screen.getByTestId("copy-btn-msg-1");
+    expect(copyBtn.className).toContain("touch-action-btn");
+    expect(copyBtn.className).toContain("opacity-0");
+    expect(copyBtn.className).toContain("group-hover:opacity-100");
+  });
+
+  it("timestamp has touch-action-btn class for touch device visibility", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const timestamp = screen.getByTestId("timestamp-msg-1");
+    expect(timestamp.className).toContain("touch-action-btn");
+    expect(timestamp.className).toContain("opacity-0");
+  });
+});
+
 describe("Performance: content-visibility optimization", () => {
   it("applies content-visibility: auto to message rows for off-screen rendering optimization", () => {
     setChatIdle("conv-1", [

@@ -116,7 +116,7 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
             onClick={handleRemove}
             aria-label="Remove dataset"
             title="Remove dataset"
-            className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:text-red-500 active:scale-90 transition-all duration-150"
+            className="touch-action-btn absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:text-red-500 active:scale-90 transition-all duration-150"
           >
             <svg
               className="w-4 h-4"

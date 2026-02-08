@@ -218,6 +218,20 @@ describe("Performance: DatasetCard memoization", () => {
   });
 });
 
+describe("Touch-friendly: action buttons visible on touch devices", () => {
+  it("ready state remove button has touch-action-btn class for touch device visibility", () => {
+    const dataset = makeDataset();
+
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const removeBtn = screen.getByRole("button", { name: /remove/i });
+    expect(removeBtn.className).toContain("touch-action-btn");
+    // Should still have opacity-0 for hover-capable devices
+    expect(removeBtn.className).toContain("opacity-0");
+    expect(removeBtn.className).toContain("group-hover:opacity-100");
+  });
+});
+
 describe("DC-RETRY-LOADING: Retry button shows loading spinner", () => {
   it("shows spinner when retry button is clicked", async () => {
     const dataset = makeDataset({

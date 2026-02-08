@@ -279,7 +279,7 @@ export function ChatHistory() {
                   ) : (
                     <button
                       data-testid={`delete-conversation-${conv.id}`}
-                      className="absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
+                      className="touch-action-btn absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteClick(conv.id);

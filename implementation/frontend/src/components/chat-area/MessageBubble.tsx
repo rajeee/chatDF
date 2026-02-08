@@ -141,7 +141,7 @@ function MessageBubbleComponent({
         {/* Copy button - visible on hover via group-hover */}
         <button
           data-testid={`copy-btn-${message.id}`}
-          className="absolute top-1 right-1 p-1 rounded text-xs opacity-0 group-hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
+          className="touch-action-btn absolute top-1 right-1 p-1 rounded text-xs opacity-0 group-hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
           style={{ color: isUser ? "var(--color-white)" : "var(--color-text)" }}
           onClick={() => onCopy(message.content)}
           aria-label="Copy message"
@@ -156,7 +156,7 @@ function MessageBubbleComponent({
       {/* Timestamp on hover */}
       <span
         data-testid={`timestamp-${message.id}`}
-        className="text-xs mt-1 opacity-0 group-hover:opacity-70 transition-opacity"
+        className="touch-action-btn text-xs mt-1 opacity-0 group-hover:opacity-70 transition-opacity"
         style={{ color: "var(--color-text)" }}
       >
         {formatTimestamp(message.created_at)}

@@ -71,6 +71,10 @@ export function MessageList() {
     navigator.clipboard.writeText(content);
   }, []);
 
+  const handleCopySQL = useCallback((sql: string) => {
+    navigator.clipboard.writeText(sql);
+  }, []);
+
   return (
     <div className="flex flex-col">
       <div
@@ -97,6 +101,7 @@ export function MessageList() {
               onShowSQL={handleShowSQL}
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}
+              onCopySQL={handleCopySQL}
             />
           );
         })}

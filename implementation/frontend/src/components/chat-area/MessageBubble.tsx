@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   onShowSQL: (executions: SqlExecution[]) => void;
   onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
+  onCopySQL: (sql: string) => void;
 }
 
 function formatTimestamp(isoString: string): string {
@@ -41,6 +42,7 @@ export function MessageBubble({
   onShowSQL,
   onShowReasoning,
   onCopy,
+  onCopySQL,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
@@ -116,6 +118,26 @@ export function MessageBubble({
                 onClick={() => onShowSQL(message.sql_executions)}
               >
                 Show SQL ({message.sql_executions.length})
+              </button>
+            )}
+
+            {/* Copy SQL button */}
+            {message.sql_executions.length > 0 && (
+              <button
+                data-testid={`copy-sql-btn-${message.id}`}
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 flex items-center gap-1"
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                onClick={() => {
+                  const allSQL = message.sql_executions.map((exec) => exec.query).join("\n\n");
+                  onCopySQL(allSQL);
+                }}
+                aria-label="Copy SQL queries"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                Copy SQL
               </button>
             )}
           </div>

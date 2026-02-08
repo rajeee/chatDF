@@ -1,5 +1,6 @@
 // Implements: spec/frontend/plan.md#state-management-architecture (uiStore)
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { SqlExecution } from "@/stores/chatStore";
 
 interface UiState {
@@ -31,54 +32,66 @@ interface UiActions {
   closeReasoningModal: () => void;
 }
 
-export const useUiStore = create<UiState & UiActions>()((set) => ({
-  leftPanelOpen: true,
-  leftPanelWidth: 260,
-  rightPanelWidth: 300,
-  sqlModalOpen: false,
-  activeSqlExecutions: [],
-  sqlResultModalIndex: null,
-  schemaModalDatasetId: null,
-  presetModalOpen: false,
-  reasoningModalOpen: false,
-  activeReasoning: "",
+export const useUiStore = create<UiState & UiActions>()(
+  persist(
+    (set) => ({
+      leftPanelOpen: true,
+      leftPanelWidth: 260,
+      rightPanelWidth: 300,
+      sqlModalOpen: false,
+      activeSqlExecutions: [],
+      sqlResultModalIndex: null,
+      schemaModalDatasetId: null,
+      presetModalOpen: false,
+      reasoningModalOpen: false,
+      activeReasoning: "",
 
-  toggleLeftPanel: () =>
-    set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
+      toggleLeftPanel: () =>
+        set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
 
-  setLeftPanelWidth: (w) =>
-    set({ leftPanelWidth: Math.max(180, Math.min(400, w)) }),
+      setLeftPanelWidth: (w) =>
+        set({ leftPanelWidth: Math.max(180, Math.min(400, w)) }),
 
-  setRightPanelWidth: (w) =>
-    set({ rightPanelWidth: Math.max(200, Math.min(500, w)) }),
+      setRightPanelWidth: (w) =>
+        set({ rightPanelWidth: Math.max(200, Math.min(500, w)) }),
 
-  openSqlModal: (executions) =>
-    set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: null }),
+      openSqlModal: (executions) =>
+        set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: null }),
 
-  closeSqlModal: () =>
-    set({ sqlModalOpen: false, activeSqlExecutions: [], sqlResultModalIndex: null }),
+      closeSqlModal: () =>
+        set({ sqlModalOpen: false, activeSqlExecutions: [], sqlResultModalIndex: null }),
 
-  openSqlResultModal: (index) =>
-    set({ sqlResultModalIndex: index }),
+      openSqlResultModal: (index) =>
+        set({ sqlResultModalIndex: index }),
 
-  closeSqlResultModal: () =>
-    set({ sqlResultModalIndex: null }),
+      closeSqlResultModal: () =>
+        set({ sqlResultModalIndex: null }),
 
-  openSchemaModal: (datasetId) =>
-    set({ schemaModalDatasetId: datasetId }),
+      openSchemaModal: (datasetId) =>
+        set({ schemaModalDatasetId: datasetId }),
 
-  closeSchemaModal: () =>
-    set({ schemaModalDatasetId: null }),
+      closeSchemaModal: () =>
+        set({ schemaModalDatasetId: null }),
 
-  openPresetModal: () =>
-    set({ presetModalOpen: true }),
+      openPresetModal: () =>
+        set({ presetModalOpen: true }),
 
-  closePresetModal: () =>
-    set({ presetModalOpen: false }),
+      closePresetModal: () =>
+        set({ presetModalOpen: false }),
 
-  openReasoningModal: (reasoning) =>
-    set({ reasoningModalOpen: true, activeReasoning: reasoning }),
+      openReasoningModal: (reasoning) =>
+        set({ reasoningModalOpen: true, activeReasoning: reasoning }),
 
-  closeReasoningModal: () =>
-    set({ reasoningModalOpen: false, activeReasoning: "" }),
-}));
+      closeReasoningModal: () =>
+        set({ reasoningModalOpen: false, activeReasoning: "" }),
+    }),
+    {
+      name: "chatdf-ui-preferences",
+      partialize: (state) => ({
+        leftPanelOpen: state.leftPanelOpen,
+        leftPanelWidth: state.leftPanelWidth,
+        rightPanelWidth: state.rightPanelWidth,
+      }),
+    }
+  )
+);

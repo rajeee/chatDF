@@ -232,4 +232,47 @@ describe("uiStore", () => {
       expect(useUiStore.getState().schemaModalDatasetId).toBe("ds-1");
     });
   });
+
+  describe("localStorage persistence", () => {
+    beforeEach(() => {
+      // Clear localStorage before each test
+      localStorage.clear();
+    });
+
+    it("persists leftPanelOpen state to localStorage", () => {
+      useUiStore.getState().toggleLeftPanel();
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.leftPanelOpen).toBe(false);
+    });
+
+    it("persists leftPanelWidth to localStorage", () => {
+      useUiStore.getState().setLeftPanelWidth(320);
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.leftPanelWidth).toBe(320);
+    });
+
+    it("persists rightPanelWidth to localStorage", () => {
+      useUiStore.getState().setRightPanelWidth(400);
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.rightPanelWidth).toBe(400);
+    });
+
+    it("does not persist modal states to localStorage", () => {
+      useUiStore.getState().openSqlModal(sampleExecutions);
+      useUiStore.getState().openSchemaModal("ds-1");
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+
+      expect(stored.state.sqlModalOpen).toBeUndefined();
+      expect(stored.state.schemaModalDatasetId).toBeUndefined();
+    });
+
+    it("persists multiple width changes correctly", () => {
+      useUiStore.getState().setLeftPanelWidth(300);
+      useUiStore.getState().setRightPanelWidth(350);
+
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.leftPanelWidth).toBe(300);
+      expect(stored.state.rightPanelWidth).toBe(350);
+    });
+  });
 });

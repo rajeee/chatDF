@@ -30,9 +30,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const isStreaming = useChatStore((s) => s.isStreaming);
     const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
+    const loadingPhase = useChatStore((s) => s.loadingPhase);
 
     const charCount = inputValue.length;
     const trimmedEmpty = inputValue.trim().length === 0;
+    const isSending = loadingPhase === "thinking" && !isStreaming;
 
     // Auto-focus on mount
     useEffect(() => {
@@ -181,9 +183,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             <button
               type="button"
               aria-label="Send message"
-              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isSending ? "animate-pulse" : ""}`}
               onClick={handleSend}
-              disabled={trimmedEmpty || dailyLimitReached}
+              disabled={trimmedEmpty || dailyLimitReached || isSending}
+              data-sending={isSending}
             >
               {/* Arrow send icon */}
               <svg

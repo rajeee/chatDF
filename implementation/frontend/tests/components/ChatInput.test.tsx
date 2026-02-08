@@ -1,9 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, userEvent } from "../helpers/render";
 import { createRef } from "react";
 import { ChatInput, type ChatInputHandle } from "@/components/chat-area/ChatInput";
+import { useChatStore } from "@/stores/chatStore";
 
 describe("ChatInput", () => {
+  beforeEach(() => {
+    // Reset chat store before each test
+    useChatStore.getState().reset();
+  });
+
   it("exposes focus method via ref", () => {
     const ref = createRef<ChatInputHandle>();
     const onSend = vi.fn();
@@ -144,5 +150,67 @@ describe("ChatInput", () => {
     const counter = screen.getByTestId("char-counter");
     expect(counter.className).toContain("transition-colors");
     expect(counter.className).toContain("duration-300");
+  });
+
+  it("send button shows pulse animation during sending state", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Type a message
+    ref.current?.setInputValue("test message");
+
+    // Set loadingPhase to "thinking" (simulates message being sent)
+    useChatStore.setState({ loadingPhase: "thinking", isStreaming: false });
+
+    const sendButton = screen.getByLabelText("Send message");
+    expect(sendButton.className).toContain("animate-pulse");
+    expect(sendButton).toHaveAttribute("data-sending", "true");
+  });
+
+  it("send button is disabled during sending state", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Type a message
+    ref.current?.setInputValue("test message");
+
+    // Set loadingPhase to "thinking"
+    useChatStore.setState({ loadingPhase: "thinking", isStreaming: false });
+
+    const sendButton = screen.getByLabelText("Send message");
+    expect(sendButton).toBeDisabled();
+  });
+
+  it("send button returns to normal when streaming starts", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Type a message
+    ref.current?.setInputValue("test message");
+
+    // Set loadingPhase to "thinking" first
+    useChatStore.setState({ loadingPhase: "thinking", isStreaming: false });
+
+    // Verify it's showing pulse animation
+    let sendButton = screen.getByLabelText("Send message");
+    expect(sendButton.className).toContain("animate-pulse");
+
+    // Now simulate streaming starting
+    useChatStore.setState({ loadingPhase: "thinking", isStreaming: true });
+
+    // Button should no longer show pulse (streaming takes over, shows stop button instead)
+    sendButton = screen.queryByLabelText("Send message") as HTMLButtonElement;
+    // When streaming, the send button is replaced by stop button
+    const stopButton = screen.queryByLabelText("Stop generating");
+    expect(stopButton).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@ import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
-import { apiPost } from "@/api/client";
+import { apiPost, TimeoutError } from "@/api/client";
 
 const URL_REGEX = /^https?:\/\/[^/]+\.[^/]+/;
 

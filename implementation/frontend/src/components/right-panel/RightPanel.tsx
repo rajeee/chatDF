@@ -52,7 +52,7 @@ export function RightPanel() {
   return (
     <aside
       data-testid="right-panel"
-      className="flex flex-col border-l relative sticky top-12 self-start"
+      className="flex flex-col border-l relative sticky top-12 self-start transition-all duration-300 ease-in-out"
       style={{
         width: rightPanelWidth,
         minWidth: rightPanelWidth,

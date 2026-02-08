@@ -72,7 +72,7 @@ export function LeftPanel() {
     return (
       <aside
         data-testid="left-panel"
-        className="flex flex-col items-center pt-3 sticky top-12 self-start border-r"
+        className="flex flex-col items-center pt-3 sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
         style={{
           width: 48,
           minWidth: 48,
@@ -84,7 +84,7 @@ export function LeftPanel() {
         <button
           data-testid="toggle-left-panel"
           onClick={toggleLeftPanel}
-          className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500"
+          className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
           aria-label="Toggle left panel"
         >
           <HamburgerIcon />
@@ -97,7 +97,7 @@ export function LeftPanel() {
   return (
     <aside
       data-testid="left-panel"
-      className="flex flex-col relative sticky top-12 self-start border-r"
+      className="flex flex-col relative sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
       style={{
         width: leftPanelWidth,
         minWidth: leftPanelWidth,
@@ -106,12 +106,12 @@ export function LeftPanel() {
         borderColor: "var(--color-border)",
       }}
     >
-      <div className="flex flex-col h-full p-4 overflow-y-auto">
+      <div className="flex flex-col h-full p-4 overflow-y-auto animate-panel-content-fade-in">
         <div className="flex items-center mb-3">
           <button
             data-testid="toggle-left-panel"
             onClick={toggleLeftPanel}
-            className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500"
+            className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
             aria-label="Toggle left panel"
           >
             <HamburgerIcon />

@@ -57,6 +57,15 @@ describe("FE-L-1: Three-panel layout", () => {
     expect(leftIdx).toBeLessThan(chatIdx);
     expect(chatIdx).toBeLessThan(rightIdx);
   });
+
+  it("right panel has transition classes for smooth resize", () => {
+    renderWithProviders(<AppShell />);
+
+    const rightPanel = screen.getByTestId("right-panel");
+    expect(rightPanel.className).toContain("transition-all");
+    expect(rightPanel.className).toContain("duration-300");
+    expect(rightPanel.className).toContain("ease-in-out");
+  });
 });
 
 describe("FE-L-2: Left panel collapse/expand", () => {
@@ -94,6 +103,23 @@ describe("FE-L-2: Left panel collapse/expand", () => {
     const leftPanel = screen.getByTestId("left-panel");
     expect(leftPanel.style.width).toBe("48px");
   });
+
+  it("left panel has transition classes for smooth open/close", () => {
+    renderWithProviders(<AppShell />);
+
+    const leftPanel = screen.getByTestId("left-panel");
+    expect(leftPanel.className).toContain("transition-all");
+    expect(leftPanel.className).toContain("duration-300");
+    expect(leftPanel.className).toContain("ease-in-out");
+  });
+
+  it("panel content has fade-in animation when expanded", () => {
+    renderWithProviders(<AppShell />);
+
+    const leftPanel = screen.getByTestId("left-panel");
+    const content = leftPanel.querySelector(".animate-panel-content-fade-in");
+    expect(content).toBeInTheDocument();
+  });
 });
 
 describe("FE-L-3: Responsive behavior below 1024px", () => {
@@ -124,6 +150,14 @@ describe("FE-L-3: Responsive behavior below 1024px", () => {
 
     const backdrop = screen.queryByTestId("left-panel-backdrop");
     expect(backdrop).not.toBeInTheDocument();
+  });
+
+  it("backdrop has fade-in animation when rendered", () => {
+    useUiStore.setState({ leftPanelOpen: true });
+    renderWithProviders(<AppShell />);
+
+    const backdrop = screen.getByTestId("left-panel-backdrop");
+    expect(backdrop.className).toContain("animate-fade-in");
   });
 });
 

@@ -20,6 +20,20 @@ export default {
       boxShadow: {
         panel: "0 1px 3px var(--color-shadow)",
       },
+      keyframes: {
+        "panel-content-fade-in": {
+          "0%": { opacity: "0", transform: "translateX(-8px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+      },
+      animation: {
+        "panel-content-fade-in": "panel-content-fade-in 0.3s ease-out",
+        "fade-in": "fade-in 0.2s ease-out",
+      },
     },
   },
   plugins: [typography],

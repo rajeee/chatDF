@@ -49,3 +49,4 @@ Track each improvement cycle: what was done, what was learned.
 | 43 | 2026-02-08 | Always-visible copy-message button | U23 | 369/434 frontend, 64/65 backend | 4a74850 |
 | 44 | 2026-02-08 | Skip-to-content link for keyboard users | A3 | 372/437 frontend, 64/65 backend | 60570a5 |
 | 45 | 2026-02-08 | Connection status indicator in header | U22 | 383/448 frontend, 64/65 backend | 7763a8b |
+| 46 | 2026-02-08 | Global focus-visible outlines for keyboard accessibility | A4 | 385/450 frontend, 64/65 backend | ec47677 |

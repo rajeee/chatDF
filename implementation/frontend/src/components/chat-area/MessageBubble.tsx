@@ -76,7 +76,7 @@ function MessageBubbleComponent({
     >
       <div
         data-testid={`message-bubble-${message.id}`}
-        className="relative max-w-[80%] rounded-lg px-4 py-2 text-sm"
+        className="relative max-w-[80%] rounded-lg px-4 py-2 text-sm break-words"
         style={{
           backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
           color: isUser ? "var(--color-white)" : "var(--color-text)",
@@ -86,11 +86,11 @@ function MessageBubbleComponent({
       >
         {/* Message content - use StreamingMessage component for active streaming, otherwise show finalized content */}
         {isUser ? (
-          <span>{message.content}</span>
+          <span className="break-words">{message.content}</span>
         ) : isCurrentlyStreaming ? (
           <StreamingMessage messageId={message.id} />
         ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
             <ReactMarkdown
               components={{
                 code: CodeBlock,

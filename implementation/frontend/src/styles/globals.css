@@ -344,6 +344,18 @@ select:focus-visible {
 .syntax-comment { color: var(--syntax-comment, #a0a1a7); font-style: italic; }
 .syntax-operator { color: var(--syntax-operator, #4078f2); }
 
+/* Ensure inline code wraps in message bubbles */
+.prose code {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Ensure pre blocks scroll horizontally instead of overflowing */
+.prose pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 /* Hide number-input spin buttons for clean inline page-jump input */
 .hide-spin-buttons::-webkit-inner-spin-button,
 .hide-spin-buttons::-webkit-outer-spin-button {

@@ -70,6 +70,7 @@ interface ChatState {
   streamingMessageId: string | null;
   loadingPhase: LoadingPhase;
   dailyLimitReached: boolean;
+  isLoadingMessages: boolean;
 }
 
 interface ChatActions {
@@ -82,6 +83,7 @@ interface ChatActions {
   finalizeStreamingMessage: (extras?: Partial<Message>) => void;
   setLoadingPhase: (phase: LoadingPhase) => void;
   setDailyLimitReached: (reached: boolean) => void;
+  setLoadingMessages: (loading: boolean) => void;
   markMessageFailed: (messageId: string) => void;
   removeMessage: (messageId: string) => void;
   reset: () => void;
@@ -97,6 +99,7 @@ const initialState: ChatState = {
   streamingMessageId: null,
   loadingPhase: "idle",
   dailyLimitReached: false,
+  isLoadingMessages: false,
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -112,6 +115,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       isReasoning: false,
       streamingMessageId: null,
       loadingPhase: "idle",
+      isLoadingMessages: id !== null,
     }),
 
   addMessage: (message) =>
@@ -153,6 +157,9 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
 
   setDailyLimitReached: (reached) =>
     set({ dailyLimitReached: reached }),
+
+  setLoadingMessages: (loading) =>
+    set({ isLoadingMessages: loading }),
 
   markMessageFailed: (messageId) =>
     set((state) => ({

@@ -61,11 +61,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     if (!trimmed || dailyLimitReached) return;
     onSend(trimmed);
     setInputValue("");
-    // Reset textarea height after clearing
+    // Reset textarea height after clearing and re-focus
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = "auto";
+        textarea.focus();
       }
     });
   }, [inputValue, dailyLimitReached, onSend]);

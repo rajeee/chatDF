@@ -24,6 +24,7 @@ import { ChartModal } from "./ChartModal";
 import { ReasoningModal } from "./ReasoningModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { LiveRegion } from "./LiveRegion";
+import { SkeletonMessages } from "./SkeletonMessages";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -32,6 +33,7 @@ export function ChatArea() {
   const setStreaming = useChatStore((s) => s.setStreaming);
   const setLoadingPhase = useChatStore((s) => s.setLoadingPhase);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const isLoadingMessages = useChatStore((s) => s.isLoadingMessages);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const allDatasets = useDatasetStore((s) => s.datasets);
   const datasets = useMemo(
@@ -159,6 +161,13 @@ export function ChatArea() {
     }
   }, [activeConversationId]);
 
+  // Clear skeleton loading state when messages arrive
+  useEffect(() => {
+    if (hasMessages && useChatStore.getState().isLoadingMessages) {
+      useChatStore.getState().setLoadingMessages(false);
+    }
+  }, [hasMessages]);
+
   const handleStop = useCallback(async () => {
     if (!activeConversationId) return;
     try {
@@ -210,6 +219,10 @@ export function ChatArea() {
             <div className="onboarding-exit">
               <OnboardingGuide onSendPrompt={handleSend} />
             </div>
+          )}
+
+          {isLoadingMessages && !hasMessages && !showOnboarding && !showSuggested && (
+            <SkeletonMessages />
           )}
 
           {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} onRetry={handleRetry} />}

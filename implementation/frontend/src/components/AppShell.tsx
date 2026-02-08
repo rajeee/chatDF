@@ -14,6 +14,7 @@ import { Header } from "@/components/Header";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import { ChatArea } from "@/components/chat-area/ChatArea";
 import { RightPanel } from "@/components/right-panel/RightPanel";
+import { ConnectionBanner } from "@/components/ConnectionBanner";
 
 export function AppShell() {
   const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
@@ -45,6 +46,7 @@ export function AppShell() {
       </a>
 
       <Header />
+      <ConnectionBanner />
 
       {/* Backdrop for mobile overlay when left panel is open */}
       {leftPanelOpen && (

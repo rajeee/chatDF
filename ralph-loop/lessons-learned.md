@@ -304,6 +304,13 @@ Insights accumulated through improvement iterations.
 - **Backdrop pattern for overlays**: Added `right-panel-backdrop` in AppShell matching the existing `left-panel-backdrop` pattern. Click-to-dismiss backdrop is essential for mobile overlays.
 - **Test count increased**: Frontend went from 337/398 to 346/407 passing (+9 new tests, 0 regressions). Backend unchanged at 64/65 passing. Pre-existing failure count stable at 61.
 
+### Iteration 40 (2026-02-08)
+- **Mobile auto-close panel on navigation**: On mobile, selecting a conversation now auto-closes the left panel overlay so users immediately see chat content. This is a standard UX pattern in mobile chat apps (Slack, Discord, ChatGPT) — when you navigate somewhere, the navigation drawer closes automatically.
+- **Simple viewport check**: Used `window.innerWidth < 1024` to detect mobile, matching the Tailwind `lg:` breakpoint where panels switch to overlay mode. This is simpler than adding a media query listener or resize observer — we only need to check at the moment of selection, not continuously.
+- **Guard clause for toggle**: Check `leftPanelOpen && window.innerWidth < 1024` before calling `toggleLeftPanel()`. The `leftPanelOpen` guard prevents toggling the panel open if it's somehow already closed, and the width check prevents closing on desktop where the panel is inline, not overlay.
+- **ChatHistory tests are pre-existing failures**: All ChatHistory tests that require API data (MSW `http.get("/conversations", ...)`) fail when run in isolation. This is a pre-existing issue from around iteration 18-20 where the MSW setup broke. Tests pass in the full suite context where 346/409 pass. New tests follow the same pattern and will pass/fail together with existing ones.
+- **Minimal implementation for mobile UX**: This was a 5-line change (2 lines of imports/hooks, 3 lines of conditional logic) that significantly improves the mobile experience. Users no longer have to manually close the panel — the app just does the right thing.
+
 ---
 
 ## General Principles

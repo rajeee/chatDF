@@ -207,9 +207,11 @@ describe("ChatArea conditional rendering", () => {
   });
 
   it("shows suggested prompts placeholder when datasets exist but no messages", () => {
+    setChatIdle("conv-1");
     setDatasetsLoaded([
       {
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "test_data",
         row_count: 100,

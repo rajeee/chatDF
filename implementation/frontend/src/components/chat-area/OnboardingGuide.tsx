@@ -4,7 +4,9 @@
 // Before data loaded: title + "Try with preset sources" button + "or load your own data".
 // After data loaded: example prompt chips.
 
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useMemo } from "react";
+import { useChatStore } from "@/stores/chatStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
 import { SAMPLE_PROMPT_CHIPS } from "@/lib/constants";
 
@@ -13,7 +15,12 @@ interface OnboardingGuideProps {
 }
 
 export function OnboardingGuide({ onSendPrompt }: OnboardingGuideProps) {
-  const datasets = useDatasetStore((s) => s.datasets);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const datasets = useMemo(
+    () => filterDatasetsByConversation(allDatasets, activeConversationId),
+    [allDatasets, activeConversationId]
+  );
   const openPresetModal = useUiStore((s) => s.openPresetModal);
 
   const hasDatasets = datasets.length > 0;

@@ -111,6 +111,7 @@ async def add_dataset(
                 "type": "dataset_loaded",
                 "dataset": {
                     "id": result["id"],
+                    "conversation_id": conversation["id"],
                     "url": result["url"],
                     "name": result["name"],
                     "row_count": result["row_count"],

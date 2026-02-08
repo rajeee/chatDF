@@ -22,6 +22,7 @@ import { DatasetCard } from "@/components/right-panel/DatasetCard";
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {
     id: "ds-1",
+    conversation_id: "conv-1",
     url: "https://data.example.com/sales.parquet",
     name: "sales",
     row_count: 133433,

@@ -141,6 +141,7 @@ export function PresetSourcesModal() {
         const placeholderId = `preset-loading-${idx}`;
         addDataset({
           id: placeholderId,
+          conversation_id: convId!,
           url: preset.url,
           name: preset.name,
           row_count: 0,

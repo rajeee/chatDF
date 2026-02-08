@@ -28,6 +28,7 @@ import { DatasetInput } from "@/components/right-panel/DatasetInput";
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {
     id: "ds-1",
+    conversation_id: "conv-1",
     url: "https://example.com/data.parquet",
     name: "test_data",
     row_count: 100,

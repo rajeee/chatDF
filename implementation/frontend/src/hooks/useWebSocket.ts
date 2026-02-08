@@ -137,6 +137,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
           if (msg.dataset) {
             const dsPayload = msg.dataset as {
               id: string;
+              conversation_id: string;
               url: string;
               name: string;
               row_count: number;
@@ -145,14 +146,20 @@ export function useWebSocket(isAuthenticated: boolean): void {
               status: "loading" | "ready" | "error";
               error_message: string | null;
             };
+            // Ensure conversation_id is set (fallback to active conversation for backwards compat)
+            const convId =
+              dsPayload.conversation_id ||
+              useChatStore.getState().activeConversationId ||
+              "";
+            const datasetWithConv = { ...dsPayload, conversation_id: convId };
             const exists = datasetStore.datasets.some(
               (d) => d.id === dsPayload.id
             );
             if (exists) {
-              datasetStore.updateDataset(dsPayload.id, dsPayload);
+              datasetStore.updateDataset(dsPayload.id, datasetWithConv);
             } else {
               // WS event arrived before HTTP response added the dataset
-              datasetStore.addDataset(dsPayload);
+              datasetStore.addDataset(datasetWithConv);
             }
           }
           break;

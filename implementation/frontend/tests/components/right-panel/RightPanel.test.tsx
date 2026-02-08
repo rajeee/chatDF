@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderWithProviders, screen } from "../../helpers/render";
 import { resetAllStores, type Dataset } from "../../helpers/stores";
+import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
 import { RightPanel } from "@/components/right-panel/RightPanel";
@@ -13,6 +14,7 @@ import { RightPanel } from "@/components/right-panel/RightPanel";
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {
     id: "ds-1",
+    conversation_id: "conv-1",
     url: "https://data.example.com/sales.parquet",
     name: "sales",
     row_count: 133433,
@@ -26,6 +28,8 @@ function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
 
 beforeEach(() => {
   resetAllStores();
+  // Set active conversation so dataset filtering works
+  useChatStore.setState({ activeConversationId: "conv-1" });
 });
 
 describe("RP-EMPTY-1: Shows empty state when no datasets", () => {

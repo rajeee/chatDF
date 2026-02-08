@@ -16,6 +16,7 @@ import {
   setChatIdle,
   type Dataset,
 } from "../../helpers/stores";
+import { useChatStore } from "@/stores/chatStore";
 import { OnboardingGuide } from "@/components/chat-area/OnboardingGuide";
 import { SuggestedPrompts } from "@/components/chat-area/SuggestedPrompts";
 import { ChatArea } from "@/components/chat-area/ChatArea";
@@ -24,6 +25,7 @@ import { SAMPLE_DATASET_URL, SAMPLE_PROMPT_CHIPS } from "@/lib/constants";
 
 const IRIS_DATASET: Dataset = {
   id: "ds-iris",
+  conversation_id: "conv-1",
   url: SAMPLE_DATASET_URL,
   name: "iris",
   row_count: 150,
@@ -35,6 +37,7 @@ const IRIS_DATASET: Dataset = {
 
 beforeEach(() => {
   resetAllStores();
+  useChatStore.setState({ activeConversationId: "conv-1" });
 });
 
 describe("OB-1: Renders simplified onboarding when no datasets and no messages", () => {

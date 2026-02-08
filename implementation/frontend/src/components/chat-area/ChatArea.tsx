@@ -7,9 +7,9 @@
 // ChatInput is always visible at the bottom.
 // SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
 import { apiPost } from "@/api/client";
 import { OnboardingGuide } from "./OnboardingGuide";
@@ -26,7 +26,11 @@ export function ChatArea() {
   const setLoadingPhase = useChatStore((s) => s.setLoadingPhase);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
-  const datasets = useDatasetStore((s) => s.datasets);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const datasets = useMemo(
+    () => filterDatasetsByConversation(allDatasets, activeConversationId),
+    [allDatasets, activeConversationId]
+  );
 
   const hasDatasets = datasets.length > 0;
   const hasMessages = messages.length > 0;

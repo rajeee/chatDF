@@ -2,7 +2,7 @@
 // Covers: FE-S-03 (add/remove/update datasets)
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 
 describe("datasetStore", () => {
   beforeEach(() => {
@@ -23,6 +23,7 @@ describe("datasetStore", () => {
     it("adds a dataset to the array", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "test_data",
         row_count: 100,
@@ -42,6 +43,7 @@ describe("datasetStore", () => {
     it("adds multiple datasets", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data1.csv",
         name: "dataset_one",
         row_count: 50,
@@ -52,6 +54,7 @@ describe("datasetStore", () => {
       });
       useDatasetStore.getState().addDataset({
         id: "ds-2",
+        conversation_id: "conv-1",
         url: "https://example.com/data2.csv",
         name: "dataset_two",
         row_count: 200,
@@ -69,6 +72,7 @@ describe("datasetStore", () => {
     it("removes a dataset by id", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "dataset_one",
         row_count: 100,
@@ -79,6 +83,7 @@ describe("datasetStore", () => {
       });
       useDatasetStore.getState().addDataset({
         id: "ds-2",
+        conversation_id: "conv-1",
         url: "https://example.com/data2.csv",
         name: "dataset_two",
         row_count: 50,
@@ -98,6 +103,7 @@ describe("datasetStore", () => {
     it("does nothing when removing non-existent id", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "dataset_one",
         row_count: 100,
@@ -116,6 +122,7 @@ describe("datasetStore", () => {
     it("updates specific fields of a dataset", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "original_name",
         row_count: 0,
@@ -145,6 +152,7 @@ describe("datasetStore", () => {
     it("does not modify other datasets", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data1.csv",
         name: "first",
         row_count: 10,
@@ -155,6 +163,7 @@ describe("datasetStore", () => {
       });
       useDatasetStore.getState().addDataset({
         id: "ds-2",
+        conversation_id: "conv-1",
         url: "https://example.com/data2.csv",
         name: "second",
         row_count: 20,
@@ -173,6 +182,7 @@ describe("datasetStore", () => {
     it("updates error_message on dataset error", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "broken",
         row_count: 0,
@@ -197,6 +207,7 @@ describe("datasetStore", () => {
     it("updates the name of a dataset", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "old_name",
         row_count: 100,
@@ -213,6 +224,7 @@ describe("datasetStore", () => {
     it("does not affect other fields", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "old_name",
         row_count: 100,
@@ -235,6 +247,7 @@ describe("datasetStore", () => {
     it("marks dataset id as loading", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "dataset",
         row_count: 100,
@@ -259,10 +272,108 @@ describe("datasetStore", () => {
     });
   });
 
+  describe("setConversationDatasets", () => {
+    it("replaces datasets for a specific conversation", () => {
+      // Add datasets for two conversations
+      useDatasetStore.getState().addDataset({
+        id: "ds-1",
+        conversation_id: "conv-1",
+        url: "https://example.com/a.csv",
+        name: "a",
+        row_count: 10,
+        column_count: 2,
+        schema_json: "{}",
+        status: "ready",
+        error_message: null,
+      });
+      useDatasetStore.getState().addDataset({
+        id: "ds-2",
+        conversation_id: "conv-2",
+        url: "https://example.com/b.csv",
+        name: "b",
+        row_count: 20,
+        column_count: 3,
+        schema_json: "{}",
+        status: "ready",
+        error_message: null,
+      });
+
+      // Replace conv-1 datasets
+      useDatasetStore.getState().setConversationDatasets("conv-1", [
+        {
+          id: "ds-3",
+          conversation_id: "conv-1",
+          url: "https://example.com/c.csv",
+          name: "c",
+          row_count: 30,
+          column_count: 4,
+          schema_json: "{}",
+          status: "ready",
+          error_message: null,
+        },
+      ]);
+
+      const datasets = useDatasetStore.getState().datasets;
+      expect(datasets).toHaveLength(2);
+      expect(datasets.find((d) => d.id === "ds-2")).toBeDefined(); // conv-2 preserved
+      expect(datasets.find((d) => d.id === "ds-3")).toBeDefined(); // conv-1 replaced
+      expect(datasets.find((d) => d.id === "ds-1")).toBeUndefined(); // old conv-1 gone
+    });
+  });
+
+  describe("filterDatasetsByConversation", () => {
+    it("returns only datasets for the given conversation", () => {
+      useDatasetStore.getState().addDataset({
+        id: "ds-1",
+        conversation_id: "conv-1",
+        url: "https://example.com/a.csv",
+        name: "a",
+        row_count: 10,
+        column_count: 2,
+        schema_json: "{}",
+        status: "ready",
+        error_message: null,
+      });
+      useDatasetStore.getState().addDataset({
+        id: "ds-2",
+        conversation_id: "conv-2",
+        url: "https://example.com/b.csv",
+        name: "b",
+        row_count: 20,
+        column_count: 3,
+        schema_json: "{}",
+        status: "ready",
+        error_message: null,
+      });
+
+      const result = filterDatasetsByConversation(useDatasetStore.getState().datasets, "conv-1");
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("ds-1");
+    });
+
+    it("returns empty array for null conversationId", () => {
+      useDatasetStore.getState().addDataset({
+        id: "ds-1",
+        conversation_id: "conv-1",
+        url: "https://example.com/a.csv",
+        name: "a",
+        row_count: 10,
+        column_count: 2,
+        schema_json: "{}",
+        status: "ready",
+        error_message: null,
+      });
+
+      const result = filterDatasetsByConversation(useDatasetStore.getState().datasets, null);
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe("reset", () => {
     it("clears all datasets and loading state", () => {
       useDatasetStore.getState().addDataset({
         id: "ds-1",
+        conversation_id: "conv-1",
         url: "https://example.com/data.csv",
         name: "dataset",
         row_count: 100,

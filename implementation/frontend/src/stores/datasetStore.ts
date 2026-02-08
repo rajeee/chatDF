@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 export interface Dataset {
   id: string;
+  conversation_id: string;
   url: string;
   name: string;
   row_count: number;
@@ -23,6 +24,7 @@ interface DatasetActions {
   updateDataset: (id: string, updates: Partial<Dataset>) => void;
   renameDataset: (id: string, name: string) => void;
   refreshSchema: (id: string) => void;
+  setConversationDatasets: (conversationId: string, datasets: Dataset[]) => void;
   reset: () => void;
 }
 
@@ -63,9 +65,28 @@ export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => 
       loadingDatasets: new Set(state.loadingDatasets).add(id),
     })),
 
+  setConversationDatasets: (conversationId, datasets) =>
+    set((state) => ({
+      // Replace datasets for this conversation, keep others
+      datasets: [
+        ...state.datasets.filter((d) => d.conversation_id !== conversationId),
+        ...datasets,
+      ],
+    })),
+
   reset: () =>
     set({
       datasets: [],
       loadingDatasets: new Set<string>(),
     }),
 }));
+
+/** Filter datasets for a specific conversation (use with useMemo in components) */
+export function filterDatasetsByConversation(
+  datasets: Dataset[],
+  conversationId: string | null
+): Dataset[] {
+  return conversationId
+    ? datasets.filter((d) => d.conversation_id === conversationId)
+    : [];
+}

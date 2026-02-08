@@ -3,8 +3,8 @@
 // "Preset Sources" button at top, then URL text input with Add button.
 // Client-side validation (debounced 300ms), server-side validation on submit.
 
-import { useState, useEffect, useCallback } from "react";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -22,7 +22,11 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const datasets = useDatasetStore((s) => s.datasets);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const datasets = useMemo(
+    () => filterDatasetsByConversation(allDatasets, conversationId || null),
+    [allDatasets, conversationId]
+  );
   const addDataset = useDatasetStore((s) => s.addDataset);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const openPresetModal = useUiStore((s) => s.openPresetModal);
@@ -102,6 +106,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
       if (!alreadyExists) {
         addDataset({
           id: response.dataset_id,
+          conversation_id: convId,
           url,
           name: "",
           row_count: 0,

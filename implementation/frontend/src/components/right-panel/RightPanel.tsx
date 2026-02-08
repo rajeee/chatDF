@@ -5,9 +5,9 @@
 // Below 1024px (lg): renders as fixed overlay from right side, toggled via Header button.
 // On desktop (>=1024px): always visible inline panel with resize handle.
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
 import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
@@ -16,7 +16,11 @@ import { PresetSourcesModal } from "./PresetSourcesModal";
 
 export function RightPanel() {
   const conversationId = useChatStore((s) => s.activeConversationId);
-  const datasets = useDatasetStore((s) => s.datasets);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const datasets = useMemo(
+    () => filterDatasetsByConversation(allDatasets, conversationId),
+    [allDatasets, conversationId]
+  );
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const rightPanelWidth = useUiStore((s) => s.rightPanelWidth);
   const setRightPanelWidth = useUiStore((s) => s.setRightPanelWidth);

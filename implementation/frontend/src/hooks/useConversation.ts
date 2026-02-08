@@ -52,24 +52,24 @@ export function useConversation() {
         });
       }
     }
-    const datasetState = useDatasetStore.getState();
-    if (datasetState.datasets.length === 0 && conversation.datasets.length > 0) {
-      for (const ds of conversation.datasets) {
-        datasetState.addDataset({
-          ...ds,
-          status: ds.status ?? "ready",
-          schema_json: ds.schema_json ?? "{}",
-          error_message: ds.error_message ?? null,
-        });
-      }
+    // Populate datasets for this conversation (merge with existing store)
+    if (conversation.datasets.length > 0) {
+      const datasetState = useDatasetStore.getState();
+      const convDatasets = conversation.datasets.map((ds) => ({
+        ...ds,
+        conversation_id: conversation.id,
+        status: ds.status ?? "ready",
+        schema_json: ds.schema_json ?? "{}",
+        error_message: ds.error_message ?? null,
+      }));
+      datasetState.setConversationDatasets(conversation.id, convDatasets);
     }
   }
 
   const switchConversation = useCallback(
     (conversationId: string | null) => {
-      // Reset stores when switching
+      // Reset chat messages (per-conversation), keep datasets (already filtered by conversation_id)
       useChatStore.getState().setActiveConversation(conversationId);
-      useDatasetStore.getState().reset();
       // Invalidate the conversation query to force a refetch
       if (conversationId) {
         void queryClient.invalidateQueries({

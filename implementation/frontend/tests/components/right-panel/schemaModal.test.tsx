@@ -30,6 +30,7 @@ import { SchemaModal } from "@/components/right-panel/SchemaModal";
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {
     id: "ds-1",
+    conversation_id: "conv-1",
     url: "https://example.com/sales.parquet",
     name: "sales",
     row_count: 1000,

@@ -6,6 +6,7 @@
 
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useChatStore } from "@/stores/chatStore";
+import { QueryHistoryDropdown } from "./QueryHistoryDropdown";
 
 const CHAR_LIMIT = 2000;
 const CHAR_COUNTER_THRESHOLD = 1800;
@@ -15,10 +16,11 @@ interface ChatInputProps {
   onStop: () => void;
 }
 
-// Expose both the textarea element and send functionality
+// Expose textarea element, send functionality, and input value setter
 export interface ChatInputHandle {
   focus: () => void;
   sendMessage: () => void;
+  setInputValue: (value: string) => void;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
@@ -66,14 +68,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     });
   }, [inputValue, dailyLimitReached, onSend]);
 
-  // Expose focus and sendMessage methods to parent via ref
+  // Expose focus, sendMessage, and setInputValue methods to parent via ref
   useImperativeHandle(
     ref,
     () => ({
       focus: () => textareaRef.current?.focus(),
       sendMessage: handleSend,
+      setInputValue: (value: string) => {
+        setInputValue(value);
+        requestAnimationFrame(resizeTextarea);
+      },
     }),
-    [handleSend]
+    [handleSend, resizeTextarea]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -113,6 +119,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   const formattedCount = charCount.toLocaleString();
   const formattedLimit = CHAR_LIMIT.toLocaleString();
 
+  const handleSelectQuery = useCallback((query: string) => {
+    setInputValue(query);
+    requestAnimationFrame(() => {
+      resizeTextarea();
+      textareaRef.current?.focus();
+    });
+  }, [resizeTextarea]);
+
     return (
       <div className="relative flex flex-col gap-1">
         <div className="flex items-end gap-2">
@@ -132,6 +146,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             onPaste={handlePaste}
             placeholder={placeholder}
             disabled={dailyLimitReached}
+          />
+
+          <QueryHistoryDropdown
+            onSelectQuery={handleSelectQuery}
+            disabled={dailyLimitReached || isStreaming}
           />
 
           {isStreaming ? (

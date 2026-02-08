@@ -61,4 +61,21 @@ describe("ChatInput", () => {
 
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it("exposes setInputValue method via ref", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    expect(ref.current).toBeDefined();
+    expect(ref.current?.setInputValue).toBeInstanceOf(Function);
+
+    // Set input value
+    ref.current?.setInputValue("SELECT * FROM users");
+
+    const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(textarea.value).toBe("SELECT * FROM users");
+  });
 });

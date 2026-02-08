@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChatDFSocket } from "@/lib/websocket";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore } from "@/stores/datasetStore";
+import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 
 interface WsMessage {
   type: string;
@@ -109,6 +110,14 @@ export function useWebSocket(isAuthenticated: boolean): void {
           });
           chatStore.setStreaming(false);
           chatStore.setLoadingPhase("idle");
+
+          // Save SQL queries to history
+          const queryHistoryStore = useQueryHistoryStore.getState();
+          sqlExecs.forEach((exec) => {
+            if (exec.query && exec.query.trim()) {
+              queryHistoryStore.addQuery(exec.query);
+            }
+          });
           break;
         }
         case "ce": // chat_error (compressed)

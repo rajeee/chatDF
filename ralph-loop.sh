@@ -182,27 +182,72 @@ while true; do
   fi
 
   # Run Claude in print mode (non-interactive, no permission prompts)
-  # timeout guards against silent hangs (iter 38 hung for 3h50m)
-  ITER_TIMEOUT="${RALPH_TIMEOUT:-900}"  # 15 min default
-  log "Running Claude (model=$MODEL, budget=\$$MAX_BUDGET, timeout=${ITER_TIMEOUT}s)..."
+  # A watchdog monitors for API stalls (0 activity for STALL_TIMEOUT seconds).
+  # This does NOT cap total runtime — if Claude is actively working, it runs forever.
+  STALL_TIMEOUT="${RALPH_STALL_TIMEOUT:-300}"  # 5 min of zero activity = stall
+  log "Running Claude (model=$MODEL, budget=\$$MAX_BUDGET, stall_detect=${STALL_TIMEOUT}s)..."
   set +e
   cd "$PROJECT_DIR"
-  timeout "$ITER_TIMEOUT" $CLAUDE_BIN \
+
+  # Launch Claude in background, piping through tee
+  $CLAUDE_BIN \
     --print \
     --model "$MODEL" \
     --dangerously-skip-permissions \
     --max-budget-usd "$MAX_BUDGET" \
     --verbose \
     "$prompt" \
-    2>&1 | tee "$log_file"
+    2>&1 | tee "$log_file" &
+  tee_pid=$!
+  # The actual claude process is the parent of tee in the pipeline
+  claude_pid=$(jobs -p | head -1)
 
-  exit_code=${PIPESTATUS[0]}
+  # Watchdog: kill only if no file activity (git changes OR log output) for STALL_TIMEOUT
+  (
+    while kill -0 "$tee_pid" 2>/dev/null; do
+      sleep 30
+      # Check if claude is still alive
+      if ! kill -0 "$tee_pid" 2>/dev/null; then
+        break
+      fi
+      # Measure seconds since last activity:
+      #   1) log file growing = Claude producing output
+      #   2) any file in implementation/ modified = Claude working via tools
+      last_log_mod=$(stat -c %Y "$log_file" 2>/dev/null || echo 0)
+      last_src_mod=$(find "$PROJECT_DIR/implementation" -type f -newer "$log_file" 2>/dev/null | head -1)
+      now=$(date +%s)
+      idle_secs=$((now - last_log_mod))
+
+      if [[ -n "$last_src_mod" ]]; then
+        # Source files changed more recently than log — Claude is working
+        continue
+      fi
+
+      if [[ $idle_secs -gt $STALL_TIMEOUT ]]; then
+        echo "[watchdog] No activity for ${idle_secs}s — killing stalled Claude process" >&2
+        kill "$tee_pid" 2>/dev/null
+        # Also kill any child claude processes
+        pkill -P "$tee_pid" 2>/dev/null || true
+        break
+      fi
+    done
+  ) &
+  watchdog_pid=$!
+
+  # Wait for Claude to finish (or be killed by watchdog)
+  wait "$tee_pid" 2>/dev/null
+  exit_code=$?
+
+  # Clean up watchdog
+  kill "$watchdog_pid" 2>/dev/null
+  wait "$watchdog_pid" 2>/dev/null
+
   set -e
 
   if [[ $exit_code -eq 0 ]]; then
     ok "Iteration #$iter_num completed successfully"
-  elif [[ $exit_code -eq 124 ]]; then
-    err "Iteration #$iter_num TIMED OUT after ${ITER_TIMEOUT}s"
+  elif [[ $exit_code -eq 143 ]] || [[ $exit_code -eq 137 ]]; then
+    err "Iteration #$iter_num killed by watchdog (API stall detected)"
     warn "Reverting any uncommitted changes..."
     git checkout -- . 2>/dev/null || true
     git clean -fd 2>/dev/null || true

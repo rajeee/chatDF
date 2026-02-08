@@ -7,4 +7,3 @@
 - **Schema data is already available — use it**: Parse `schema_json` column types (numeric/date/categorical) for context-aware prompts instead of generic suggestions.
 - **Full-stack features via SQL subqueries**: Adding derived fields (like `last_message_preview`) to list APIs is cheaply done via correlated subqueries rather than JOINs — keeps response model clean and avoids N+1.
 - **Test files go in `tests/` not `src/__tests__/`**: Vitest config includes `tests/**/*.test.{ts,tsx}`, not `src/__tests__/`. Files in the wrong location are silently ignored.
-- **Grouped rendering preserves test IDs**: When refactoring flat lists into grouped rendering, keep all existing `data-testid` attributes on the inner items — existing tests work if the DOM nodes are still present.

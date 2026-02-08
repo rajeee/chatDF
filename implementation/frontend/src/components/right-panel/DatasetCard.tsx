@@ -10,6 +10,7 @@ import { useUiStore } from "@/stores/uiStore";
 
 interface DatasetCardProps {
   dataset: Dataset;
+  index?: number;
 }
 
 function formatNumber(n: number): string {
@@ -24,7 +25,7 @@ function getHostname(url: string): string {
   }
 }
 
-function DatasetCardComponent({ dataset }: DatasetCardProps) {
+function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -72,7 +73,7 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
     <div
       data-testid="dataset-card"
       className={[
-        "group relative rounded border p-3 w-full transition-all duration-150",
+        "group relative rounded border p-3 w-full transition-all duration-150 dataset-card-enter",
         isReady ? "cursor-pointer hover:shadow-md hover:border-accent/50" : "cursor-default",
         isError ? "border-l-4 border-red-500" : "",
       ]
@@ -81,7 +82,8 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
       style={{
         backgroundColor: "var(--color-surface)",
         borderColor: isError ? undefined : "var(--color-border)",
-      }}
+        "--stagger-index": index,
+      } as React.CSSProperties}
       onClick={handleCardClick}
     >
       {/* Loading state */}

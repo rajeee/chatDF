@@ -232,6 +232,35 @@ describe("Touch-friendly: action buttons visible on touch devices", () => {
   });
 });
 
+describe("Stagger animation: dataset cards appear with staggered delay", () => {
+  it("applies dataset-card-enter class to cards", () => {
+    const dataset = makeDataset();
+
+    renderWithProviders(<DatasetCard dataset={dataset} index={0} />);
+
+    const card = screen.getByTestId("dataset-card");
+    expect(card.className).toContain("dataset-card-enter");
+  });
+
+  it("sets --stagger-index CSS variable based on index prop", () => {
+    const dataset = makeDataset();
+
+    renderWithProviders(<DatasetCard dataset={dataset} index={3} />);
+
+    const card = screen.getByTestId("dataset-card");
+    expect(card.style.getPropertyValue("--stagger-index")).toBe("3");
+  });
+
+  it("defaults stagger index to 0 when no index prop provided", () => {
+    const dataset = makeDataset();
+
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const card = screen.getByTestId("dataset-card");
+    expect(card.style.getPropertyValue("--stagger-index")).toBe("0");
+  });
+});
+
 describe("DC-RETRY-LOADING: Retry button shows loading spinner", () => {
   it("shows spinner when retry button is clicked", async () => {
     const dataset = makeDataset({

@@ -146,8 +146,8 @@ export function RightPanel() {
               </p>
             </div>
           ) : (
-            datasets.map((dataset) => (
-              <DatasetCard key={dataset.id} dataset={dataset} />
+            datasets.map((dataset, index) => (
+              <DatasetCard key={dataset.id} dataset={dataset} index={index} />
             ))
           )}
         </div>

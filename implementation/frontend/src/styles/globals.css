@@ -219,6 +219,14 @@ select:focus-visible {
   animation: modalScaleIn 0.2s ease-out forwards;
 }
 
+/* Stagger entrance animation for dataset cards.
+   Uses --stagger-index custom property set inline for per-card delay. */
+.dataset-card-enter {
+  opacity: 0;
+  animation: fadeInUp 0.35s ease-out forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 60ms);
+}
+
 /* Touch device support: show action buttons that are normally hover-only.
    On devices without hover (phones, tablets), these buttons would be permanently
    invisible since there's no hover state. Show them at subtle opacity instead. */

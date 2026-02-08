@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatDFSocket } from "@/lib/websocket";
 import { useChatStore } from "@/stores/chatStore";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 
@@ -188,11 +189,26 @@ export function useWebSocket(isAuthenticated: boolean): void {
       }
     });
 
+    const { setStatus } = useConnectionStore.getState();
+    let intentionalDisconnect = false;
+
+    socket.onOpen(() => {
+      setStatus("connected");
+    });
+
+    socket.onClose(() => {
+      // After intentional disconnect, stay "disconnected".
+      // After unexpected close, ChatDFSocket auto-reconnects with backoff.
+      setStatus(intentionalDisconnect ? "disconnected" : "reconnecting");
+    });
+
     socket.connect();
 
     return () => {
+      intentionalDisconnect = true;
       socket.disconnect();
       socketRef.current = null;
+      setStatus("disconnected");
     };
   }, [isAuthenticated, queryClient]);
 }

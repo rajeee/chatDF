@@ -9,11 +9,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderWithProviders, screen, userEvent } from "../helpers/render";
 import { resetAllStores, setDatasetsLoaded, setChatIdle } from "../helpers/stores";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { useUiStore } from "@/stores/uiStore";
 import { AppShell } from "@/components/AppShell";
 
 beforeEach(() => {
   resetAllStores();
+  useConnectionStore.setState({ status: "disconnected" });
   // Reset window.innerWidth to desktop default
   Object.defineProperty(window, "innerWidth", {
     writable: true,
@@ -239,5 +241,63 @@ describe("ChatArea conditional rendering", () => {
     renderWithProviders(<AppShell />);
 
     expect(screen.getByTestId("message-list-scroll")).toBeInTheDocument();
+  });
+});
+
+describe("Connection status indicator (U22)", () => {
+  it("renders connection status indicator in the header", () => {
+    renderWithProviders(<AppShell />);
+    expect(screen.getByTestId("connection-status")).toBeInTheDocument();
+  });
+
+  it("shows red dot when disconnected", () => {
+    useConnectionStore.setState({ status: "disconnected" });
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator).toHaveAttribute("aria-label", "Connection status: Disconnected");
+  });
+
+  it("shows green dot when connected", () => {
+    useConnectionStore.setState({ status: "connected" });
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator).toHaveAttribute("aria-label", "Connection status: Connected");
+  });
+
+  it("shows amber pulsing dot when reconnecting", () => {
+    useConnectionStore.setState({ status: "reconnecting" });
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator).toHaveAttribute("aria-label", "Connection status: Reconnecting");
+    // The dot should have animate-pulse class
+    const dot = indicator.querySelector("span");
+    expect(dot?.className).toContain("animate-pulse");
+  });
+
+  it("shows text label only when not connected", () => {
+    useConnectionStore.setState({ status: "disconnected" });
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator.textContent).toContain("Disconnected");
+  });
+
+  it("hides text label when connected", () => {
+    useConnectionStore.setState({ status: "connected" });
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator.textContent).not.toContain("Connected");
+  });
+
+  it("has role=status and aria-live for accessibility", () => {
+    renderWithProviders(<AppShell />);
+
+    const indicator = screen.getByTestId("connection-status");
+    expect(indicator).toHaveAttribute("role", "status");
+    expect(indicator).toHaveAttribute("aria-live", "polite");
   });
 });

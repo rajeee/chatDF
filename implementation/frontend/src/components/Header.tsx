@@ -1,12 +1,21 @@
 // Implements: spec/frontend/plan.md#component-hierarchy (Header)
 //
-// Header bar with app title. Hamburger toggle moved into LeftPanel.
+// Header bar with app title and connection status indicator.
 // On mobile (<lg): shows datasets toggle button on the right.
 
+import { useConnectionStore, type ConnectionStatus } from "@/stores/connectionStore";
 import { useUiStore } from "@/stores/uiStore";
+
+const statusConfig: Record<ConnectionStatus, { color: string; label: string }> = {
+  connected: { color: "#22c55e", label: "Connected" },
+  disconnected: { color: "#ef4444", label: "Disconnected" },
+  reconnecting: { color: "#f59e0b", label: "Reconnecting" },
+};
 
 export function Header() {
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
+  const connectionStatus = useConnectionStore((s) => s.status);
+  const { color, label } = statusConfig[connectionStatus];
 
   return (
     <header
@@ -18,9 +27,29 @@ export function Header() {
         boxShadow: "0 1px 2px var(--color-shadow)",
       }}
     >
-      <span className="text-lg font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
-        ChatDF
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-lg font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
+          ChatDF
+        </span>
+        <span
+          data-testid="connection-status"
+          className="flex items-center gap-1.5 text-xs select-none"
+          style={{ color: "var(--color-text-secondary)" }}
+          role="status"
+          aria-live="polite"
+          aria-label={`Connection status: ${label}`}
+          title={label}
+        >
+          <span
+            className={`inline-block w-2 h-2 rounded-full${connectionStatus === "reconnecting" ? " animate-pulse" : ""}`}
+            style={{ backgroundColor: color }}
+            aria-hidden="true"
+          />
+          {connectionStatus !== "connected" && (
+            <span className="hidden sm:inline">{label}</span>
+          )}
+        </span>
+      </div>
 
       {/* Datasets toggle button — mobile only */}
       <button

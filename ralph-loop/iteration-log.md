@@ -60,3 +60,4 @@ Track each improvement cycle: what was done, what was learned.
 | 54 | 2026-02-08 | Fix preset modal checkbox double-toggle + commit prior work | work.md task #1 & #2 | 437/502 frontend (6 new pass), 64/65 backend | e2ce521, 314b8fd |
 | 55 | 2026-02-08 | Fix schema viewer column display + refresh | work.md task | 441/505 frontend (3 fixed + 3 new), 64/65 backend | 862c95f |
 | 56 | 2026-02-08 | Inline Visualize button in chat message bubbles | work.md task | 446/510 frontend (5 new pass), 64/65 backend | 5b00fdb |
+| 57 | 2026-02-08 | Smart schema-based suggested prompts | U29 | 456/520 frontend (10 new pass), 64/65 backend | afe1ed2 |

@@ -78,4 +78,4 @@ The difference between "fine" and "wow" is in the micro-interactions:
 5. **Accessibility** — Keyboard navigation, screen reader support, ARIA labels everywhere.
 6. **Smart suggestions** — After loading a dataset, suggest interesting questions based on the schema.
 7. **Query explanation** — Show what SQL was generated and why, so users learn as they explore.
-8. **Result Visualization** — Add "Visualize this" option in query results so users can view data as bar graphs, box plots, or other common chart types.
+8. **Result Visualization (HIGH PRIORITY)** — Add "Visualize this" option in query results using **Plotly.js** (react-plotly.js). Auto-detect the best chart type from the data shape (bar, line, scatter, box plot, histogram, pie) but let users switch. Interactive charts with hover tooltips, zoom, pan. This is a key differentiator — going from question to beautiful chart in one click.

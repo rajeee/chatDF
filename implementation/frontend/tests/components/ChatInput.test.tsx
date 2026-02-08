@@ -10,6 +10,18 @@ describe("ChatInput", () => {
     useChatStore.getState().reset();
   });
 
+  it("shows placeholder with keyboard shortcuts hint", () => {
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput onSend={onSend} onStop={onStop} />);
+
+    const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(textarea.placeholder).toContain("Ask a question about your data");
+    expect(textarea.placeholder).toContain("⏎ to send");
+    expect(textarea.placeholder).toContain("⇧⏎ for new line");
+  });
+
   it("exposes focus method via ref", () => {
     const ref = createRef<ChatInputHandle>();
     const onSend = vi.fn();

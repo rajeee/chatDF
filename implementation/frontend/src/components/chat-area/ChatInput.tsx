@@ -113,7 +113,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
   const placeholder = dailyLimitReached
     ? "Daily limit reached"
-    : "Ask a question about your data...";
+    : "Ask a question about your data... (⏎ to send • ⇧⏎ for new line)";
 
   const showCounter = charCount > CHAR_COUNTER_THRESHOLD;
 

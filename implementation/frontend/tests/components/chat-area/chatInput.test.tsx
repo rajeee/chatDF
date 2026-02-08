@@ -334,7 +334,7 @@ describe("ChatInput accessibility and focus", () => {
     const textarea = screen.getByRole("textbox", { name: /message input/i });
     expect(textarea).toHaveAttribute(
       "placeholder",
-      "Ask a question about your data..."
+      "Ask a question about your data... (⏎ to send • ⇧⏎ for new line)"
     );
   });
 });

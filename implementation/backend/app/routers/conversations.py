@@ -33,6 +33,7 @@ from app.models import (
     DatasetResponse,
     MessageAckResponse,
     MessageResponse,
+    PinConversationRequest,
     RenameConversationRequest,
     SendMessageRequest,
     SuccessResponse,
@@ -84,12 +85,12 @@ async def list_conversations(
 ) -> ConversationListResponse:
     """List all conversations for the authenticated user, sorted by updated_at desc."""
     cursor = await db.execute(
-        "SELECT c.id, c.title, c.created_at, c.updated_at, "
+        "SELECT c.id, c.title, c.created_at, c.updated_at, c.is_pinned, "
         "  (SELECT COUNT(*) FROM datasets d WHERE d.conversation_id = c.id) AS dataset_count, "
         "  (SELECT SUBSTR(m.content, 1, 100) FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_preview "
         "FROM conversations c "
         "WHERE c.user_id = ? "
-        "ORDER BY c.updated_at DESC",
+        "ORDER BY c.is_pinned DESC, c.updated_at DESC",
         (user["id"],),
     )
     rows = await cursor.fetchall()
@@ -102,6 +103,7 @@ async def list_conversations(
             updated_at=datetime.fromisoformat(row["updated_at"]),
             dataset_count=row["dataset_count"],
             last_message_preview=row["last_message_preview"],
+            is_pinned=bool(row["is_pinned"]),
         )
         for row in rows
     ]
@@ -196,6 +198,33 @@ async def rename_conversation(
     return {
         "id": conversation["id"],
         "title": body.title,
+        "updated_at": now,
+    }
+
+
+# ---------------------------------------------------------------------------
+# PATCH /conversations/{conversation_id}/pin
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/{conversation_id}/pin")
+async def pin_conversation(
+    body: PinConversationRequest,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Pin or unpin a conversation."""
+    now = datetime.utcnow().isoformat()
+
+    await db.execute(
+        "UPDATE conversations SET is_pinned = ?, updated_at = ? WHERE id = ?",
+        (int(body.is_pinned), now, conversation["id"]),
+    )
+    await db.commit()
+
+    return {
+        "id": conversation["id"],
+        "is_pinned": body.is_pinned,
         "updated_at": now,
     }
 

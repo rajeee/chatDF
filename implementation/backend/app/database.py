@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     id              TEXT PRIMARY KEY,
     user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title           TEXT NOT NULL DEFAULT '',
+    is_pinned       INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );
@@ -185,6 +186,15 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     # Migration: add reasoning column to existing databases
     try:
         await conn.execute("ALTER TABLE messages ADD COLUMN reasoning TEXT")
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add is_pinned column to existing databases
+    try:
+        await conn.execute(
+            "ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0"
+        )
         await conn.commit()
     except Exception:
         pass  # Column already exists

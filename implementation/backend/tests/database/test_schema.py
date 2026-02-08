@@ -115,10 +115,11 @@ async def test_referral_keys_table_structure(fresh_db):
 async def test_conversations_table_structure(fresh_db):
     """SCHEMA-5: Conversations table has correct columns."""
     cols = await _get_columns(fresh_db, "conversations")
-    assert len(cols) == 5
+    assert len(cols) == 6
     _assert_column(cols, "id", "TEXT", notnull=0, pk=1)
     _assert_column(cols, "user_id", "TEXT", notnull=1)
     _assert_column(cols, "title", "TEXT", notnull=1)
+    _assert_column(cols, "is_pinned", "INTEGER", notnull=1)
     _assert_column(cols, "created_at", "TEXT", notnull=1)
     _assert_column(cols, "updated_at", "TEXT", notnull=1)
 

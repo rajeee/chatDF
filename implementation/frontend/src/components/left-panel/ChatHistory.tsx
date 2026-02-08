@@ -2,6 +2,7 @@
 //
 // Conversation list with selection, inline rename, delete with confirmation.
 // TanStack Query for GET /conversations, sorted by updated_at desc.
+// Supports pinning conversations to the top of the sidebar.
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
@@ -23,10 +24,30 @@ interface ConversationSummary {
   updated_at: string;
   dataset_count: number;
   last_message_preview: string | null;
+  is_pinned?: boolean;
 }
 
 interface ConversationsResponse {
   conversations: ConversationSummary[];
+}
+
+/** Inline SVG pin icon (thumbtack). */
+function PinIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 17v5" />
+      <path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7" />
+      <path d="M5 11h14l-1.5 6h-11z" />
+    </svg>
+  );
 }
 
 export function ChatHistory() {
@@ -62,10 +83,21 @@ export function ChatHistory() {
 
   const groupedConversations = useMemo(() => {
     const groups: ConversationGroup[] = [];
+
+    // Separate pinned from non-pinned
+    const pinned = filteredConversations.filter((c) => c.is_pinned);
+    const unpinned = filteredConversations.filter((c) => !c.is_pinned);
+
+    // Add "Pinned" group first if there are pinned conversations
+    if (pinned.length > 0) {
+      groups.push({ label: "Pinned", conversations: pinned });
+    }
+
+    // Group remaining conversations by date
     const groupOrder = ["Today", "Yesterday", "This Week", "This Month", "Older"];
     const grouped = new Map<string, ConversationSummary[]>();
 
-    for (const conv of filteredConversations) {
+    for (const conv of unpinned) {
       const group = getDateGroup(conv.updated_at);
       if (!grouped.has(group)) grouped.set(group, []);
       grouped.get(group)!.push(conv);
@@ -88,6 +120,7 @@ export function ChatHistory() {
   );
 
   const editInputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -95,6 +128,17 @@ export function ChatHistory() {
       editInputRef.current.select();
     }
   }, [editingId]);
+
+  useEffect(() => {
+    if (activeConversationId) {
+      const el = itemRefs.current.get(activeConversationId);
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      }
+    }
+  }, [activeConversationId]);
 
   const renameMutation = useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) =>
@@ -129,6 +173,19 @@ export function ChatHistory() {
     },
     onSettled: () => {
       setConfirmingDeleteId(null);
+    },
+  });
+
+  const pinMutation = useMutation({
+    mutationFn: ({ id, is_pinned }: { id: string; is_pinned: boolean }) =>
+      apiPatch(`/conversations/${id}/pin`, { is_pinned }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to update pin";
+      showError(message);
     },
   });
 
@@ -190,6 +247,10 @@ export function ChatHistory() {
 
   function handleCancelDelete() {
     setConfirmingDeleteId(null);
+  }
+
+  function handlePinToggle(conv: ConversationSummary) {
+    pinMutation.mutate({ id: conv.id, is_pinned: !conv.is_pinned });
   }
 
   return (
@@ -302,10 +363,17 @@ export function ChatHistory() {
                 {group.conversations.map((conv) => (
                   <li
                     key={conv.id}
+                    ref={(el) => {
+                      if (el) itemRefs.current.set(conv.id, el);
+                      else itemRefs.current.delete(conv.id);
+                    }}
                     data-testid="conversation-item"
+                    data-pinned={conv.is_pinned ? "true" : "false"}
                     data-active={activeConversationId === conv.id ? "true" : "false"}
                     aria-current={activeConversationId === conv.id ? "page" : undefined}
                     className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-colors ${
+                      conv.is_pinned ? "border-l-2 border-blue-400/50" : ""
+                    } ${
                       activeConversationId === conv.id
                         ? "bg-blue-500/10"
                         : "hover:bg-gray-500/10"
@@ -335,6 +403,9 @@ export function ChatHistory() {
                           <span
                             className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
                           >
+                            {conv.is_pinned && (
+                              <PinIcon className="w-3 h-3 inline-block mr-1 opacity-50 -mt-0.5" />
+                            )}
                             {conv.title || "Untitled"}
                           </span>
                           <span
@@ -398,30 +469,47 @@ export function ChatHistory() {
                             </button>
                           </span>
                         ) : (
-                          <button
-                            data-testid={`delete-conversation-${conv.id}`}
-                            className="touch-action-btn absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(conv.id);
-                            }}
-                            title="Delete conversation"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                          <span className="flex items-center gap-0.5 absolute right-2">
+                            <button
+                              data-testid={`pin-conversation-${conv.id}`}
+                              className={`touch-action-btn text-xs active:scale-90 transition-all duration-150 ${
+                                conv.is_pinned
+                                  ? "opacity-50 hover:opacity-80 text-blue-400"
+                                  : "opacity-0 group-hover:opacity-100 hover:text-blue-400"
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePinToggle(conv);
+                              }}
+                              title={conv.is_pinned ? "Unpin conversation" : "Pin conversation"}
                             >
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              <line x1="10" y1="11" x2="10" y2="17" />
-                              <line x1="14" y1="11" x2="14" y2="17" />
-                            </svg>
-                          </button>
+                              <PinIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              data-testid={`delete-conversation-${conv.id}`}
+                              className="touch-action-btn opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(conv.id);
+                              }}
+                              title="Delete conversation"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          </span>
                         )}
                       </>
                     )}

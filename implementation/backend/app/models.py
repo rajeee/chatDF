@@ -41,6 +41,12 @@ class RenameConversationRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
 
 
+class PinConversationRequest(BaseModel):
+    """Body for ``PATCH /conversations/{id}/pin``."""
+
+    is_pinned: bool
+
+
 class RenameDatasetRequest(BaseModel):
     """Body for ``PATCH /conversations/{id}/datasets/{dataset_id}``."""
 
@@ -83,6 +89,7 @@ class ConversationSummary(BaseModel):
     updated_at: datetime
     dataset_count: int
     last_message_preview: str | None = None
+    is_pinned: bool = False
 
 
 class ConversationListResponse(BaseModel):

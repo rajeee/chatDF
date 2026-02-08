@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     id              TEXT PRIMARY KEY,
     user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title           TEXT NOT NULL DEFAULT '',
+    is_pinned       INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );

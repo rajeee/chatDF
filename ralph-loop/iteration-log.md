@@ -71,3 +71,5 @@ Track each improvement cycle: what was done, what was learned.
 | 65 | 2026-02-08 | Scroll-to-top, timestamp tooltips, URL clear button, toast stacking, shortcuts modal, paste-submit | U51, U53, U54, U55, U56, U57 | 571/637 frontend (+16 pass, 9 new tests), 64/65 backend | 38d7af2, 31df14f |
 | 66 | 2026-02-08 | Error toasts, touch-friendly buttons, dataset badge, success flash | U61, U62, U63, U64 | 686/694 frontend (+9 new tests, 8 pre-existing failures), 64/65 backend | 59e18b1 |
 | 67 | 2026-02-08 | Safe-area insets, SQL error display, copy feedback, retry button | U66, U68, U69, U70 | 699/707 frontend (+13 new tests, 8 pre-existing failures), 64/65 backend | 254909f |
+| 68 | 2026-02-08 | Conversation virtualization, swipe-to-close, reduced motion | U65, U67, A5 | 699/707 frontend (8 pre-existing failures), 64/65 backend | faaf863 |
+| 69 | 2026-02-08 | SQL query optimization, null cell styling, theme icons, theme transition | U71, U72, U73, U74 | 700/708 frontend (+1 new test, 8 pre-existing failures), 64/65 backend | 4eb4b99 |

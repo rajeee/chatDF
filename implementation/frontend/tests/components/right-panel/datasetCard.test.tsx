@@ -129,9 +129,14 @@ describe("DC-REMOVE-1: Remove with confirmation", () => {
     expect(confirmSpy).toHaveBeenCalledWith(
       expect.stringContaining("Remove this dataset")
     );
+
+    // Wait for exit animation timeout to complete so it doesn't leak into next test
+    await waitFor(() => {
+      expect(useDatasetStore.getState().datasets).toHaveLength(0);
+    });
   });
 
-  it("removes dataset when confirmation accepted", async () => {
+  it("removes dataset when confirmation accepted (after exit animation)", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const dataset = makeDataset();
 
@@ -143,7 +148,13 @@ describe("DC-REMOVE-1: Remove with confirmation", () => {
     const removeBtn = screen.getByRole("button", { name: /remove/i });
     await user.click(removeBtn);
 
-    expect(useDatasetStore.getState().datasets).toHaveLength(0);
+    // Dataset not removed yet — exit animation playing
+    expect(useDatasetStore.getState().datasets).toHaveLength(1);
+
+    // Wait for the 250ms animation delay to complete
+    await waitFor(() => {
+      expect(useDatasetStore.getState().datasets).toHaveLength(0);
+    });
   });
 
   it("does not remove dataset when confirmation rejected", async () => {
@@ -161,7 +172,7 @@ describe("DC-REMOVE-1: Remove with confirmation", () => {
     expect(useDatasetStore.getState().datasets).toHaveLength(1);
   });
 
-  it("removes error dataset without confirmation", async () => {
+  it("removes error dataset without confirmation (after exit animation)", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const dataset = makeDataset({
       status: "error",
@@ -177,7 +188,13 @@ describe("DC-REMOVE-1: Remove with confirmation", () => {
     await user.click(removeBtn);
 
     expect(confirmSpy).not.toHaveBeenCalled();
-    expect(useDatasetStore.getState().datasets).toHaveLength(0);
+    // Dataset not removed yet — exit animation playing
+    expect(useDatasetStore.getState().datasets).toHaveLength(1);
+
+    // Wait for the 250ms animation delay to complete
+    await waitFor(() => {
+      expect(useDatasetStore.getState().datasets).toHaveLength(0);
+    });
   });
 });
 
@@ -259,6 +276,88 @@ describe("Stagger animation: dataset cards appear with staggered delay", () => {
 
     const card = screen.getByTestId("dataset-card");
     expect(card.style.getPropertyValue("--stagger-index")).toBe("0");
+  });
+});
+
+describe("DC-REMOVE-EXIT: Exit animation on dataset removal", () => {
+  it("applies dataset-card-exit class when remove is clicked and confirmed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const dataset = makeDataset();
+
+    useDatasetStore.setState({ datasets: [dataset] });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const card = screen.getByTestId("dataset-card");
+    // Before removal, card should have the enter animation class
+    expect(card.className).toContain("dataset-card-enter");
+    expect(card.className).not.toContain("dataset-card-exit");
+
+    const removeBtn = screen.getByRole("button", { name: /remove/i });
+    await user.click(removeBtn);
+
+    // After clicking remove, card should have exit class instead of enter class
+    expect(card.className).toContain("dataset-card-exit");
+    expect(card.className).not.toContain("dataset-card-enter");
+  });
+
+  it("applies dataset-card-exit class on error dataset removal (no confirmation)", async () => {
+    const dataset = makeDataset({
+      status: "error",
+      error_message: "fail",
+    });
+
+    useDatasetStore.setState({ datasets: [dataset] });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const card = screen.getByTestId("dataset-card");
+
+    const removeBtn = screen.getByRole("button", { name: /remove/i });
+    await user.click(removeBtn);
+
+    // Card should have exit class during animation
+    expect(card.className).toContain("dataset-card-exit");
+    expect(card.className).not.toContain("dataset-card-enter");
+  });
+
+  it("does not apply dataset-card-exit when confirmation is rejected", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const dataset = makeDataset();
+
+    useDatasetStore.setState({ datasets: [dataset] });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const card = screen.getByTestId("dataset-card");
+
+    const removeBtn = screen.getByRole("button", { name: /remove/i });
+    await user.click(removeBtn);
+
+    // Card should NOT have exit class since user rejected confirmation
+    expect(card.className).not.toContain("dataset-card-exit");
+    expect(card.className).toContain("dataset-card-enter");
+  });
+
+  it("card has pointer-events: none during exit via CSS class", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const dataset = makeDataset();
+
+    useDatasetStore.setState({ datasets: [dataset] });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const removeBtn = screen.getByRole("button", { name: /remove/i });
+    await user.click(removeBtn);
+
+    const card = screen.getByTestId("dataset-card");
+    // The dataset-card-exit CSS class includes pointer-events: none
+    // Verify the class is applied (CSS rules are defined in globals.css)
+    expect(card.className).toContain("dataset-card-exit");
   });
 });
 

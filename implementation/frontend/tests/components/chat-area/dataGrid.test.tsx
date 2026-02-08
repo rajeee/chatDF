@@ -489,6 +489,186 @@ describe("DG-PAGE-JUMP: Jump-to-page input", () => {
   });
 });
 
+describe("DG-SORT-ICONS: Sort indicator SVG icons", () => {
+  it("shows unsorted icons on all headers before any click", () => {
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const unsortedIcons = screen.getAllByTestId("sort-unsorted-icon");
+    // One unsorted icon per column header
+    expect(unsortedIcons).toHaveLength(sampleColumns.length);
+    // Each should be an SVG element
+    for (const icon of unsortedIcons) {
+      expect(icon.tagName.toLowerCase()).toBe("svg");
+    }
+  });
+
+  it("shows ascending SVG icon after clicking a header once", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader);
+
+    // The clicked column should show the asc icon
+    expect(screen.getByTestId("sort-asc-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-asc-icon").tagName.toLowerCase()).toBe("svg");
+    // No desc icon should be visible
+    expect(screen.queryByTestId("sort-desc-icon")).not.toBeInTheDocument();
+    // The other columns should still show unsorted icons
+    const unsortedIcons = screen.getAllByTestId("sort-unsorted-icon");
+    expect(unsortedIcons).toHaveLength(sampleColumns.length - 1);
+  });
+
+  it("shows descending SVG icon after clicking a header twice", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader);
+    await user.click(nameHeader);
+
+    expect(screen.getByTestId("sort-desc-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-desc-icon").tagName.toLowerCase()).toBe("svg");
+    expect(screen.queryByTestId("sort-asc-icon")).not.toBeInTheDocument();
+  });
+
+  it("shows all unsorted icons after clicking a header three times (sort cleared)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader);
+    await user.click(nameHeader);
+    await user.click(nameHeader);
+
+    // All columns should revert to unsorted icons
+    const unsortedIcons = screen.getAllByTestId("sort-unsorted-icon");
+    expect(unsortedIcons).toHaveLength(sampleColumns.length);
+    expect(screen.queryByTestId("sort-asc-icon")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("sort-desc-icon")).not.toBeInTheDocument();
+  });
+
+  it("unsorted icon has opacity-30 class", () => {
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const unsortedIcons = screen.getAllByTestId("sort-unsorted-icon");
+    for (const icon of unsortedIcons) {
+      expect(icon).toHaveClass("opacity-30");
+    }
+  });
+});
+
+describe("DG-ZEBRA: Zebra striping on table rows", () => {
+  it("applies zebra striping classes to odd rows", () => {
+    const rows: Record<string, unknown>[] = [
+      { id: 1, name: "Alice", score: 90 },
+      { id: 2, name: "Bob", score: 80 },
+      { id: 3, name: "Charlie", score: 70 },
+      { id: 4, name: "Dave", score: 60 },
+    ];
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={rows} totalRows={4} />
+    );
+
+    const tbody = screen.getByTestId("data-grid-body");
+    const dataRows = within(tbody).getAllByRole("row");
+
+    // Even-index rows (0, 2) should NOT have zebra class
+    expect(dataRows[0].className).not.toContain("bg-black/[0.02]");
+    expect(dataRows[2].className).not.toContain("bg-black/[0.02]");
+
+    // Odd-index rows (1, 3) SHOULD have zebra class
+    expect(dataRows[1].className).toContain("bg-black/[0.02]");
+    expect(dataRows[1].className).toContain("dark:bg-white/[0.02]");
+    expect(dataRows[3].className).toContain("bg-black/[0.02]");
+    expect(dataRows[3].className).toContain("dark:bg-white/[0.02]");
+  });
+
+  it("preserves hover classes alongside zebra striping", () => {
+    const rows: Record<string, unknown>[] = [
+      { id: 1, name: "Alice", score: 90 },
+      { id: 2, name: "Bob", score: 80 },
+    ];
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={rows} totalRows={2} />
+    );
+
+    const tbody = screen.getByTestId("data-grid-body");
+    const dataRows = within(tbody).getAllByRole("row");
+
+    // Both rows should still have hover classes
+    for (const row of dataRows) {
+      expect(row.className).toContain("hover:bg-black/[0.04]");
+      expect(row.className).toContain("dark:hover:bg-white/[0.06]");
+    }
+  });
+});
+
+describe("DG-SORT-HEADER: Active sort column header accent background", () => {
+  it("adds bg-accent/5 class to the sorted column header", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    // Before sorting, no header should have the accent class
+    const headers = screen.getAllByRole("columnheader");
+    for (const header of headers) {
+      expect(header.className).not.toContain("bg-accent/5");
+    }
+
+    // Click "name" header to sort
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader);
+
+    // Now the name header should have the accent background
+    expect(nameHeader.className).toContain("bg-accent/5");
+
+    // Other headers should NOT have it
+    const idHeader = screen.getByRole("columnheader", { name: /^id$/i });
+    const scoreHeader = screen.getByRole("columnheader", { name: /score/i });
+    expect(idHeader.className).not.toContain("bg-accent/5");
+    expect(scoreHeader.className).not.toContain("bg-accent/5");
+  });
+
+  it("keeps bg-accent/5 on desc sort (second click)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader); // asc
+    await user.click(nameHeader); // desc
+
+    expect(nameHeader.className).toContain("bg-accent/5");
+  });
+
+  it("removes bg-accent/5 when sort is cleared (third click)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
+    );
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    await user.click(nameHeader); // asc
+    await user.click(nameHeader); // desc
+    await user.click(nameHeader); // clear
+
+    expect(nameHeader.className).not.toContain("bg-accent/5");
+  });
+});
+
 describe("Numeric alignment", () => {
   it("right-aligns numeric values", () => {
     const rows: Record<string, unknown>[] = [

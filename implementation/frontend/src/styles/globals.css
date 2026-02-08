@@ -313,6 +313,30 @@ select:focus-visible {
   animation-delay: calc(var(--stagger-index, 0) * 60ms);
 }
 
+/* Exit animation for dataset cards when removed */
+@keyframes datasetCardExit {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 100px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+  }
+}
+
+.dataset-card-exit {
+  animation: datasetCardExit 0.25s ease-in forwards;
+  pointer-events: none;
+}
+
 /* Syntax highlighting classes for code blocks */
 .syntax-keyword { color: var(--syntax-keyword, #a626a4); }
 .syntax-string { color: var(--syntax-string, #50a14f); }
@@ -370,6 +394,7 @@ select:focus-visible {
   .modal-backdrop-enter,
   .modal-scale-enter,
   .dataset-card-enter,
+  .dataset-card-exit,
   .animate-fade-in {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;

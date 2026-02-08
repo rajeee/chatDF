@@ -294,31 +294,36 @@ export function SchemaModal() {
 
           {/* Column list */}
           <div className="mb-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
-                  <th className="text-left py-1 font-medium">Name</th>
-                  <th className="text-left py-1 font-medium">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {columns.map((col, idx) => (
-                  <tr
-                    key={idx}
-                    className="border-b"
-                    style={{ borderColor: "var(--color-border)" }}
-                  >
-                    <td className="py-1">{col.name}</td>
-                    <td className="py-1 opacity-70">
-                      <span className="inline-flex items-center">
-                        <TypeIcon type={col.type} />
-                        {mapType(col.type)}
-                      </span>
-                    </td>
+            <div
+              data-testid="schema-column-table-container"
+              className="max-h-[300px] overflow-y-auto rounded border"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-surface)" }}>
+                  <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
+                    <th className="text-left py-1 font-medium">Name</th>
+                    <th className="text-left py-1 font-medium">Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {columns.map((col, idx) => (
+                    <tr
+                      key={idx}
+                      className={`hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors ${idx % 2 === 0 ? "" : "bg-black/[0.02] dark:bg-white/[0.02]"}`}
+                    >
+                      <td className="py-1">{col.name}</td>
+                      <td className="py-1 opacity-70">
+                        <span className="inline-flex items-center">
+                          <TypeIcon type={col.type} />
+                          {mapType(col.type)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Refresh Schema button */}

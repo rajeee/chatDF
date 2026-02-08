@@ -29,13 +29,15 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
 
     if (dataset.status === "error") {
-      // Error datasets: remove immediately, no confirmation.
-      removeDataset(dataset.id);
+      // Error datasets: remove with exit animation, no confirmation.
+      setIsExiting(true);
+      setTimeout(() => removeDataset(dataset.id), 250);
       return;
     }
 
@@ -44,7 +46,8 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
       "Remove this dataset? The LLM will no longer have access to it."
     );
     if (confirmed) {
-      removeDataset(dataset.id);
+      setIsExiting(true);
+      setTimeout(() => removeDataset(dataset.id), 250);
     }
   }
 
@@ -73,7 +76,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
     <div
       data-testid="dataset-card"
       className={[
-        "group relative rounded border p-3 w-full transition-all duration-150 dataset-card-enter",
+        `group relative rounded border p-3 w-full transition-all duration-150 ${isExiting ? "dataset-card-exit" : "dataset-card-enter"}`,
         isReady ? "cursor-pointer hover:shadow-md hover:border-accent/50" : "cursor-default",
         isError ? "border-l-4 border-red-500" : "",
       ]

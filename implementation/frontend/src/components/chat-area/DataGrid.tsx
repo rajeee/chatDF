@@ -14,6 +14,56 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 
+/* ---------- Sort indicator SVG icons ---------- */
+function SortAscIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+      className="inline-block shrink-0"
+      data-testid="sort-asc-icon"
+    >
+      <path d="M6 2.5L9.5 7.5H2.5L6 2.5Z" fill="var(--color-accent)" />
+    </svg>
+  );
+}
+
+function SortDescIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+      className="inline-block shrink-0"
+      data-testid="sort-desc-icon"
+    >
+      <path d="M6 9.5L2.5 4.5H9.5L6 9.5Z" fill="var(--color-accent)" />
+    </svg>
+  );
+}
+
+function SortUnsortedIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+      className="inline-block shrink-0 opacity-30"
+      data-testid="sort-unsorted-icon"
+    >
+      <path d="M6 1.5L9 5H3L6 1.5Z" fill="currentColor" />
+      <path d="M6 10.5L3 7H9L6 10.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 interface DataGridProps {
   columns: string[];
   rows: Record<string, unknown>[];
@@ -147,13 +197,14 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const isNumeric = numericColumns.has(header.id);
+                  const isSorted = header.column.getIsSorted();
                   return (
                     <th
                       key={header.id}
                       role="columnheader"
-                      className={`px-3 py-2 text-left font-medium border-b cursor-pointer select-none ${
-                        isNumeric ? "text-right" : ""
-                      }`}
+                      className={`px-3 py-2 text-left font-medium border-b cursor-pointer select-none${
+                        isNumeric ? " text-right" : ""
+                      }${isSorted ? " bg-accent/5" : ""}`}
                       style={{
                         width: header.getSize(),
                         position: "relative",
@@ -163,10 +214,13 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                     >
                       <div className="flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                        {{
-                          asc: " \u2191",
-                          desc: " \u2193",
-                        }[header.column.getIsSorted() as string] ?? ""}
+                        {header.column.getIsSorted() === "asc" ? (
+                          <SortAscIcon />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <SortDescIcon />
+                        ) : (
+                          <SortUnsortedIcon />
+                        )}
                       </div>
                       {/* Resize handle */}
                       <div
@@ -194,8 +248,8 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} role="row" className="border-b transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]" style={{ borderColor: "var(--color-border)" }}>
+              table.getRowModel().rows.map((row, rowIndex) => (
+                <tr key={row.id} role="row" className={`border-b transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]${rowIndex % 2 === 1 ? " bg-black/[0.02] dark:bg-white/[0.02]" : ""}`} style={{ borderColor: "var(--color-border)" }}>
                   {row.getVisibleCells().map((cell) => {
                     const isNumeric = numericColumns.has(cell.column.id);
                     return (

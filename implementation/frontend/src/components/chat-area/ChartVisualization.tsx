@@ -265,8 +265,14 @@ export function ChartVisualization({
 
   if (!recommendations.length || !plotConfig) {
     return (
-      <div className="flex items-center justify-center py-8 text-xs opacity-50">
-        No visualizable data detected
+      <div className="flex flex-col items-center justify-center py-8 gap-2 opacity-50">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="12" width="4" height="9" rx="1" />
+          <rect x="10" y="6" width="4" height="15" rx="1" />
+          <rect x="17" y="9" width="4" height="12" rx="1" />
+          <line x1="2" y1="3" x2="22" y2="21" strokeWidth="2" />
+        </svg>
+        <span className="text-xs">No visualizable data detected</span>
       </div>
     );
   }
@@ -285,9 +291,11 @@ export function ChartVisualization({
               key={rec.type}
               type="button"
               onClick={() => setSelectedType(rec.type)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
+                isActive ? "" : "hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+              }`}
               style={{
-                backgroundColor: isActive ? "var(--color-accent)" : "transparent",
+                backgroundColor: isActive ? "var(--color-accent)" : undefined,
                 color: isActive ? "#fff" : "var(--color-text-secondary)",
               }}
             >
@@ -302,8 +310,12 @@ export function ChartVisualization({
       <div className="flex-1 min-h-0 px-2 py-2">
         <Suspense
           fallback={
-            <div className="flex items-center justify-center h-full text-xs opacity-50">
-              Loading chart...
+            <div className="flex flex-col items-center justify-center h-full gap-2">
+              <div
+                className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent opacity-40"
+                aria-hidden="true"
+              />
+              <span className="text-xs opacity-50">Loading chart...</span>
             </div>
           }
         >

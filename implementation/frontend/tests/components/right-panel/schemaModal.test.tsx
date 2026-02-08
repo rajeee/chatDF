@@ -321,6 +321,75 @@ describe("Modal entrance animation", () => {
   });
 });
 
+describe("Column table visual polish", () => {
+  it("column table rows have hover transition classes", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const rows = screen.getByTestId("schema-column-table-container")
+      .querySelectorAll("tbody tr");
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row).toHaveClass("transition-colors");
+      expect(row.className).toContain("hover:bg-black/[0.03]");
+      expect(row.className).toContain("dark:hover:bg-white/[0.04]");
+    }
+  });
+
+  it("table container has max-height and overflow-y-auto", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const container = screen.getByTestId("schema-column-table-container");
+    expect(container).toHaveClass("max-h-[300px]");
+    expect(container).toHaveClass("overflow-y-auto");
+  });
+
+  it("alternating rows have different background classes (zebra striping)", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const rows = screen.getByTestId("schema-column-table-container")
+      .querySelectorAll("tbody tr");
+
+    // Even rows (idx 0, 2, 4) should NOT have zebra bg
+    expect(rows[0].className).not.toContain("bg-black/[0.02]");
+    expect(rows[2].className).not.toContain("bg-black/[0.02]");
+    expect(rows[4].className).not.toContain("bg-black/[0.02]");
+
+    // Odd rows (idx 1, 3) should have zebra bg
+    expect(rows[1].className).toContain("bg-black/[0.02]");
+    expect(rows[1].className).toContain("dark:bg-white/[0.02]");
+    expect(rows[3].className).toContain("bg-black/[0.02]");
+    expect(rows[3].className).toContain("dark:bg-white/[0.02]");
+  });
+
+  it("thead is sticky with proper z-index", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const thead = screen.getByTestId("schema-column-table-container")
+      .querySelector("thead");
+
+    expect(thead).toHaveClass("sticky");
+    expect(thead).toHaveClass("top-0");
+    expect(thead).toHaveClass("z-10");
+  });
+});
+
 describe("SM-CLOSE-2: Backdrop click closes modal", () => {
   it("closes modal when clicking the backdrop", async () => {
     const dataset = makeDataset();

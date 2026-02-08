@@ -203,7 +203,7 @@ export function PresetSourcesModal() {
           <button
             onClick={closeModal}
             disabled={isLoading}
-            className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 disabled:opacity-50"
+            className="p-1 rounded hover:bg-gray-500/10 active:scale-90 transition-all duration-150 disabled:opacity-50"
             aria-label="Close"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -278,7 +278,7 @@ export function PresetSourcesModal() {
               {allDatasets.map((ds, idx) => (
                 <tr
                   key={idx}
-                  className="border-b cursor-pointer hover:bg-opacity-5 hover:bg-gray-500"
+                  className="border-b cursor-pointer hover:bg-gray-500/5 transition-colors duration-150"
                   style={{ borderColor: "var(--color-border)" }}
                   onClick={() => !isLoading && toggleSelection(idx)}
                 >
@@ -319,7 +319,7 @@ export function PresetSourcesModal() {
           <button
             onClick={handleLoad}
             disabled={selected.size === 0 || isLoading}
-            className="rounded px-4 py-1.5 text-sm font-medium disabled:opacity-50 bg-accent text-white"
+            className="rounded px-4 py-1.5 text-sm font-medium disabled:opacity-50 bg-accent text-white hover:brightness-110 active:scale-95 transition-all duration-150"
           >
             {isLoading
               ? `Loading ${loadProgress.current}/${loadProgress.total}...`

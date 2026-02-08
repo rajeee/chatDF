@@ -97,7 +97,7 @@ function MessageBubbleComponent({
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:bg-accent/10 active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                 onClick={() => onShowReasoning(reasoningContent)}
               >
@@ -108,7 +108,7 @@ function MessageBubbleComponent({
             {/* Show SQL button */}
             {message.sql_executions.length > 0 && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100"
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:bg-accent/10 active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                 onClick={() => onShowSQL(message.sql_executions)}
               >
@@ -120,7 +120,7 @@ function MessageBubbleComponent({
             {message.sql_executions.length > 0 && (
               <button
                 data-testid={`copy-sql-btn-${message.id}`}
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 flex items-center gap-1"
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:bg-accent/10 active:scale-95 transition-all duration-150 flex items-center gap-1"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                 onClick={() => {
                   const allSQL = message.sql_executions.map((exec) => exec.query).join("\n\n");
@@ -141,7 +141,7 @@ function MessageBubbleComponent({
         {/* Copy button - visible on hover via group-hover */}
         <button
           data-testid={`copy-btn-${message.id}`}
-          className="absolute top-1 right-1 p-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1 right-1 p-1 rounded text-xs opacity-0 group-hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
           style={{ color: isUser ? "var(--color-white)" : "var(--color-text)" }}
           onClick={() => onCopy(message.content)}
           aria-label="Copy message"

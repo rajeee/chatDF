@@ -147,7 +147,7 @@ export function ChatHistory() {
       <button
         data-testid="new-chat-button"
         onClick={() => createMutation.mutate()}
-        className="mb-2 px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+        className="mb-2 px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150"
       >
         + New Chat
       </button>
@@ -218,13 +218,13 @@ export function ChatHistory() {
                     >
                       <span>Delete?</span>
                       <button
-                        className="text-red-500 hover:text-red-700 font-medium"
+                        className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150"
                         onClick={() => handleConfirmDelete(conv.id)}
                       >
                         Yes
                       </button>
                       <button
-                        className="hover:opacity-70 font-medium"
+                        className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
                         onClick={handleCancelDelete}
                       >
                         No
@@ -233,7 +233,7 @@ export function ChatHistory() {
                   ) : (
                     <button
                       data-testid={`delete-conversation-${conv.id}`}
-                      className="absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 transition-opacity"
+                      className="absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteClick(conv.id);

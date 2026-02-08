@@ -67,8 +67,8 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
     <div
       data-testid="dataset-card"
       className={[
-        "group relative rounded border p-3 w-full",
-        isReady ? "cursor-pointer hover:opacity-90" : "cursor-default",
+        "group relative rounded border p-3 w-full transition-all duration-150",
+        isReady ? "cursor-pointer hover:shadow-md hover:border-accent/50" : "cursor-default",
         isError ? "border-l-4 border-red-500" : "",
       ]
         .filter(Boolean)
@@ -110,7 +110,7 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
           <button
             onClick={handleRemove}
             aria-label="Remove dataset"
-            className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+            className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:text-red-500 active:scale-90 transition-all duration-150 text-xs"
           >
             X
           </button>
@@ -127,7 +127,7 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
             <button
               onClick={handleRetry}
               aria-label="Retry"
-              className="text-xs px-2 py-0.5 rounded border"
+              className="text-xs px-2 py-0.5 rounded border hover:bg-accent/10 active:scale-95 transition-all duration-150"
             >
               Retry
             </button>
@@ -135,7 +135,7 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
           <button
             onClick={handleRemove}
             aria-label="Remove dataset"
-            className="absolute top-1 right-1 p-1 rounded text-xs"
+            className="absolute top-1 right-1 p-1 rounded text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
           >
             X
           </button>

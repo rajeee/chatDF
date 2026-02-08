@@ -79,7 +79,7 @@ export function ToastContainer() {
           {/* Close button */}
           <button
             onClick={() => removeToast(toast.id)}
-            className="flex-shrink-0 text-text-secondary hover:text-text"
+            className="flex-shrink-0 text-text-secondary hover:text-text active:scale-90 transition-all duration-150"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

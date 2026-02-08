@@ -121,7 +121,7 @@ export function ChatInput({ onSend, onStop }: ChatInputProps) {
           <button
             type="button"
             aria-label="Stop generating"
-            className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-red-100"
+            className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-red-100 active:scale-95"
             onClick={onStop}
           >
             {/* Square stop icon */}
@@ -139,7 +139,7 @@ export function ChatInput({ onSend, onStop }: ChatInputProps) {
           <button
             type="button"
             aria-label="Send message"
-            className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleSend}
             disabled={trimmedEmpty || dailyLimitReached}
           >

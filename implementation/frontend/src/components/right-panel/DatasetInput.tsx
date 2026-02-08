@@ -141,7 +141,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
       <button
         onClick={openPresetModal}
         disabled={atLimit}
-        className="w-full rounded px-3 py-1.5 text-sm font-medium mb-3 disabled:opacity-50 bg-accent text-white"
+        className="w-full rounded px-3 py-1.5 text-sm font-medium mb-3 disabled:opacity-50 bg-accent text-white hover:brightness-110 active:scale-98 transition-all duration-150"
       >
         Preset Sources
       </button>
@@ -169,7 +169,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
           onClick={handleSubmit}
           disabled={addDisabled}
           aria-label="Add"
-          className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 bg-accent text-white"
+          className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 bg-accent text-white hover:brightness-110 active:scale-95 transition-all duration-150"
         >
           {isSubmitting ? (
             <span

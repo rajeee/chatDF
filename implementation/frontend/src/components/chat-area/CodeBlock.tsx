@@ -43,7 +43,7 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
         <span className="font-mono opacity-60">{language || "code"}</span>
         <button
           onClick={handleCopy}
-          className="px-2 py-1 rounded text-xs opacity-0 group-hover/code:opacity-100 transition-opacity flex items-center gap-1.5 hover:bg-opacity-10 hover:bg-white"
+          className="px-2 py-1 rounded text-xs opacity-0 group-hover/code:opacity-100 transition-all duration-150 flex items-center gap-1.5 hover:bg-white/10 active:scale-95"
           style={{ color: "var(--color-text)" }}
           aria-label="Copy code to clipboard"
         >

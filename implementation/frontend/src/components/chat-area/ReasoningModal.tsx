@@ -49,7 +49,7 @@ export function ReasoningModal() {
           <h2 className="text-lg font-semibold">Reasoning</h2>
           <button
             onClick={closeModal}
-            className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500"
+            className="p-1 rounded hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
             aria-label="Close"
           >
             <svg

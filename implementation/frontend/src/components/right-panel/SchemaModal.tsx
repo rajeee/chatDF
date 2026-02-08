@@ -185,7 +185,7 @@ export function SchemaModal() {
             <button
               onClick={closeSchemaModal}
               aria-label="Close"
-              className="p-1 rounded hover:opacity-70 text-lg"
+              className="p-1 rounded hover:opacity-70 active:scale-90 transition-all duration-150 text-lg"
             >
               X
             </button>
@@ -245,7 +245,7 @@ export function SchemaModal() {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 bg-accent text-white"
+              className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 bg-accent text-white hover:brightness-110 active:scale-95 transition-all duration-150"
             >
               {isRefreshing ? (
                 <span className="inline-flex items-center gap-2">

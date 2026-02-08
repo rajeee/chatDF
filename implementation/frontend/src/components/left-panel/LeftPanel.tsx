@@ -86,6 +86,7 @@ export function LeftPanel() {
           onClick={toggleLeftPanel}
           className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
           aria-label="Toggle left panel"
+          title="Toggle sidebar (⌘/Ctrl+B)"
         >
           <HamburgerIcon />
         </button>
@@ -113,6 +114,7 @@ export function LeftPanel() {
             onClick={toggleLeftPanel}
             className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
             aria-label="Toggle left panel"
+            title="Toggle sidebar (⌘/Ctrl+B)"
           >
             <HamburgerIcon />
           </button>

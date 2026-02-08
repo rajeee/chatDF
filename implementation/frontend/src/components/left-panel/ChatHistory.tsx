@@ -42,6 +42,18 @@ export function ChatHistory() {
 
   const conversations = data?.conversations ?? [];
 
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredConversations = searchQuery.trim()
+    ? conversations.filter((conv) => {
+        const query = searchQuery.toLowerCase();
+        return (
+          conv.title.toLowerCase().includes(query) ||
+          (conv.last_message_preview?.toLowerCase().includes(query) ?? false)
+        );
+      })
+    : conversations;
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
@@ -99,6 +111,7 @@ export function ChatHistory() {
     onSuccess: (newConv) => {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setActiveConversation(newConv.id);
+      setSearchQuery("");
     },
   });
 
@@ -157,6 +170,7 @@ export function ChatHistory() {
       <button
         data-testid="new-chat-button"
         onClick={() => createMutation.mutate()}
+        title="New conversation"
         className="mb-2 px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150 flex items-center justify-center gap-2"
       >
         <svg
@@ -173,6 +187,56 @@ export function ChatHistory() {
         </svg>
         <span>New Chat</span>
       </button>
+
+      {conversations.length >= 2 && (
+        <div className="relative mb-2">
+          <svg
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            data-testid="conversation-search"
+            type="text"
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearchQuery("");
+                e.currentTarget.blur();
+              }
+            }}
+            className="w-full pl-7 pr-7 py-1 text-xs rounded border"
+            style={{
+              borderColor: "var(--color-border)",
+              backgroundColor: "var(--color-bg)",
+              color: "var(--color-text)",
+            }}
+            aria-label="Search conversations"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-500/20 transition-colors"
+              aria-label="Clear search"
+              data-testid="conversation-search-clear"
+            >
+              <svg className="w-3 h-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
 
       {isPending ? (
         <ul className="flex-1 overflow-y-auto space-y-0.5">
@@ -196,9 +260,13 @@ export function ChatHistory() {
         <div className="flex-1 flex items-center justify-center text-sm opacity-50">
           No conversations yet
         </div>
+      ) : filteredConversations.length === 0 && searchQuery ? (
+        <div className="flex-1 flex items-center justify-center text-sm opacity-50">
+          No matches
+        </div>
       ) : (
         <ul className="flex-1 overflow-y-auto space-y-0.5" role="listbox" aria-label="Conversations">
-          {conversations.map((conv) => (
+          {filteredConversations.map((conv) => (
             <li
               key={conv.id}
               data-testid="conversation-item"

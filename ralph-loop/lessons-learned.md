@@ -87,6 +87,13 @@ Insights accumulated through improvement iterations.
 - **Test streaming components in isolation**: Create dedicated test file for StreamingMessage to verify it only renders when appropriate (matching message ID, isStreaming true).
 - **Performance wins from architecture**: React.memo prevents re-renders from props, but doesn't help if parent re-renders due to unrelated state. Isolating subscriptions at the component level is more powerful than memoization alone.
 
+### Iteration 14 (2026-02-08)
+- **Favicon and meta tags for polish**: Added SVG favicon and comprehensive meta tags to improve browser tab appearance and social sharing. Small static asset changes that require no runtime code and zero tests.
+- **SVG favicons are efficient**: Modern browsers support SVG favicons, which are resolution-independent, small file size (~250 bytes), and can match theme colors. Use data chart/bar visualization to represent data analysis app.
+- **Meta tags best practices**: Include title, description, theme-color for mobile browsers, Open Graph tags for social sharing (og:type, og:title, og:description), and Twitter card tags (twitter:card, twitter:title, twitter:description).
+- **Zero-code polish wins**: Static HTML/asset improvements like favicons and meta tags provide immediate visual polish without any JavaScript complexity or test burden. High impact for minimal effort.
+- **Validate ideas before implementation**: P5 referenced "debounce search inputs" but no search feature exists in ChatHistory. Always verify the feature exists before planning implementation. Mark aspirational ideas as "blocked" until prerequisite features are built.
+
 ---
 
 ## General Principles

@@ -132,6 +132,12 @@ Insights accumulated through improvement iterations.
 - **Test keyboard events**: Create KeyboardEvent with options (`{ key: "/", ctrlKey: true }`) and dispatch to `document`. For testing events from specific elements, use `Object.defineProperty(event, "target", { value: element })` to set the target.
 - **userEvent.setup() pattern**: Always call `userEvent.setup()` before using `userEvent.type()` or other interactions. Use `renderWithProviders()` for components that need Zustand/React Router context.
 
+### Iteration 20 (2026-02-08)
+- **Frontend test infrastructure broken**: Discovered 50+ pre-existing test failures (down from 367 passing in iteration 19 to 317 passing now). Multiple components that use `useQuery` fail to render in tests (UsageStats, Account, routing tests). Component renders as `<div />` suggesting queries aren't resolving.
+- **Cannot add features to broken test infrastructure**: Attempted to add rate limit warning banner to UsageStats component. Backend changes worked perfectly (added `warning` field to UsageResponse model, updated tests, all pass). However, frontend tests for new feature can't pass because base UsageStats component doesn't render in tests at all.
+- **Blocked ideas need clear documentation**: When an idea is blocked due to infrastructure issues, document the reason in the ideas file so future iterations don't waste time retrying.
+- **Test count regression signals bigger problems**: When test count drops significantly between iterations (367 → 317), it's a sign of systemic test infrastructure issues, not just a fluke. These need to be fixed before new features can be reliably tested.
+
 ---
 
 ## General Principles

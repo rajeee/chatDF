@@ -161,6 +161,41 @@ describe("FE-L-3: Responsive behavior below 1024px", () => {
   });
 });
 
+describe("Skip-to-content link (A3)", () => {
+  it("renders a skip-to-content link as the first focusable element", () => {
+    renderWithProviders(<AppShell />);
+
+    const skipLink = screen.getByTestId("skip-to-content");
+    expect(skipLink).toBeInTheDocument();
+    expect(skipLink.tagName).toBe("A");
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+    expect(skipLink).toHaveTextContent("Skip to main content");
+  });
+
+  it("skip link appears before the header in DOM order", () => {
+    renderWithProviders(<AppShell />);
+
+    const shell = screen.getByTestId("app-shell");
+    const children = Array.from(shell.children);
+    const skipIdx = children.findIndex(
+      (el) => (el as HTMLElement).dataset.testid === "skip-to-content"
+    );
+    const headerIdx = children.findIndex(
+      (el) => (el as HTMLElement).dataset.testid === "header"
+    );
+
+    expect(skipIdx).toBeLessThan(headerIdx);
+  });
+
+  it("chat area has matching id for skip link target", () => {
+    renderWithProviders(<AppShell />);
+
+    const chatArea = screen.getByTestId("chat-area");
+    expect(chatArea).toHaveAttribute("id", "main-content");
+    expect(chatArea.tabIndex).toBe(-1);
+  });
+});
+
 describe("ChatArea conditional rendering", () => {
   it("shows onboarding placeholder when no datasets and no messages", () => {
     // Default state: no datasets, no messages, no active conversation

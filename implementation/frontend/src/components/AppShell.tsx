@@ -35,6 +35,15 @@ export function AppShell() {
       className="flex flex-col min-h-screen"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
+      {/* Skip-to-content link for keyboard/screen-reader users */}
+      <a
+        href="#main-content"
+        className="skip-to-content"
+        data-testid="skip-to-content"
+      >
+        Skip to main content
+      </a>
+
       <Header />
 
       {/* Backdrop for mobile overlay when left panel is open */}

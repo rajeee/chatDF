@@ -102,8 +102,10 @@ export function ChatArea() {
 
   return (
     <section
+      id="main-content"
+      tabIndex={-1}
       data-testid="chat-area"
-      className="relative flex flex-col flex-1 min-w-0 items-center"
+      className="relative flex flex-col flex-1 min-w-0 items-center outline-none"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* Constrained-width inner container */}

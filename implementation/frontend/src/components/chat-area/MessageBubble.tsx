@@ -222,6 +222,14 @@ function MessageBubbleComponent({
         data-testid={`timestamp-${message.id}`}
         className="text-xs mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
         style={{ color: "var(--color-text)" }}
+        title={new Date(message.created_at).toLocaleString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+        })}
       >
         {formatTimestamp(message.created_at)}
       </span>

@@ -170,21 +170,38 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         Custom Parquet URL
       </label>
       <div className="flex gap-2">
-        <input
-          type="text"
-          value={url}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
-          disabled={atLimit || isSubmitting}
-          className="flex-1 rounded border px-2 py-1 text-sm disabled:opacity-50"
-          style={{
-            backgroundColor: "var(--color-surface)",
-            borderColor: "var(--color-border)",
-            color: "var(--color-text)",
-          }}
-        />
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={url}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
+            disabled={atLimit || isSubmitting}
+            className="w-full rounded border px-2 py-1 text-sm disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--color-surface)",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text)",
+              paddingRight: url && !atLimit && !isSubmitting ? "1.75rem" : undefined,
+            }}
+          />
+          {url && !atLimit && !isSubmitting && (
+            <button
+              type="button"
+              data-testid="clear-url-btn"
+              aria-label="Clear URL"
+              onClick={() => { setUrl(""); setError(null); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity duration-150"
+              style={{ color: "var(--color-text)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </div>
         <button
           onClick={handleSubmit}
           disabled={addDisabled}

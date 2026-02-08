@@ -27,6 +27,7 @@ export function MessageList() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollRafRef = useRef<number | null>(null);
 
   // Check if user is near bottom of page
@@ -37,14 +38,21 @@ export function MessageList() {
     return scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD;
   }, []);
 
+  // Check if user is near top of page
+  const isNearTop = useCallback(() => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    return scrollTop < SCROLL_THRESHOLD;
+  }, []);
+
   // Handle scroll events to detect manual scroll-up
   useEffect(() => {
     const handleScroll = () => {
       setUserHasScrolledUp(!isNearBottom());
+      setShowScrollToTop(!isNearTop());
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isNearBottom]);
+  }, [isNearBottom, isNearTop]);
 
   // Auto-scroll to bottom when new content arrives
   // Uses requestAnimationFrame for smoother performance during streaming
@@ -79,6 +87,11 @@ export function MessageList() {
     requestAnimationFrame(() => {
       sentinelRef.current?.scrollIntoView?.({ behavior: "smooth" });
     });
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    setShowScrollToTop(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const handleShowSQL = useCallback(
@@ -210,6 +223,37 @@ export function MessageList() {
             <polyline points="6 9 12 15 18 9" />
           </svg>
           Scroll to bottom
+        </button>
+      )}
+
+      {/* Scroll to top button */}
+      {showScrollToTop && (
+        <button
+          data-testid="scroll-to-top-btn"
+          className="fixed top-20 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-xs shadow-md z-10 flex items-center gap-1.5 hover:shadow-lg active:scale-95 transition-all duration-150"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
+          }}
+          onClick={scrollToTop}
+          title="Scroll to top"
+          aria-label="Scroll to top"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+          Scroll to top
         </button>
       )}
     </div>

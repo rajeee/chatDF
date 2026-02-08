@@ -3,7 +3,7 @@
 // Conversation list with selection, inline rename, delete with confirmation.
 // TanStack Query for GET /conversations, sorted by updated_at desc.
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   useQuery,
   useMutation,
@@ -14,6 +14,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { formatRelativeTime } from "@/utils/relativeTime";
+import { getDateGroup } from "@/utils/dateGroups";
 
 interface ConversationSummary {
   id: string;
@@ -53,6 +54,32 @@ export function ChatHistory() {
         );
       })
     : conversations;
+
+  interface ConversationGroup {
+    label: string;
+    conversations: ConversationSummary[];
+  }
+
+  const groupedConversations = useMemo(() => {
+    const groups: ConversationGroup[] = [];
+    const groupOrder = ["Today", "Yesterday", "This Week", "This Month", "Older"];
+    const grouped = new Map<string, ConversationSummary[]>();
+
+    for (const conv of filteredConversations) {
+      const group = getDateGroup(conv.updated_at);
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group)!.push(conv);
+    }
+
+    for (const label of groupOrder) {
+      const convs = grouped.get(label);
+      if (convs && convs.length > 0) {
+        groups.push({ label, conversations: convs });
+      }
+    }
+
+    return groups;
+  }, [filteredConversations]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -265,133 +292,142 @@ export function ChatHistory() {
           No matches
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto space-y-0.5" role="listbox" aria-label="Conversations">
-          {filteredConversations.map((conv) => (
-            <li
-              key={conv.id}
-              data-testid="conversation-item"
-              data-active={activeConversationId === conv.id ? "true" : "false"}
-              aria-current={activeConversationId === conv.id ? "page" : undefined}
-              className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-colors ${
-                activeConversationId === conv.id
-                  ? "bg-blue-500/10"
-                  : "hover:bg-gray-500/10"
-              }`}
-              onClick={() => handleSelect(conv.id)}
-            >
-              {editingId === conv.id ? (
-                <input
-                  ref={editInputRef}
-                  type="text"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={() => handleRenameSubmit(conv.id)}
-                  onKeyDown={(e) => handleRenameKeyDown(e, conv.id)}
-                  className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <>
-                  <div
-                    className="flex-1 min-w-0"
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      handleDoubleClick(conv);
-                    }}
+        <ul className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversations">
+          {groupedConversations.map((group) => (
+            <li key={group.label} role="group" aria-label={group.label}>
+              <div className="text-xs uppercase tracking-wide opacity-40 px-2 pt-3 pb-1 select-none" style={{ color: "var(--color-text)" }}>
+                {group.label}
+              </div>
+              <ul className="space-y-0.5">
+                {group.conversations.map((conv) => (
+                  <li
+                    key={conv.id}
+                    data-testid="conversation-item"
+                    data-active={activeConversationId === conv.id ? "true" : "false"}
+                    aria-current={activeConversationId === conv.id ? "page" : undefined}
+                    className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-colors ${
+                      activeConversationId === conv.id
+                        ? "bg-blue-500/10"
+                        : "hover:bg-gray-500/10"
+                    }`}
+                    onClick={() => handleSelect(conv.id)}
                   >
-                    <span
-                      className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
-                    >
-                      {conv.title || "Untitled"}
-                    </span>
-                    <span
-                      className="block text-xs opacity-40 truncate"
-                      data-testid="conversation-time"
-                    >
-                      {formatRelativeTime(conv.updated_at)}
-                    </span>
-                    {conv.last_message_preview && (
-                      <span
-                        className="block text-xs opacity-30 truncate mt-0.5"
-                        data-testid="conversation-preview"
-                      >
-                        {conv.last_message_preview}
-                      </span>
-                    )}
-                  </div>
-
-                  {confirmingDeleteId === conv.id ? (
-                    <span
-                      className="flex items-center gap-1 text-xs"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span>Delete?</span>
-                      <button
-                        data-testid={`confirm-delete-${conv.id}`}
-                        className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150 flex items-center gap-1"
-                        onClick={() => handleConfirmDelete(conv.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {deleteMutation.isPending && deleteMutation.variables === conv.id ? (
-                          <svg
-                            className="w-3 h-3 animate-spin"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
+                    {editingId === conv.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={() => handleRenameSubmit(conv.id)}
+                        onKeyDown={(e) => handleRenameKeyDown(e, conv.id)}
+                        className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className="flex-1 min-w-0"
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            handleDoubleClick(conv);
+                          }}
+                        >
+                          <span
+                            className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
                           >
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="10"
+                            {conv.title || "Untitled"}
+                          </span>
+                          <span
+                            className="block text-xs opacity-40 truncate"
+                            data-testid="conversation-time"
+                          >
+                            {formatRelativeTime(conv.updated_at)}
+                          </span>
+                          {conv.last_message_preview && (
+                            <span
+                              className="block text-xs opacity-30 truncate mt-0.5"
+                              data-testid="conversation-preview"
+                            >
+                              {conv.last_message_preview}
+                            </span>
+                          )}
+                        </div>
+
+                        {confirmingDeleteId === conv.id ? (
+                          <span
+                            className="flex items-center gap-1 text-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span>Delete?</span>
+                            <button
+                              data-testid={`confirm-delete-${conv.id}`}
+                              className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150 flex items-center gap-1"
+                              onClick={() => handleConfirmDelete(conv.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              {deleteMutation.isPending && deleteMutation.variables === conv.id ? (
+                                <svg
+                                  className="w-3 h-3 animate-spin"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <circle
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeOpacity="0.25"
+                                  />
+                                  <path
+                                    d="M12 2 A10 10 0 0 1 22 12"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              ) : null}
+                              <span>Yes</span>
+                            </button>
+                            <button
+                              className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
+                              onClick={handleCancelDelete}
+                              disabled={deleteMutation.isPending}
+                            >
+                              No
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            data-testid={`delete-conversation-${conv.id}`}
+                            className="touch-action-btn absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(conv.id);
+                            }}
+                            title="Delete conversation"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
                               stroke="currentColor"
-                              strokeOpacity="0.25"
-                            />
-                            <path
-                              d="M12 2 A10 10 0 0 1 22 12"
-                              stroke="currentColor"
+                              strokeWidth="2"
                               strokeLinecap="round"
-                            />
-                          </svg>
-                        ) : null}
-                        <span>Yes</span>
-                      </button>
-                      <button
-                        className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
-                        onClick={handleCancelDelete}
-                        disabled={deleteMutation.isPending}
-                      >
-                        No
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      data-testid={`delete-conversation-${conv.id}`}
-                      className="touch-action-btn absolute right-2 opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(conv.id);
-                      }}
-                      title="Delete conversation"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        <line x1="10" y1="11" x2="10" y2="17" />
-                        <line x1="14" y1="11" x2="14" y2="17" />
-                      </svg>
-                    </button>
-                  )}
-                </>
-              )}
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>

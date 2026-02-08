@@ -5,14 +5,18 @@
 // Handles streaming display by merging streamingTokens into the active message.
 
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { MessageBubble } from "./MessageBubble";
+import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
 export function MessageList() {
+  const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
   // Only subscribe to isStreaming for scroll behavior - not streamingTokens
   // This prevents MessageList from re-rendering on every token during streaming
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -104,8 +108,54 @@ export function MessageList() {
     [openChartModal]
   );
 
+  const handleExport = useCallback(() => {
+    // Try to get conversation title from TanStack Query cache
+    let title = "Conversation";
+    if (activeConversationId) {
+      const cached = queryClient.getQueryData<{ title?: string }>([
+        "conversations",
+        activeConversationId,
+      ]);
+      if (cached?.title) {
+        title = cached.title;
+      }
+    }
+    const markdown = exportAsMarkdown(messages, title);
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+    downloadMarkdown(markdown, `${safeTitle}.md`);
+  }, [messages, activeConversationId, queryClient]);
+
   return (
     <div className="flex flex-col">
+      {messages.length > 0 && (
+        <div className="flex justify-end px-2 sm:px-4 pt-2">
+          <button
+            data-testid="export-markdown-btn"
+            className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
+            style={{ color: "var(--color-text)" }}
+            onClick={handleExport}
+            title="Export as Markdown"
+            aria-label="Export conversation as Markdown"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div
         data-testid="message-list-scroll"
         className="px-2 py-2 sm:px-4 sm:py-4 space-y-3 sm:space-y-4"

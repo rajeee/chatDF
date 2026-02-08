@@ -4,7 +4,7 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { CodeBlock } from "./CodeBlock";
@@ -54,6 +54,8 @@ function MessageBubbleComponent({
     return -1;
   }, [message.sql_executions]);
 
+  const [sqlExpanded, setSqlExpanded] = useState(false);
+
   return (
     <div
       data-testid={`message-row-${message.id}`}
@@ -100,6 +102,54 @@ function MessageBubbleComponent({
             >
               {message.content}
             </ReactMarkdown>
+          </div>
+        )}
+
+        {/* Inline SQL preview - collapsed by default */}
+        {!isUser && !isCurrentlyStreaming && message.sql_executions.length > 0 && (
+          <div
+            data-testid={`sql-preview-${message.id}`}
+            className="mt-2 rounded overflow-hidden text-xs"
+            style={{
+              backgroundColor: "var(--color-bg)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <button
+              data-testid={`sql-preview-toggle-${message.id}`}
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-left opacity-60 hover:opacity-100 transition-opacity"
+              style={{ color: "var(--color-text)" }}
+              onClick={() => setSqlExpanded(!sqlExpanded)}
+            >
+              <svg
+                className={`w-3 h-3 transition-transform duration-200 ${sqlExpanded ? "rotate-90" : ""}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              <span className="font-mono opacity-70">SQL</span>
+              {message.sql_executions.length > 1 && (
+                <span className="opacity-40">({message.sql_executions.length} queries)</span>
+              )}
+            </button>
+            {sqlExpanded && (
+              <pre
+                className="px-2 py-1.5 overflow-x-auto font-mono border-t"
+                style={{
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
+                  fontSize: "0.7rem",
+                  lineHeight: "1.4",
+                  maxHeight: "120px",
+                  overflowY: "auto",
+                }}
+              >
+                {message.sql_executions.map((exec, i) => exec.query).join(";\n\n")}
+              </pre>
+            )}
           </div>
         )}
 

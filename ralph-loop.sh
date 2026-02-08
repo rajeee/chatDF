@@ -1,14 +1,16 @@
 #!/bin/bash
 # ralph-loop.sh — Autonomous continuous improvement loop for ChatDF
 # Calls Claude CLI in print mode (no human input) each iteration.
-# Each cycle: check work.md → pick idea → implement → test → commit → push
+# Each cycle: check work.md → pick idea → implement → test → commit → push → prune knowledge
 #
 # Usage:
 #   ./ralph-loop.sh              # run loop (default: unlimited iterations)
 #   ./ralph-loop.sh --max 10     # run 10 iterations then stop
 #   ./ralph-loop.sh --dry-run    # print what would happen without executing
+#
+# Stop: Ctrl+C (or kill the PID)
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"
@@ -16,10 +18,28 @@ LOOP_DIR="$PROJECT_DIR/ralph-loop"
 LOG_DIR="$LOOP_DIR/logs"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 MODEL="${RALPH_MODEL:-opus}"
+PRUNE_MODEL="${RALPH_PRUNE_MODEL:-haiku}"
 MAX_BUDGET="${RALPH_BUDGET:-5.00}"
 COOLDOWN="${RALPH_COOLDOWN:-30}"
 MAX_ITERATIONS="${RALPH_MAX_ITER:-0}"  # 0 = unlimited
+STALL_TIMEOUT="${RALPH_STALL_TIMEOUT:-300}"  # 5 min of zero activity = stall
 DRY_RUN=false
+
+# ─── Cleanup on Ctrl+C / kill ───
+WATCHDOG_PID=""
+
+cleanup() {
+  echo ""
+  echo -e "\033[1;33m[ralph] Caught signal — shutting down...\033[0m"
+  # Kill watchdog if running
+  [[ -n "$WATCHDOG_PID" ]] && kill "$WATCHDOG_PID" 2>/dev/null
+  # Kill any claude --print children we spawned
+  pkill -P $$ 2>/dev/null || true
+  sleep 1
+  echo -e "\033[0;32m[ralph] Stopped.\033[0m"
+  exit 0
+}
+trap cleanup SIGINT SIGTERM
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -41,12 +61,14 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
-log() { echo -e "${CYAN}[ralph $(date +%H:%M:%S)]${NC} $*"; }
-ok()  { echo -e "${GREEN}[ralph $(date +%H:%M:%S)] ✓${NC} $*"; }
-err() { echo -e "${RED}[ralph $(date +%H:%M:%S)] ✗${NC} $*"; }
-warn(){ echo -e "${YELLOW}[ralph $(date +%H:%M:%S)] !${NC} $*"; }
+log()  { echo -e "${CYAN}[ralph $(date +%H:%M:%S)]${NC} $*"; }
+ok()   { echo -e "${GREEN}[ralph $(date +%H:%M:%S)] ✓${NC} $*"; }
+err()  { echo -e "${RED}[ralph $(date +%H:%M:%S)] ✗${NC} $*"; }
+warn() { echo -e "${YELLOW}[ralph $(date +%H:%M:%S)] !${NC} $*"; }
 
 # Count completed iterations from log
 get_iteration_number() {
@@ -58,7 +80,52 @@ get_iteration_number() {
   echo $((count + 1))
 }
 
-# Build the prompt for Claude
+# ─── Watchdog ───
+# Runs in background. Kills Claude if no file activity for STALL_TIMEOUT seconds.
+# Does NOT cap runtime — if Claude is actively working, it runs forever.
+start_watchdog() {
+  local logfile="$1"
+  (
+    while true; do
+      sleep 30
+      # If the main script died, exit
+      kill -0 $$ 2>/dev/null || break
+
+      last_log_mod=$(stat -c %Y "$logfile" 2>/dev/null || echo 0)
+      now=$(date +%s)
+      idle_secs=$((now - last_log_mod))
+
+      # Check if source files or knowledge files changed more recently
+      src_activity=$(find "$PROJECT_DIR/implementation" -type f -newer "$logfile" 2>/dev/null | head -1)
+      kb_activity=$(find "$LOOP_DIR" -name "*.md" -newer "$logfile" 2>/dev/null | head -1)
+
+      if [[ -n "$src_activity" ]] || [[ -n "$kb_activity" ]]; then
+        continue  # Claude is actively working
+      fi
+
+      if [[ $idle_secs -gt $STALL_TIMEOUT ]]; then
+        echo ""
+        echo -e "${RED}[watchdog] No activity for ${idle_secs}s — API stall detected, killing Claude${NC}"
+        # Kill all claude --print processes that are our children
+        pkill -P $$ -f "claude.*--print" 2>/dev/null || true
+        sleep 2
+        pkill -9 -P $$ -f "claude.*--print" 2>/dev/null || true
+        break
+      fi
+    done
+  ) &
+  WATCHDOG_PID=$!
+}
+
+stop_watchdog() {
+  if [[ -n "$WATCHDOG_PID" ]]; then
+    kill "$WATCHDOG_PID" 2>/dev/null
+    wait "$WATCHDOG_PID" 2>/dev/null || true
+    WATCHDOG_PID=""
+  fi
+}
+
+# ─── Build the main iteration prompt ───
 build_prompt() {
   local iter_num="$1"
   cat <<'PROMPT_EOF'
@@ -98,7 +165,7 @@ Do NOT add features that increase scope beyond what vision.md describes.
 
 ### Step 3: Implement
 - Read the relevant source files first
-- Make the implementation change
+- Make the implementation change — plan and then implement
 - Keep changes minimal and focused — one task per iteration
 - Follow existing code patterns and style
 - Do NOT over-engineer
@@ -153,11 +220,64 @@ PROMPT_EOF
   echo "This is iteration #${iter_num}. Begin now."
 }
 
+# ─── Build the pruning prompt ───
+build_prune_prompt() {
+  cat <<'PRUNE_EOF'
+You are a knowledge file maintainer. Your job is to keep the ralph-loop knowledge files compact and useful. Ruthlessly prune fluff.
+
+Read these 4 files and rewrite each one in place:
+
+1. /home/ubuntu/chatDF/ralph-loop/potential-ideas.md
+2. /home/ubuntu/chatDF/ralph-loop/potential-pitfalls.md
+3. /home/ubuntu/chatDF/ralph-loop/lessons-learned.md
+4. /home/ubuntu/chatDF/ralph-loop/work.md
+
+## Rules for each file:
+
+### potential-ideas.md
+- DELETE all rows with status "done" or "blocked" — they are finished
+- Keep all "pending" ideas
+- If there are more than 30 pending ideas, remove the lowest-priority ones (priority < 1.0)
+- Keep the table format intact
+
+### potential-pitfalls.md
+- REMOVE one-off issues that only applied to a single iteration and wouldn't recur
+- REMOVE obvious things (e.g. "run tests before committing", "read files before editing")
+- KEEP only pitfalls that are non-obvious, structural, or would waste >30 minutes if hit again
+- Aim for under 20 bullet points total. Be ruthless about removing noise.
+
+### lessons-learned.md
+- DELETE individual iteration entries (### Iteration N sections) — these are ephemeral
+- KEEP only genuinely reusable, non-obvious lessons under "## General Principles" or similar headers
+- A good lesson saves future time. A bad lesson is just "I learned X" — obvious in hindsight.
+- If a lesson is really a pitfall, move it to pitfalls.md instead of keeping it here
+- Aim for under 15 bullet points total. Quality over quantity.
+
+### work.md
+- DELETE all completed `[x]` tasks — they are done, no history needed
+- Keep all unchecked `[ ]` tasks exactly as they are
+- Keep the file structure/headers intact
+
+## Process
+1. Read all 4 files
+2. Rewrite each one in place according to rules above
+3. Stage and commit: git add ralph-loop/potential-ideas.md ralph-loop/potential-pitfalls.md ralph-loop/lessons-learned.md ralph-loop/work.md && git commit -m "Prune knowledge files" && git push origin main
+
+Do NOT modify vision.md or iteration-log.md.
+PRUNE_EOF
+}
+
 # ─── Main Loop ───
 
-log "Starting Ralph-Loop for ChatDF"
-log "Model: $MODEL | Budget/iter: \$$MAX_BUDGET | Cooldown: ${COOLDOWN}s"
+echo ""
+echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${CYAN}║          Ralph-Loop for ChatDF           ║${NC}"
+echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}"
+echo ""
+log "Model: ${BOLD}$MODEL${NC} | Prune: $PRUNE_MODEL | Budget: \$$MAX_BUDGET/iter"
+log "Cooldown: ${COOLDOWN}s | Stall detect: ${STALL_TIMEOUT}s"
 [[ $MAX_ITERATIONS -gt 0 ]] && log "Max iterations: $MAX_ITERATIONS" || log "Iterations: unlimited"
+log "Stop: ${BOLD}Ctrl+C${NC}"
 echo ""
 
 iteration=0
@@ -172,27 +292,50 @@ while true; do
     break
   fi
 
-  log "━━━ Iteration #$iter_num ━━━"
+  echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${BOLD}${CYAN}  ITERATION #$iter_num${NC}"
+  echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo ""
+
+  # Show pending human tasks
+  if [[ -f "$LOOP_DIR/work.md" ]]; then
+    pending=$(grep -c '^\- \[ \]' "$LOOP_DIR/work.md" 2>/dev/null || true)
+    pending=${pending:-0}
+    if [[ $pending -gt 0 ]]; then
+      warn "Human work queue: ${BOLD}$pending task(s)${NC}"
+      grep '^\- \[ \]' "$LOOP_DIR/work.md" 2>/dev/null | head -3 | while IFS= read -r line; do
+        echo -e "  ${YELLOW}$line${NC}"
+      done
+      echo ""
+    fi
+  fi
 
   # Build prompt
   prompt=$(build_prompt "$iter_num")
   log_file="$LOG_DIR/iteration-${iter_num}-$(date +%Y%m%d-%H%M%S).log"
 
   if $DRY_RUN; then
-    warn "[DRY RUN] Would execute Claude with prompt (${#prompt} chars)"
-    warn "[DRY RUN] Log would be at: $log_file"
+    warn "[DRY RUN] Prompt (${#prompt} chars):"
+    echo -e "${DIM}"
+    echo "$prompt" | head -20
+    echo "... (truncated)"
+    echo -e "${NC}"
     break
   fi
 
-  # Run Claude in print mode (non-interactive, no permission prompts)
-  # A watchdog monitors for API stalls (0 activity for STALL_TIMEOUT seconds).
-  # This does NOT cap total runtime — if Claude is actively working, it runs forever.
-  STALL_TIMEOUT="${RALPH_STALL_TIMEOUT:-300}"  # 5 min of zero activity = stall
-  log "Running Claude (model=$MODEL, budget=\$$MAX_BUDGET, stall_detect=${STALL_TIMEOUT}s)..."
+  # ═══════════════════════════════════════════
+  #  PHASE 1: Main improvement iteration
+  # ═══════════════════════════════════════════
+  log "${BOLD}PHASE 1: Improve${NC} (model=$MODEL, budget=\$$MAX_BUDGET)"
+  echo ""
+
+  # Start watchdog in background
+  touch "$log_file"
+  start_watchdog "$log_file"
+
+  # Run Claude in FOREGROUND — output streams to terminal AND log file
   set +e
   cd "$PROJECT_DIR"
-
-  # Launch Claude in background, piping through tee
   $CLAUDE_BIN \
     --print \
     --model "$MODEL" \
@@ -200,69 +343,60 @@ while true; do
     --max-budget-usd "$MAX_BUDGET" \
     --verbose \
     "$prompt" \
-    2>&1 | tee "$log_file" &
-  tee_pid=$!
-  # The actual claude process is the parent of tee in the pipeline
-  claude_pid=$(jobs -p | head -1)
-
-  # Watchdog: kill only if no file activity (git changes OR log output) for STALL_TIMEOUT
-  (
-    while kill -0 "$tee_pid" 2>/dev/null; do
-      sleep 30
-      # Check if claude is still alive
-      if ! kill -0 "$tee_pid" 2>/dev/null; then
-        break
-      fi
-      # Measure seconds since last activity:
-      #   1) log file growing = Claude producing output
-      #   2) any file in implementation/ modified = Claude working via tools
-      last_log_mod=$(stat -c %Y "$log_file" 2>/dev/null || echo 0)
-      last_src_mod=$(find "$PROJECT_DIR/implementation" -type f -newer "$log_file" 2>/dev/null | head -1)
-      now=$(date +%s)
-      idle_secs=$((now - last_log_mod))
-
-      if [[ -n "$last_src_mod" ]]; then
-        # Source files changed more recently than log — Claude is working
-        continue
-      fi
-
-      if [[ $idle_secs -gt $STALL_TIMEOUT ]]; then
-        echo "[watchdog] No activity for ${idle_secs}s — killing stalled Claude process" >&2
-        kill "$tee_pid" 2>/dev/null
-        # Also kill any child claude processes
-        pkill -P "$tee_pid" 2>/dev/null || true
-        break
-      fi
-    done
-  ) &
-  watchdog_pid=$!
-
-  # Wait for Claude to finish (or be killed by watchdog)
-  wait "$tee_pid" 2>/dev/null
-  exit_code=$?
-
-  # Clean up watchdog
-  kill "$watchdog_pid" 2>/dev/null
-  wait "$watchdog_pid" 2>/dev/null
-
+    2>&1 | tee "$log_file"
+  exit_code=${PIPESTATUS[0]}
   set -e
 
+  # Stop watchdog
+  stop_watchdog
+
+  echo ""
   if [[ $exit_code -eq 0 ]]; then
-    ok "Iteration #$iter_num completed successfully"
+    ok "Iteration #$iter_num completed"
   elif [[ $exit_code -eq 143 ]] || [[ $exit_code -eq 137 ]]; then
-    err "Iteration #$iter_num killed by watchdog (API stall detected)"
-    warn "Reverting any uncommitted changes..."
+    err "Iteration #$iter_num killed (API stall)"
+    warn "Reverting uncommitted changes..."
     git checkout -- . 2>/dev/null || true
     git clean -fd 2>/dev/null || true
   else
-    err "Iteration #$iter_num failed (exit code: $exit_code)"
-    warn "Check log: $log_file"
+    err "Iteration #$iter_num exited with code $exit_code"
   fi
 
-  # Cooldown between iterations
-  log "Cooling down for ${COOLDOWN}s..."
-  sleep "$COOLDOWN"
+  # ═══════════════════════════════════════════
+  #  PHASE 2: Prune knowledge files
+  # ═══════════════════════════════════════════
   echo ""
+  log "${BOLD}PHASE 2: Prune knowledge files${NC} (model=$PRUNE_MODEL)"
+  echo ""
+
+  prune_prompt=$(build_prune_prompt)
+  prune_log="$LOG_DIR/prune-${iter_num}-$(date +%Y%m%d-%H%M%S).log"
+
+  set +e
+  $CLAUDE_BIN \
+    --print \
+    --model "$PRUNE_MODEL" \
+    --dangerously-skip-permissions \
+    --max-budget-usd 0.50 \
+    --verbose \
+    "$prune_prompt" \
+    2>&1 | tee "$prune_log"
+  prune_exit=${PIPESTATUS[0]}
+  set -e
+
+  echo ""
+  if [[ $prune_exit -eq 0 ]]; then
+    ok "Knowledge files pruned"
+  else
+    warn "Prune step exited with code $prune_exit (non-critical)"
+  fi
+
+  # ═══════════════════════════════════════════
+  #  Cooldown
+  # ═══════════════════════════════════════════
+  echo ""
+  log "Cooling down ${COOLDOWN}s..."
+  sleep "$COOLDOWN"
 done
 
 ok "Ralph-Loop finished after $iteration iteration(s)"

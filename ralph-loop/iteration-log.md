@@ -35,3 +35,4 @@ Track each improvement cycle: what was done, what was learned.
 | 29 | 2026-02-08 | Cmd/Ctrl+K keyboard shortcut | U13 | 328/383 frontend, backend unchanged | 455ebb4 |
 | 30 | 2026-02-08 | Send button loading state | U14 | 331/386 frontend, 64/65 backend | 8abab84 |
 | 31 | 2026-02-08 | Scroll to bottom button icon | U15 | 329/386 frontend, 64/65 backend | 2b93abc |
+| 32 | 2026-02-08 | Keyboard shortcuts hint in placeholder | U16 | 330/387 frontend, 64/65 backend | de0b719 |

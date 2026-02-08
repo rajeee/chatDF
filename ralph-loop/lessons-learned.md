@@ -233,6 +233,14 @@ Insights accumulated through improvement iterations.
 - **Test count stable**: Frontend at 329/386 passing (same pre-existing failures). Added 3 new MessageList tests. Backend unchanged at 64/65 passing.
 - **Small visual details compound**: This ~10 line change (add SVG, update classes, add border style) makes the button feel significantly more polished. When users scroll up during long conversations, they immediately notice and appreciate the improved button. Priority score 4.0 (impact 4, effort 1).
 
+### Iteration 32 (2026-02-08)
+- **Keyboard shortcuts in placeholder for discoverability**: Added visual hints to chat input placeholder: "⏎ to send • ⇧⏎ for new line". This follows industry patterns from ChatGPT, Claude.ai, Slack, and Discord, making keyboard behavior immediately discoverable without requiring users to experiment or read documentation.
+- **Unicode symbols are compact and familiar**: Using Unicode symbols (⏎ for Enter, ⇧ for Shift) makes the hint visually distinct and compact. These symbols are universally recognized and don't add unnecessary text length to the placeholder.
+- **Minimal implementation, high discoverability**: Single line change to placeholder text, but provides immediate value for new users. Power users who already know the shortcuts can ignore it, while new users get helpful guidance about how to use the input field effectively.
+- **Test coverage for placeholder text**: Added new test to verify placeholder includes all three parts (question prompt, Enter hint, Shift+Enter hint). Updated existing test that checked for exact placeholder match.
+- **Pre-existing test failures unchanged**: Frontend remains at 330/387 passing (57 pre-existing failures from API client/routing issues). Backend unchanged at 64/65 passing. All ChatInput tests (22/22) pass.
+- **Small UX improvements matter**: This ~5 second change (update placeholder string, add test) makes the app feel more thoughtful and user-friendly. Users who don't know keyboard shortcuts will discover them immediately, reducing friction. Priority score 3.0 (impact 3, effort 1).
+
 ---
 
 ## General Principles

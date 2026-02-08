@@ -65,6 +65,13 @@ Insights accumulated through improvement iterations.
 - **Test clipboard API**: For testing clipboard functionality, use `Object.defineProperty(navigator, "clipboard", {...})` in global beforeEach (not nested within describe blocks) to ensure proper mock setup. Keep tests simple and focused on structure/rendering rather than complex interaction testing.
 - **High-impact polish features**: Copy buttons on code blocks are immediately noticeable and appreciated by users. Small UI additions that solve common pain points (copying code from AI responses) have outsized impact on perceived quality.
 
+### Iteration 11 (2026-02-08)
+- **Skeleton loading states**: Replace empty states during data fetching with animated skeleton placeholders. Use `isPending` from TanStack Query to detect loading state, then render pulsing placeholder elements with varying widths to simulate real content.
+- **Skeleton animation pattern**: Create simple skeleton with `animate-pulse` class on a colored div. Use `backgroundColor: "var(--color-border)"` for theme consistency. Vary widths using template literals: `width: \`${70 + Math.random() * 30}%\`` for natural-looking placeholders.
+- **WebSocket auto-reconnect already exists**: Discovered C2 (WebSocket auto-reconnect) was already implemented in websocket.ts with exponential backoff (1s → 30s max). Always check existing code before assuming features need implementation.
+- **Testing loading states**: Use delayed MSW responses (`await new Promise(resolve => setTimeout(resolve, 100))`) to ensure loading state is visible during tests. Query for skeleton testids immediately after render to verify they appear before data loads.
+- **Perceived performance > actual performance**: Skeleton loading makes the app *feel* faster even when actual load time is the same. Users perceive immediate feedback (skeleton) as more responsive than waiting for real data with no visual feedback.
+
 ---
 
 ## General Principles

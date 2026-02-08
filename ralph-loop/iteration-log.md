@@ -14,3 +14,4 @@ Track each improvement cycle: what was done, what was learned.
 | 8 | 2026-02-08 | Panel open/close CSS transitions | U1 | 345/345 frontend | 2dd9a7e |
 | 9 | 2026-02-08 | Toast notification system | U4 | 345/345 frontend | c05e1b5 |
 | 10 | 2026-02-08 | Copy button for code blocks | C6 | 351/351 frontend | abe49da |
+| 11 | 2026-02-08 | Skeleton loading states | U2 (C2 found pre-existing) | 352/352 frontend | bdef813 |

@@ -2,34 +2,24 @@
 
 Risks and traps to watch for during improvement iterations.
 
-## Architecture Pitfalls
-- **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never try to proxy WS through Vite dev server.
-- **No node binary**: System uses Bun exclusively. All npm scripts must use `~/.bun/bin/bun`.
+## Architecture
+- **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
+- **No node binary**: System uses Bun exclusively. All scripts must use `~/.bun/bin/bun`.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
 - **SQLite single-writer**: Only one write transaction at a time. Concurrent writes will queue/fail.
 
-## Frontend Pitfalls
-- **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully.
-- **Zustand getState() in callbacks**: Using `store.getState()` inside event handlers is correct pattern (avoids stale closures).
+## Frontend
+- **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **CodeMirror + React**: CodeMirror manages its own DOM. Be careful with React re-renders interfering.
+- **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts. Test immediate state instead.
+- **jsdom offsetParent is always null**: Don't use `el.offsetParent` to filter hidden elements in tests — jsdom doesn't compute layout.
+- **jsdom ignores media queries**: `hidden lg:flex` means always hidden in tests. Use single-element responsive pattern with conditional classes based on state.
 
-## Testing Pitfalls
-- **340 tests must pass**: Never commit code that breaks existing tests. Run full suite before committing.
+## Testing
 - **Playwright needs running servers**: E2E tests need both backend (8000) and frontend (5173) running.
-- **MSW handlers**: API mocks must match current API contract exactly.
-- **Dynamic imports in tests**: Vitest doesn't handle dynamic imports well without special config. Prefer static imports or use test mocks for lazy loading.
+- **Dynamic imports in tests**: Vitest doesn't handle dynamic imports well. Prefer static imports or mocks.
+- **Pre-existing test failures (~60)**: API client/routing tests broken since iteration 18's timeout/AbortSignal implementation. Don't waste time debugging these unless specifically tasked.
 
-## Performance Pitfalls
-- **Don't add heavy dependencies**: Bundle size matters. Prefer CSS solutions over JS libraries.
-- **React re-render cascades**: Zustand store updates trigger re-renders in all subscribers. Keep store slices focused.
-- **Large Polars DataFrames**: Some datasets can be 100k+ rows. Always paginate/virtualize.
-
-## Loop Stability Pitfalls
-- **Claude CLI can hang silently**: Iteration 38 ran for 3h50m with 0 output, likely API timeout/stall. The `--max-budget-usd` flag doesn't cover wall-clock hangs.
-- **Mitigation**: Use `timeout` command to cap each claude invocation to ~15 minutes max.
-
-## Scope Pitfalls
-- **Stay focused on polish**: Don't add new major features (auth providers, new data sources, etc.)
-- **Don't refactor for the sake of refactoring**: Each change must have measurable user benefit.
-- **Preserve existing behavior**: All improvements must be backwards-compatible with current UX.
+## Loop Stability
+- **Claude CLI can hang silently**: Use `timeout` command to cap each claude invocation to ~15 minutes max.

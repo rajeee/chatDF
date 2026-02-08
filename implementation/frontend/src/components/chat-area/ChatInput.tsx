@@ -90,6 +90,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!isStreaming) {
         handleSend();
       }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      textareaRef.current?.blur();
     }
   };
 
@@ -165,7 +168,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             <button
               type="button"
               aria-label="Stop generating"
-              title="Stop generating"
+              title="Stop generating (Esc)"
               className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-red-100 active:scale-95"
               onClick={onStop}
             >

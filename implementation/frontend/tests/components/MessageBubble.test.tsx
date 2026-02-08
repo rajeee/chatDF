@@ -57,8 +57,10 @@ describe("MessageBubble SQL Preview", () => {
     );
     expect(screen.getByTestId("sql-preview-msg-1")).toBeInTheDocument();
     expect(screen.getByTestId("sql-preview-toggle-msg-1")).toBeInTheDocument();
-    // Should be collapsed by default - no pre element visible
-    expect(screen.queryByText("SELECT * FROM users LIMIT 10")).not.toBeInTheDocument();
+    // Should be collapsed by default - content hidden via max-height animation
+    const sqlText = screen.getByText("SELECT * FROM users LIMIT 10");
+    const expandContainer = sqlText.closest("div[style]") as HTMLElement;
+    expect(expandContainer?.style.maxHeight).toBe("0px");
   });
 
   it("expands SQL preview on toggle click", () => {

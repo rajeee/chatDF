@@ -7,6 +7,8 @@ const SHORTCUTS = [
   { keys: ["Ctrl", "B"], description: "Toggle left sidebar" },
   { keys: ["Ctrl", "Enter"], description: "Send message" },
   { keys: ["?"], description: "Show this help" },
+  { keys: ["Esc"], description: "Unfocus chat input / Close modal" },
+  { keys: ["↑", "↓"], description: "Navigate conversations" },
 ];
 
 // On Mac, show ⌘ instead of Ctrl

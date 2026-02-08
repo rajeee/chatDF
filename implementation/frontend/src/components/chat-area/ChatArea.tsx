@@ -23,6 +23,7 @@ import { SQLModal } from "./SQLPanel";
 import { ChartModal } from "./ChartModal";
 import { ReasoningModal } from "./ReasoningModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+import { LiveRegion } from "./LiveRegion";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -185,6 +186,9 @@ export function ChatArea() {
       className="relative flex flex-col flex-1 min-w-0 items-center outline-none"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
+      {/* ARIA live region for screen reader announcements */}
+      <LiveRegion />
+
       {/* Constrained-width inner container */}
       <div className="flex flex-col w-full max-w-3xl flex-1">
         {/* Main content area - conditional rendering */}

@@ -167,7 +167,16 @@ function MessageBubbleComponent({
                 <span className="opacity-40">({message.sql_executions.length} queries)</span>
               )}
             </button>
-            {sqlExpanded && (
+            {/* SQL preview content with smooth expand/collapse */}
+            <div
+              data-testid={`sql-preview-content-${message.id}`}
+              style={{
+                maxHeight: sqlExpanded ? "200px" : "0px",
+                opacity: sqlExpanded ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 200ms ease, opacity 150ms ease",
+              }}
+            >
               <pre
                 className="px-2 py-1.5 overflow-x-auto font-mono border-t"
                 style={{
@@ -181,7 +190,7 @@ function MessageBubbleComponent({
               >
                 {message.sql_executions.map((exec, i) => exec.query).join(";\n\n")}
               </pre>
-            )}
+            </div>
           </div>
         )}
 

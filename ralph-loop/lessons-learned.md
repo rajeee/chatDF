@@ -249,6 +249,16 @@ Insights accumulated through improvement iterations.
 - **Test count stable**: Frontend remains at 330/387 passing (57 pre-existing failures unchanged from iteration 32). Backend unchanged at 64/65 passing. My new test passes, verifying the icon renders correctly.
 - **Small visual details create polish**: This ~10 line change (add SVG, wrap text in span, update flex classes) makes the button feel significantly more modern and professional. Users frequently click this button to start new conversations - making it visually appealing and instantly recognizable has outsized impact. Priority score 4.0 (impact 4, effort 1).
 
+### Iteration 34 (2026-02-08)
+- **Icons over text for instant recognition**: Replaced text ("X") with SVG icons (trash for delete, X icon for close) on all delete and close buttons. Icons are processed faster by the human brain than text and match universal patterns from professional apps (ChatGPT, Claude.ai, Slack, Discord).
+- **Trash icon for destructive actions**: Used trash icon SVG for delete/remove buttons (ChatHistory conversation delete, DatasetCard dataset remove). The trash symbol is universally recognized for delete actions across all professional software.
+- **X icon for close/dismiss actions**: Used X icon SVG for close buttons (SchemaModal, ToastContainer). The X symbol is the industry standard for closing modals and dismissing notifications.
+- **Inline SVG benefits**: Zero network requests, perfect scaling at any resolution, theme-aware via `currentColor`, tiny file size (~50-100 bytes per icon). Free performance and visual polish.
+- **Title tooltips for accessibility**: Added `title` attributes to icon-only buttons so users get helpful tooltips on hover ("Delete conversation", "Remove dataset", "Close").
+- **Consistent icon sizing**: Used `w-4 h-4` (16px) for small delete buttons, `w-5 h-5` (20px) for modal close buttons. Consistent sizing creates visual harmony across the UI.
+- **Test existing files before creating new ones**: Discovered test files already existed in `tests/components/` directory. Always search for existing test files before creating duplicates in `src/__tests__/`.
+- **High-impact micro-improvements**: This change touched 3 components but is immediately noticeable. Users see these buttons constantly (deleting conversations, removing datasets, closing modals). Making them visually recognizable improves the entire app's perceived quality. Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

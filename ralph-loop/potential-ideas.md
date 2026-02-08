@@ -51,3 +51,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | C12 | SQL query history with quick re-run | 4 | 3 | 1.33 | done |
 | U12 | Progressive color warning for character counter (gray→orange→red) | 3 | 1 | 3.0 | done |
 | U13 | Add Cmd/Ctrl+K shortcut to focus chat input (industry standard) | 4 | 1 | 4.0 | done |
+| U14 | Add sending state visual feedback to send button (pulse animation) | 4 | 1 | 4.0 | done |

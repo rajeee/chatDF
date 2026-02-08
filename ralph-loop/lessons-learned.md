@@ -215,6 +215,15 @@ Insights accumulated through improvement iterations.
 - **Zero breaking changes**: All existing shortcuts (/, Ctrl+B, Ctrl+Enter) continue to work exactly as before. Frontend test count unchanged at 328/383 passing (55 pre-existing failures).
 - **High impact, minimal effort**: This is a perfect example of a polish improvement - adds "wow factor" for keyboard users, zero bundle size increase, 5 minutes to implement, immediately noticeable. Priority score 4.0 (impact 4, effort 1).
 
+### Iteration 30 (2026-02-08)
+- **Send button loading state for immediate feedback**: Added subtle pulse animation to send button during the brief moment between clicking send and when streaming begins. This addresses a common UX gap - users need immediate feedback that their action was registered, especially on slower connections.
+- **Loading phase state already existed**: The chatStore already tracked `loadingPhase` ("idle", "thinking", "executing", "formatting") from previous work. Simply subscribed to this state in ChatInput and derived `isSending = loadingPhase === "thinking" && !isStreaming` to show the pulse animation during the pre-streaming phase.
+- **Subtle visual feedback pattern**: Used Tailwind's built-in `animate-pulse` class - simple, lightweight, no custom animations needed. Combined with disabling the button prevents double-clicks while providing clear visual feedback.
+- **State transitions matter**: The sending state exists only between button click and first streaming token. Once streaming starts, the button is replaced by the stop button. This narrow window is exactly where users need reassurance that their click registered.
+- **Test coverage for state transitions**: Added 3 comprehensive tests covering: (1) pulse animation appears during sending, (2) button is disabled during sending, (3) button correctly transitions when streaming starts. All tests use direct Zustand store updates to simulate state changes.
+- **Zero breaking changes**: All existing ChatInput behavior preserved. Frontend tests went from 328/383 to 331/386 passing (+3 new tests). Backend tests unchanged at 64/65 passing. Pre-existing failures from iterations 18/20 remain unchanged.
+- **Micro-interactions create polish**: This 5-line change (subscribe to loadingPhase, add isSending derived state, apply animate-pulse class) provides immediate user-visible feedback. Small details like this are the difference between "functional" and "polished". Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

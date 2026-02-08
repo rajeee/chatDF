@@ -15,8 +15,7 @@ Risks and traps to watch for during improvement iterations.
 
 ## Testing
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts. Test immediate state instead.
-- **jsdom offsetParent is always null**: Don't use `el.offsetParent` to filter hidden elements in tests.
-- **jsdom ignores media queries**: `hidden lg:flex` means always hidden in tests. Use conditional classes based on state instead.
+- **jsdom ignores layout and media queries**: `offsetParent` is always null; `hidden lg:flex` means always hidden. Test class/attribute presence, not computed styles.
 - **Pre-existing test failures (~60)**: API client/routing tests broken since iteration 18. Don't debug unless specifically tasked.
 
 ## Loop Stability

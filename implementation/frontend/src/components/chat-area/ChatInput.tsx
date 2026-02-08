@@ -114,7 +114,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     : "Ask a question about your data...";
 
   const showCounter = charCount > CHAR_COUNTER_THRESHOLD;
-  const atLimit = charCount >= CHAR_LIMIT;
+
+  // Progressive color warning based on character count
+  const getCounterColor = () => {
+    if (charCount >= 1950) return "text-red-500"; // Very close to limit
+    if (charCount >= 1900) return "text-orange-500"; // Warning zone
+    return "text-gray-500"; // Normal
+  };
 
   const formattedCount = charCount.toLocaleString();
   const formattedLimit = CHAR_LIMIT.toLocaleString();
@@ -196,7 +202,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {showCounter && (
           <span
             data-testid="char-counter"
-            className={`text-xs text-right ${atLimit ? "text-red-500" : "text-gray-500"}`}
+            className={`text-xs text-right transition-colors duration-300 ${getCounterColor()}`}
           >
             {formattedCount} / {formattedLimit}
           </span>

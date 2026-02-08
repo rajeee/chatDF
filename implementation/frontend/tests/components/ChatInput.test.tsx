@@ -78,4 +78,71 @@ describe("ChatInput", () => {
     const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
     expect(textarea.value).toBe("SELECT * FROM users");
   });
+
+  it("shows character counter with gray color when approaching limit (1800-1899)", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Set input to 1850 characters (above threshold, below warning)
+    const text = "a".repeat(1850);
+    ref.current?.setInputValue(text);
+
+    const counter = screen.getByTestId("char-counter");
+    expect(counter).toBeInTheDocument();
+    expect(counter.className).toContain("text-gray-500");
+    expect(counter.textContent).toContain("1,850");
+  });
+
+  it("shows character counter with orange color in warning zone (1900-1949)", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Set input to 1920 characters (warning zone)
+    const text = "a".repeat(1920);
+    ref.current?.setInputValue(text);
+
+    const counter = screen.getByTestId("char-counter");
+    expect(counter).toBeInTheDocument();
+    expect(counter.className).toContain("text-orange-500");
+    expect(counter.textContent).toContain("1,920");
+  });
+
+  it("shows character counter with red color when very close to limit (1950-2000)", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Set input to 1980 characters (danger zone)
+    const text = "a".repeat(1980);
+    ref.current?.setInputValue(text);
+
+    const counter = screen.getByTestId("char-counter");
+    expect(counter).toBeInTheDocument();
+    expect(counter.className).toContain("text-red-500");
+    expect(counter.textContent).toContain("1,980");
+  });
+
+  it("character counter has smooth color transition animation", () => {
+    const ref = createRef<ChatInputHandle>();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    renderWithProviders(<ChatInput ref={ref} onSend={onSend} onStop={onStop} />);
+
+    // Set input above threshold to make counter visible
+    const text = "a".repeat(1850);
+    ref.current?.setInputValue(text);
+
+    const counter = screen.getByTestId("char-counter");
+    expect(counter.className).toContain("transition-colors");
+    expect(counter.className).toContain("duration-300");
+  });
 });

@@ -15,9 +15,10 @@ Risks and traps to watch for during improvement iterations.
 - **CodeMirror + React**: CodeMirror manages its own DOM. Be careful with React re-renders interfering.
 
 ## Testing Pitfalls
-- **319 tests must pass**: Never commit code that breaks existing tests. Run full suite before committing.
+- **340 tests must pass**: Never commit code that breaks existing tests. Run full suite before committing.
 - **Playwright needs running servers**: E2E tests need both backend (8000) and frontend (5173) running.
 - **MSW handlers**: API mocks must match current API contract exactly.
+- **Dynamic imports in tests**: Vitest doesn't handle dynamic imports well without special config. Prefer static imports or use test mocks for lazy loading.
 
 ## Performance Pitfalls
 - **Don't add heavy dependencies**: Bundle size matters. Prefer CSS solutions over JS libraries.

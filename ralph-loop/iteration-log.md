@@ -9,3 +9,4 @@ Track each improvement cycle: what was done, what was learned.
 | 3 | 2026-02-08 | Message slide-in animation | U7 | 336/336 frontend | f2f76dd |
 | 4 | 2026-02-08 | Typing indicator animation | U8 | 337/337 frontend | 317be72 |
 | 5 | 2026-02-08 | Smooth scroll during streaming | U9 | 338/338 frontend | a76a363 |
+| 6 | 2026-02-08 | React.memo for performance | P4 (P3 blocked) | 340/340 frontend | ca3b260 |

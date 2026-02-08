@@ -5,6 +5,7 @@ Risks and traps to watch for during improvement iterations.
 ## Architecture
 - **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
+- **Backend response model != frontend type assumption**: When Pydantic wraps data (e.g., `{"columns": [...]}`), the frontend must match the actual serialized JSON shape, not what the DB stores. Always verify actual response structure.
 
 ## Frontend
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
@@ -15,4 +16,4 @@ Risks and traps to watch for during improvement iterations.
 ## Testing
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts. Test immediate state instead.
 - **jsdom ignores layout and media queries**: `offsetParent` is always null; `hidden lg:flex` means always hidden. Test class/attribute presence, not computed styles.
-- **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn` instead of relying on MSW for tests that go through `fetchWithTimeout`.
+- **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn` instead of relying on MSW.

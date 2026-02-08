@@ -1,14 +1,18 @@
 // Reasoning modal: displays the model's internal reasoning/thinking tokens.
 // Pattern follows PresetSourcesModal — fixed overlay, backdrop close, Escape close.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useUiStore } from "@/stores/uiStore";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export function ReasoningModal() {
   const isOpen = useUiStore((s) => s.reasoningModalOpen);
   const reasoning = useUiStore((s) => s.activeReasoning);
   const closeModal = useUiStore((s) => s.closeReasoningModal);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(modalRef, isOpen);
 
   // Escape key handler
   useEffect(() => {
@@ -35,6 +39,7 @@ export function ReasoningModal() {
       }}
     >
       <div
+        ref={modalRef}
         className="rounded-lg shadow-xl flex flex-col"
         style={{
           backgroundColor: "var(--color-surface)",

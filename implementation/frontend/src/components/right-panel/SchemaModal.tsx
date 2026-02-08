@@ -9,6 +9,7 @@ import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { apiPost, apiPatch } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 /** Map parquet type strings to user-friendly display labels. */
 function mapType(rawType: string): string {
@@ -67,6 +68,9 @@ export function SchemaModal() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(modalRef, !!schemaModalDatasetId);
 
   // Sync editedName when dataset changes.
   useEffect(() => {
@@ -177,6 +181,7 @@ export function SchemaModal() {
       >
         {/* Modal content */}
         <div
+          ref={modalRef}
           data-testid="schema-modal-content"
           className="rounded-lg shadow-xl p-6 w-full max-w-[500px] max-h-[80vh] overflow-y-auto"
           style={{ backgroundColor: "var(--color-surface)" }}

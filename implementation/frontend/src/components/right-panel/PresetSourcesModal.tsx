@@ -1,11 +1,12 @@
 // Preset Sources modal for loading NREL ResStock parquet files.
 // Hardcoded preset config: NREL ResStock 2025 Release 1, upgrade0 through upgrade32.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { apiPost } from "@/api/client";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 // ---------------------------------------------------------------------------
 // Preset configuration
@@ -69,6 +70,9 @@ export function PresetSourcesModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(modalRef, isOpen);
 
   const source = PRESET_SOURCES[sourceIndex];
   const release = source.releases[releaseIndex];
@@ -191,6 +195,7 @@ export function PresetSourcesModal() {
       }}
     >
       <div
+        ref={modalRef}
         className="rounded-lg shadow-xl flex flex-col"
         style={{
           backgroundColor: "var(--color-surface)",

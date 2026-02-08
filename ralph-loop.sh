@@ -128,20 +128,24 @@ stop_watchdog() {
   fi
 }
 
-# ─── Run Claude with terminal output + Ctrl+C support ───
-# Pipeline (| tee) shows output on terminal AND saves to log.
+# ─── Run Claude with live streaming visibility ───
+# Uses --output-format stream-json for real-time events (tool calls,
+# subagent dispatches, text output). Piped through stream-formatter.sh
+# for human-readable terminal output. Raw JSON saved to log file.
 # Wrapped in backgrounded subshell so `wait` is interruptible by SIGINT.
-# When Ctrl+C fires, trap kills the subshell PID (and its children).
+STREAM_FORMATTER="$LOOP_DIR/stream-formatter.sh"
+
 run_claude() {
   local log_file="$1"
   local budget="$2"
   local model="$3"
   local prompt="$4"
 
-  # Subshell in background: tee copies to terminal + log file
-  # Background + wait = Ctrl+C interrupts wait, trap kills subshell
+  # Subshell in background: stream-json → formatter → terminal + log
   ($CLAUDE_BIN --print --model "$model" --dangerously-skip-permissions \
-    --max-budget-usd "$budget" --verbose "$prompt" 2>&1 | tee "$log_file") &
+    --output-format stream-json --verbose \
+    --max-budget-usd "$budget" "$prompt" 2>&1 \
+    | bash "$STREAM_FORMATTER" "$log_file") &
   CLAUDE_PID=$!
   wait "$CLAUDE_PID" 2>/dev/null
   local rc=$?

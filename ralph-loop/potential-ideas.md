@@ -52,4 +52,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | U12 | Progressive color warning for character counter (gray→orange→red) | 3 | 1 | 3.0 | done |
 | U13 | Add Cmd/Ctrl+K shortcut to focus chat input (industry standard) | 4 | 1 | 4.0 | done |
 | U14 | Add sending state visual feedback to send button (pulse animation) | 4 | 1 | 4.0 | done |
-| U15 | Add down arrow icon to "Scroll to bottom" button for better visual recognition | 4 | 1 | 4.0 | pending |
+| U15 | Add down arrow icon to "Scroll to bottom" button for better visual recognition | 4 | 1 | 4.0 | done |

@@ -336,3 +336,50 @@ select:focus-visible {
     padding-right: env(safe-area-inset-right, 0px);
   }
 }
+
+/* Respect prefers-reduced-motion: reduce or disable animations.
+   - Transform/slide animations → instant (0.01s to still fire animationend)
+   - Informational animations (cursor pulse) → reduced but kept
+   - Hover lift effects → disabled */
+@media (prefers-reduced-motion: reduce) {
+  .message-appear,
+  .first-message-entrance,
+  .onboarding-fade-in,
+  .onboarding-fade-in-delayed,
+  .onboarding-fade-in-delayed-2,
+  .onboarding-exit,
+  .modal-backdrop-enter,
+  .modal-scale-enter,
+  .dataset-card-enter,
+  .animate-fade-in {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+  }
+
+  .typing-dot {
+    animation: none !important;
+    opacity: 0.6;
+  }
+
+  .empty-state-float {
+    animation: none !important;
+  }
+
+  .streaming-cursor {
+    animation-duration: 2s !important;
+  }
+
+  .prompt-chip:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .prompt-chip:active {
+    transform: none !important;
+  }
+
+  /* Disable transition-based motion */
+  .skip-to-content {
+    transition-duration: 0.01s !important;
+  }
+}

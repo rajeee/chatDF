@@ -9,6 +9,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
 import { SchemaModal } from "./SchemaModal";
@@ -26,6 +27,12 @@ export function RightPanel() {
   const setRightPanelWidth = useUiStore((s) => s.setRightPanelWidth);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const isDragging = useRef(false);
+
+  const swipeRef = useSwipeToDismiss({
+    direction: "right",
+    onDismiss: toggleRightPanel,
+    enabled: rightPanelOpen,
+  });
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -67,6 +74,7 @@ export function RightPanel() {
 
   return (
     <aside
+      ref={swipeRef as React.RefObject<HTMLElement>}
       data-testid="right-panel"
       className={`flex-col border-l transition-all duration-300 ease-in-out ${mobileClasses} ${desktopClasses}`}
       style={{

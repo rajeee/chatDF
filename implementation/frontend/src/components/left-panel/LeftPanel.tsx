@@ -6,6 +6,7 @@
 
 import { useCallback, useRef } from "react";
 import { useUiStore } from "@/stores/uiStore";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { ChatHistory } from "./ChatHistory";
 import { Settings } from "./Settings";
 import { UsageStats } from "./UsageStats";
@@ -37,6 +38,12 @@ export function LeftPanel() {
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
   const setLeftPanelWidth = useUiStore((s) => s.setLeftPanelWidth);
   const isDragging = useRef(false);
+
+  const swipeRef = useSwipeToDismiss({
+    direction: "left",
+    onDismiss: toggleLeftPanel,
+    enabled: leftPanelOpen,
+  });
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -97,6 +104,7 @@ export function LeftPanel() {
   // Expanded state: full sidebar with hamburger + content + resize handle
   return (
     <aside
+      ref={swipeRef as React.RefObject<HTMLElement>}
       data-testid="left-panel"
       className="flex flex-col relative sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
       style={{

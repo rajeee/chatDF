@@ -3,6 +3,7 @@
 // Conversation list with selection, inline rename, delete with confirmation.
 // TanStack Query for GET /conversations, sorted by updated_at desc.
 // Supports pinning conversations to the top of the sidebar.
+// Virtualizes the list when 40+ conversations for scroll performance.
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
@@ -49,6 +50,100 @@ function PinIcon({ className }: { className?: string }) {
       <path d="M5 11h14l-1.5 6h-11z" />
     </svg>
   );
+}
+
+/** Threshold for enabling virtualization (total flat items including headers). */
+const VIRTUAL_THRESHOLD = 40;
+/** Estimated height in px for a conversation item. */
+const ITEM_HEIGHT = 64;
+/** Estimated height in px for a group header. */
+const HEADER_HEIGHT = 28;
+/** Number of extra items rendered above/below the visible window. */
+const BUFFER_SIZE = 5;
+
+/**
+ * Lightweight scroll-based virtualization hook.
+ * Only activates when `enabled` is true (i.e. item count >= threshold).
+ * Returns the visible slice indices and spacer heights.
+ */
+function useVirtualList(
+  containerRef: React.RefObject<HTMLElement | null>,
+  items: ReadonlyArray<{ type: "header" | "conversation" }>,
+  enabled: boolean,
+) {
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !enabled) return;
+
+    const handleScroll = () => setScrollTop(el.scrollTop);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerHeight(entry.contentRect.height);
+      }
+    });
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    observer.observe(el);
+    setContainerHeight(el.clientHeight);
+
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
+    };
+  }, [containerRef, enabled]);
+
+  // Pre-compute cumulative heights so mixed header/item sizes are handled.
+  const cumulativeHeights = useMemo(() => {
+    const heights: number[] = [];
+    let total = 0;
+    for (const item of items) {
+      total += item.type === "header" ? HEADER_HEIGHT : ITEM_HEIGHT;
+      heights.push(total);
+    }
+    return heights;
+  }, [items]);
+
+  const totalHeight = cumulativeHeights.length > 0 ? cumulativeHeights[cumulativeHeights.length - 1] : 0;
+
+  if (!enabled) {
+    return {
+      startIndex: 0,
+      endIndex: items.length,
+      topPadding: 0,
+      bottomPadding: 0,
+      totalHeight,
+    };
+  }
+
+  // Binary search for the first item whose cumulative bottom edge > scrollTop.
+  let lo = 0;
+  let hi = cumulativeHeights.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (cumulativeHeights[mid] <= scrollTop) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  const firstVisible = lo;
+
+  // Find last item whose top edge < scrollTop + containerHeight.
+  const bottomEdge = scrollTop + containerHeight;
+  let lastVisible = firstVisible;
+  while (lastVisible < cumulativeHeights.length - 1 && (cumulativeHeights[lastVisible] - (items[lastVisible].type === "header" ? HEADER_HEIGHT : ITEM_HEIGHT)) < bottomEdge) {
+    lastVisible++;
+  }
+
+  const startIndex = Math.max(0, firstVisible - BUFFER_SIZE);
+  const endIndex = Math.min(items.length, lastVisible + BUFFER_SIZE + 1);
+  const topPadding = startIndex > 0 ? cumulativeHeights[startIndex - 1] : 0;
+  const bottomPadding = Math.max(0, totalHeight - cumulativeHeights[endIndex - 1]);
+
+  return { startIndex, endIndex, topPadding, bottomPadding, totalHeight };
 }
 
 export function ChatHistory() {
@@ -114,6 +209,29 @@ export function ChatHistory() {
     return groups;
   }, [filteredConversations]);
 
+  type FlatItem =
+    | { type: "header"; label: string }
+    | { type: "conversation"; conv: ConversationSummary };
+
+  const flatItems: FlatItem[] = useMemo(() => {
+    const items: FlatItem[] = [];
+    for (const group of groupedConversations) {
+      items.push({ type: "header", label: group.label });
+      for (const conv of group.conversations) {
+        items.push({ type: "conversation", conv });
+      }
+    }
+    return items;
+  }, [groupedConversations]);
+
+  const listRef = useRef<HTMLUListElement>(null);
+  const virtualEnabled = flatItems.length >= VIRTUAL_THRESHOLD;
+  const { startIndex, endIndex, topPadding, bottomPadding } = useVirtualList(
+    listRef,
+    flatItems,
+    virtualEnabled,
+  );
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
@@ -135,7 +253,9 @@ export function ChatHistory() {
       const el = itemRefs.current.get(activeConversationId);
       if (el) {
         requestAnimationFrame(() => {
-          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          if (typeof el.scrollIntoView === "function") {
+            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
         });
       }
     }
@@ -354,196 +474,201 @@ export function ChatHistory() {
           No matches
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversations">
-          {groupedConversations.map((group) => (
-            <li key={group.label} role="group" aria-label={group.label}>
-              <div className="text-xs uppercase tracking-wide opacity-40 px-2 pt-3 pb-1 select-none" style={{ color: "var(--color-text)" }}>
-                {group.label}
-              </div>
-              <ul className="space-y-0.5">
-                {group.conversations.map((conv) => (
-                  <li
-                    key={conv.id}
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(conv.id, el);
-                      else itemRefs.current.delete(conv.id);
-                    }}
-                    data-testid="conversation-item"
-                    data-pinned={conv.is_pinned ? "true" : "false"}
-                    data-active={activeConversationId === conv.id ? "true" : "false"}
-                    aria-current={activeConversationId === conv.id ? "page" : undefined}
-                    className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 ${
-                      conv.is_pinned ? "border-l-2 border-blue-400/50" : ""
-                    } ${
-                      activeConversationId === conv.id
-                        ? "bg-blue-500/10"
-                        : "hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
-                    }`}
-                    onClick={() => handleSelect(conv.id)}
-                  >
-                    {editingId === conv.id ? (
-                      <input
-                        ref={editInputRef}
-                        type="text"
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        onBlur={() => handleRenameSubmit(conv.id)}
-                        onKeyDown={(e) => handleRenameKeyDown(e, conv.id)}
-                        className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <>
-                        <div
-                          className="flex-1 min-w-0"
-                          onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            handleDoubleClick(conv);
-                          }}
+        <ul ref={listRef} className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversations">
+          {topPadding > 0 && <li aria-hidden="true" style={{ height: topPadding }} />}
+          {flatItems.slice(startIndex, endIndex).map((item) => {
+            if (item.type === "header") {
+              return (
+                <li key={`hdr-${item.label}`} role="group" aria-label={item.label}>
+                  <div className="text-xs uppercase tracking-wide opacity-40 px-2 pt-3 pb-1 select-none" style={{ color: "var(--color-text)" }}>
+                    {item.label}
+                  </div>
+                </li>
+              );
+            }
+            const conv = item.conv;
+            return (
+              <li
+                key={conv.id}
+                ref={(el) => {
+                  if (el) itemRefs.current.set(conv.id, el);
+                  else itemRefs.current.delete(conv.id);
+                }}
+                data-testid="conversation-item"
+                data-pinned={conv.is_pinned ? "true" : "false"}
+                data-active={activeConversationId === conv.id ? "true" : "false"}
+                aria-current={activeConversationId === conv.id ? "page" : undefined}
+                className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 ${
+                  conv.is_pinned ? "border-l-2 border-blue-400/50" : ""
+                } ${
+                  activeConversationId === conv.id
+                    ? "bg-blue-500/10"
+                    : "hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
+                }`}
+                onClick={() => handleSelect(conv.id)}
+              >
+                {editingId === conv.id ? (
+                  <input
+                    ref={editInputRef}
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => handleRenameSubmit(conv.id)}
+                    onKeyDown={(e) => handleRenameKeyDown(e, conv.id)}
+                    className="flex-1 bg-transparent border border-blue-400 rounded px-1 py-0 text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <>
+                    <div
+                      className="flex-1 min-w-0"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        handleDoubleClick(conv);
+                      }}
+                    >
+                      <span
+                        className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
+                      >
+                        {conv.is_pinned && (
+                          <PinIcon className="w-3 h-3 inline-block mr-1 opacity-50 -mt-0.5" />
+                        )}
+                        {conv.title || "Untitled"}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs opacity-40">
+                        <span
+                          className="truncate"
+                          data-testid="conversation-time"
                         >
+                          {formatRelativeTime(conv.updated_at)}
+                        </span>
+                        {conv.message_count > 0 && (
                           <span
-                            className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
+                            data-testid="message-count-badge"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] leading-4 font-medium shrink-0"
+                            style={{
+                              backgroundColor: "var(--color-border)",
+                              color: "var(--color-text-muted, var(--color-text))",
+                            }}
                           >
-                            {conv.is_pinned && (
-                              <PinIcon className="w-3 h-3 inline-block mr-1 opacity-50 -mt-0.5" />
-                            )}
-                            {conv.title || "Untitled"}
-                          </span>
-                          <span className="flex items-center gap-1.5 text-xs opacity-40">
-                            <span
-                              className="truncate"
-                              data-testid="conversation-time"
+                            <svg
+                              className="w-2.5 h-2.5"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
                             >
-                              {formatRelativeTime(conv.updated_at)}
-                            </span>
-                            {conv.message_count > 0 && (
-                              <span
-                                data-testid="message-count-badge"
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] leading-4 font-medium shrink-0"
-                                style={{
-                                  backgroundColor: "var(--color-border)",
-                                  color: "var(--color-text-muted, var(--color-text))",
-                                }}
-                              >
-                                <svg
-                                  className="w-2.5 h-2.5"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                </svg>
-                                {conv.message_count}
-                              </span>
-                            )}
-                          </span>
-                          {conv.last_message_preview && (
-                            <span
-                              className="block text-xs opacity-30 truncate mt-0.5"
-                              data-testid="conversation-preview"
-                            >
-                              {conv.last_message_preview}
-                            </span>
-                          )}
-                        </div>
-
-                        {confirmingDeleteId === conv.id ? (
-                          <span
-                            className="flex items-center gap-1 text-xs animate-fade-in"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span>Delete?</span>
-                            <button
-                              data-testid={`confirm-delete-${conv.id}`}
-                              className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150 flex items-center gap-1"
-                              onClick={() => handleConfirmDelete(conv.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              {deleteMutation.isPending && deleteMutation.variables === conv.id ? (
-                                <svg
-                                  className="w-3 h-3 animate-spin"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                >
-                                  <circle
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeOpacity="0.25"
-                                  />
-                                  <path
-                                    d="M12 2 A10 10 0 0 1 22 12"
-                                    stroke="currentColor"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              ) : null}
-                              <span>Yes</span>
-                            </button>
-                            <button
-                              className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
-                              onClick={handleCancelDelete}
-                              disabled={deleteMutation.isPending}
-                            >
-                              No
-                            </button>
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-0.5 absolute right-2">
-                            <button
-                              data-testid={`pin-conversation-${conv.id}`}
-                              className={`touch-action-btn text-xs active:scale-90 transition-all duration-150 ${
-                                conv.is_pinned
-                                  ? "opacity-50 hover:opacity-80 text-blue-400"
-                                  : "opacity-0 group-hover:opacity-100 hover:text-blue-400"
-                              }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePinToggle(conv);
-                              }}
-                              title={conv.is_pinned ? "Unpin conversation" : "Pin conversation"}
-                            >
-                              <PinIcon className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              data-testid={`delete-conversation-${conv.id}`}
-                              className="touch-action-btn opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(conv.id);
-                              }}
-                              title="Delete conversation"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                <line x1="10" y1="11" x2="10" y2="17" />
-                                <line x1="14" y1="11" x2="14" y2="17" />
-                              </svg>
-                            </button>
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            {conv.message_count}
                           </span>
                         )}
-                      </>
+                      </span>
+                      {conv.last_message_preview && (
+                        <span
+                          className="block text-xs opacity-30 truncate mt-0.5"
+                          data-testid="conversation-preview"
+                        >
+                          {conv.last_message_preview}
+                        </span>
+                      )}
+                    </div>
+
+                    {confirmingDeleteId === conv.id ? (
+                      <span
+                        className="flex items-center gap-1 text-xs animate-fade-in"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span>Delete?</span>
+                        <button
+                          data-testid={`confirm-delete-${conv.id}`}
+                          className="text-red-500 hover:text-red-700 active:scale-95 font-medium transition-all duration-150 flex items-center gap-1"
+                          onClick={() => handleConfirmDelete(conv.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          {deleteMutation.isPending && deleteMutation.variables === conv.id ? (
+                            <svg
+                              className="w-3 h-3 animate-spin"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeOpacity="0.25"
+                              />
+                              <path
+                                d="M12 2 A10 10 0 0 1 22 12"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          ) : null}
+                          <span>Yes</span>
+                        </button>
+                        <button
+                          className="hover:opacity-70 active:scale-95 font-medium transition-all duration-150"
+                          onClick={handleCancelDelete}
+                          disabled={deleteMutation.isPending}
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-0.5 absolute right-2">
+                        <button
+                          data-testid={`pin-conversation-${conv.id}`}
+                          className={`touch-action-btn text-xs active:scale-90 transition-all duration-150 ${
+                            conv.is_pinned
+                              ? "opacity-50 hover:opacity-80 text-blue-400"
+                              : "opacity-0 group-hover:opacity-100 hover:text-blue-400"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePinToggle(conv);
+                          }}
+                          title={conv.is_pinned ? "Unpin conversation" : "Pin conversation"}
+                        >
+                          <PinIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          data-testid={`delete-conversation-${conv.id}`}
+                          className="touch-action-btn opacity-0 group-hover:opacity-100 text-xs hover:text-red-500 active:scale-90 transition-all duration-150"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(conv.id);
+                          }}
+                          title="Delete conversation"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      </span>
                     )}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
+                  </>
+                )}
+              </li>
+            );
+          })}
+          {bottomPadding > 0 && <li aria-hidden="true" style={{ height: bottomPadding }} />}
         </ul>
       )}
     </div>

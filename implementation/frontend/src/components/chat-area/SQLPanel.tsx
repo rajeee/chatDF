@@ -182,11 +182,11 @@ function SQLErrorModal({
   return (
     <div className="fixed inset-0" style={{ zIndex: 70 }} role="dialog" aria-modal="true" aria-labelledby={`sql-error-title-${queryIndex}`}>
       <div
-        className="fixed inset-0 bg-black/30 flex items-center justify-center"
+        className="fixed inset-0 bg-black/30 flex items-center justify-center modal-backdrop-enter"
         onClick={handleBackdropClick}
       >
         <div
-          className="relative rounded-lg shadow-xl flex flex-col"
+          className="relative rounded-lg shadow-xl flex flex-col modal-scale-enter"
           style={{
             backgroundColor: "var(--color-surface)",
             ...(pos ? { position: "fixed", left: pos.x, top: pos.y } : {}),
@@ -274,11 +274,11 @@ function SQLResultModal({
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }} role="dialog" aria-modal="true" aria-labelledby={`sql-result-title-${index}`}>
       <div
-        className="fixed inset-0 bg-black/30 flex items-center justify-center"
+        className="fixed inset-0 bg-black/30 flex items-center justify-center modal-backdrop-enter"
         onClick={handleBackdropClick}
       >
         <div
-          className="relative rounded-lg shadow-xl flex flex-col"
+          className="relative rounded-lg shadow-xl flex flex-col modal-scale-enter"
           style={{
             backgroundColor: "var(--color-surface)",
             ...(pos ? { position: "fixed", left: pos.x, top: pos.y } : {}),
@@ -486,11 +486,11 @@ export function SQLModal() {
       <div data-testid="sql-modal" className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="sql-modal-title">
         <div
           data-testid="sql-modal-backdrop"
-          className="fixed inset-0 bg-black/30 flex items-center justify-center"
+          className="fixed inset-0 bg-black/30 flex items-center justify-center modal-backdrop-enter"
           onClick={handleBackdropClick}
         >
           <div
-            className="relative rounded-lg shadow-xl flex flex-col"
+            className="relative rounded-lg shadow-xl flex flex-col modal-scale-enter"
             style={{
               backgroundColor: "var(--color-surface)",
               ...(pos ? { position: "fixed", left: pos.x, top: pos.y } : {}),

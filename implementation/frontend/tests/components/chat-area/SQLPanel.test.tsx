@@ -167,6 +167,31 @@ describe("SQLModal", () => {
     expect(title?.textContent).toBe("SQL Queries (1)");
   });
 
+  it("should apply entrance animation classes to backdrop and modal content", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT 1",
+          columns: ["id"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: null,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+
+    const backdrop = screen.getByTestId("sql-modal-backdrop");
+    expect(backdrop).toHaveClass("modal-backdrop-enter");
+
+    // The modal content div (child of backdrop) should have scale-enter animation
+    const modalContent = backdrop.querySelector(".modal-scale-enter");
+    expect(modalContent).toBeInTheDocument();
+  });
+
   it("should not display execution time when null", () => {
     useUiStore.setState({
       sqlModalOpen: true,

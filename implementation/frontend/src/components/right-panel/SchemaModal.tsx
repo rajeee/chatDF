@@ -176,14 +176,14 @@ export function SchemaModal() {
       {/* Backdrop */}
       <div
         data-testid="schema-modal-backdrop"
-        className="fixed inset-0 bg-black/50 flex items-center justify-center"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center modal-backdrop-enter"
         onClick={handleBackdropClick}
       >
         {/* Modal content */}
         <div
           ref={modalRef}
           data-testid="schema-modal-content"
-          className="rounded-lg shadow-xl p-6 w-full max-w-[500px] max-h-[80vh] overflow-y-auto"
+          className="rounded-lg shadow-xl p-6 w-full max-w-[500px] max-h-[80vh] overflow-y-auto modal-scale-enter"
           style={{ backgroundColor: "var(--color-surface)" }}
           onClick={(e) => e.stopPropagation()}
         >

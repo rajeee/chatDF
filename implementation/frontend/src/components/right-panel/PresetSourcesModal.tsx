@@ -186,7 +186,7 @@ export function PresetSourcesModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop modal-backdrop-enter"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preset-sources-modal-title"
@@ -196,7 +196,7 @@ export function PresetSourcesModal() {
     >
       <div
         ref={modalRef}
-        className="rounded-lg shadow-xl flex flex-col"
+        className="rounded-lg shadow-xl flex flex-col modal-scale-enter"
         style={{
           backgroundColor: "var(--color-surface)",
           color: "var(--color-text)",

@@ -234,6 +234,22 @@ describe("Accessibility: ARIA dialog attributes", () => {
   });
 });
 
+describe("Modal entrance animation", () => {
+  it("applies entrance animation classes to backdrop and content", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const backdrop = screen.getByTestId("schema-modal-backdrop");
+    expect(backdrop).toHaveClass("modal-backdrop-enter");
+
+    const content = screen.getByTestId("schema-modal-content");
+    expect(content).toHaveClass("modal-scale-enter");
+  });
+});
+
 describe("SM-CLOSE-2: Backdrop click closes modal", () => {
   it("closes modal when clicking the backdrop", async () => {
     const dataset = makeDataset();

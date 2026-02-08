@@ -30,7 +30,7 @@ export function ReasoningModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop modal-backdrop-enter"
       role="dialog"
       aria-modal="true"
       aria-labelledby="reasoning-modal-title"
@@ -40,7 +40,7 @@ export function ReasoningModal() {
     >
       <div
         ref={modalRef}
-        className="rounded-lg shadow-xl flex flex-col"
+        className="rounded-lg shadow-xl flex flex-col modal-scale-enter"
         style={{
           backgroundColor: "var(--color-surface)",
           color: "var(--color-text)",

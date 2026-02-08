@@ -51,3 +51,5 @@ Track each improvement cycle: what was done, what was learned.
 | 45 | 2026-02-08 | Connection status indicator in header | U22 | 383/448 frontend, 64/65 backend | 7763a8b |
 | 46 | 2026-02-08 | Global focus-visible outlines for keyboard accessibility | A4 | 385/450 frontend, 64/65 backend | ec47677 |
 | 47 | 2026-02-08 | Prompt chip hover effects, onboarding entrance animations, floating empty state | U24 | 392/457 frontend, 64/65 backend | f8b80ac |
+| 48 | 2026-02-08 | Data grid row hover highlight effect | U25 | 394/459 frontend, 64/65 backend | be3f446 |
+| 49 | 2026-02-08 | Modal entrance animation (scale+fade) for all modals | U26 | 396/461 frontend, 64/65 backend | 8d7274e |

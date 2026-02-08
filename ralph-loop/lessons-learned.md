@@ -8,3 +8,4 @@
 - **Test structure, not browser behavior**: Test for class presence, attribute existence, and DOM structure — jsdom can't compute layout/animations.
 - **Zustand selective subscriptions beat React.memo**: Fine-grained state subscriptions prevent re-renders more effectively than memoization.
 - **$1 budget is too low for a full iteration cycle**: Use $5 minimum for read → implement → test → commit.
+- **Separate tiny stores for cross-cutting concerns**: Connection status is used by Header but set by the WS hook. A dedicated Zustand store (no persistence needed) keeps both decoupled without prop drilling through AppShell.

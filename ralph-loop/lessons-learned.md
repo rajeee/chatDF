@@ -10,3 +10,5 @@
 - **Validation with warnings vs errors**: Return `{ error, warning }` from validate functions. Errors block submit; warnings inform but allow. Different border colors give clear visual feedback.
 - **Module-level dict caching is fine for single-process**: Simple `dict[key, (value, expiry)]` with `time.time()` suffices. Invalidate on write operations.
 - **Exit animations need delayed removal**: Set CSS class immediately but delay DOM removal with `setTimeout` matching animation duration.
+- **Skeleton loading state via store flag**: Use a boolean flag (`isLoadingMessages`) set in `setActiveConversation` and cleared via `useEffect` when messages arrive — simpler than tracking fetch states separately.
+- **re-focus in requestAnimationFrame**: When resetting textarea height after send, add `.focus()` in the same rAF callback to combine DOM read/write and avoid layout thrash.

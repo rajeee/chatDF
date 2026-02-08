@@ -129,13 +129,27 @@ export function MessageList() {
       {userHasScrolledUp && (
         <button
           data-testid="scroll-to-bottom-btn"
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs shadow-md z-10"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-xs shadow-md z-10 flex items-center gap-1.5 hover:shadow-lg active:scale-95 transition-all duration-150"
           style={{
             backgroundColor: "var(--color-surface)",
             color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
           }}
           onClick={scrollToBottom}
         >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
           Scroll to bottom
         </button>
       )}

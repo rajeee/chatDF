@@ -211,6 +211,23 @@ select:focus-visible {
   animation: fadeInUp 0.5s ease-out 0.3s forwards;
 }
 
+/* Exit animation for SuggestedPrompts / OnboardingGuide when first message is sent */
+@keyframes fadeOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.onboarding-exit {
+  animation: fadeOutDown 0.3s ease-in forwards;
+  pointer-events: none;
+}
+
 /* Modal entrance animations — scale + fade for a polished feel */
 @keyframes modalBackdropIn {
   from {

@@ -8,3 +8,4 @@
 - **Reuse existing features for onboarding**: Wire CTAs to open existing modals instead of building new flows. Less code, fewer tests, more consistent UX.
 - **Lift local state to store for external control**: When a modal's internal state needs to be set from outside, move it to Zustand so any component can trigger the desired behavior.
 - **Schema data is already available — use it**: Parse `schema_json` column types (numeric/date/categorical) for context-aware prompts instead of generic suggestions.
+- **useEffect cleanup kills timers on re-render**: Effects without deps run every render; the cleanup from the previous run fires before the new one, clearing any pending `setTimeout`. Fix: add proper deps array so the effect only re-runs when the trigger values change.

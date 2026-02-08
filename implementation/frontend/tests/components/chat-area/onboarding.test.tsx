@@ -10,7 +10,7 @@
 // OB-7: Smart schema-based suggestions
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderWithProviders, screen, userEvent } from "../../helpers/render";
+import { renderWithProviders, screen, userEvent, act, waitFor } from "../../helpers/render";
 import {
   resetAllStores,
   setDatasetsLoaded,
@@ -396,5 +396,95 @@ describe("OB-7: Smart schema-based suggestions", () => {
     // "sepal_length" should appear as "sepal length"
     expect(suggestions.some((s) => s.includes("sepal length"))).toBe(true);
     expect(suggestions.some((s) => s.includes("sepal_length"))).toBe(false);
+  });
+});
+
+describe("OB-EXIT: Smooth exit animation when SuggestedPrompts disappears", () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "conv-1" }), { status: 200 })
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("applies onboarding-exit class when messages appear while SuggestedPrompts is visible", () => {
+    // Start with datasets loaded, no messages → SuggestedPrompts visible
+    setDatasetsLoaded([IRIS_DATASET]);
+    renderWithProviders(<ChatArea />);
+
+    expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
+
+    // Simulate sending a message → messages appear, SuggestedPrompts should exit
+    act(() => {
+      useChatStore.getState().addMessage({
+        id: "msg-1",
+        role: "user",
+        content: "Hello",
+        sql_query: null,
+        sql_executions: [],
+        reasoning: null,
+        created_at: new Date().toISOString(),
+      });
+    });
+
+    // SuggestedPrompts should still be in DOM (exit animation running)
+    const prompts = screen.getByTestId("suggested-prompts");
+    expect(prompts).toBeInTheDocument();
+
+    // The wrapper div should have the exit animation class
+    const wrapper = prompts.parentElement;
+    expect(wrapper).toHaveClass("onboarding-exit");
+  });
+
+  it("removes SuggestedPrompts from DOM after exit animation completes", async () => {
+    setDatasetsLoaded([IRIS_DATASET]);
+    renderWithProviders(<ChatArea />);
+
+    expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
+
+    // Trigger exit by adding a message
+    act(() => {
+      useChatStore.getState().addMessage({
+        id: "msg-1",
+        role: "user",
+        content: "Hello",
+        sql_query: null,
+        sql_executions: [],
+        reasoning: null,
+        created_at: new Date().toISOString(),
+      });
+    });
+
+    // Still visible during animation
+    expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
+
+    // Wait for the 300ms exit animation to complete and element to be removed
+    await waitFor(() => {
+      expect(screen.queryByTestId("suggested-prompts")).not.toBeInTheDocument();
+    }, { timeout: 1000 });
+  });
+
+  it("exit animation wrapper has pointer-events: none via CSS class", () => {
+    setDatasetsLoaded([IRIS_DATASET]);
+    renderWithProviders(<ChatArea />);
+
+    act(() => {
+      useChatStore.getState().addMessage({
+        id: "msg-1",
+        role: "user",
+        content: "Hello",
+        sql_query: null,
+        sql_executions: [],
+        reasoning: null,
+        created_at: new Date().toISOString(),
+      });
+    });
+
+    // During exit, the wrapper should have the class that disables pointer events
+    const wrapper = screen.getByTestId("suggested-prompts").parentElement;
+    expect(wrapper).toHaveClass("onboarding-exit");
   });
 });

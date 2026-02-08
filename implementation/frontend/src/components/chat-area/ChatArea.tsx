@@ -7,7 +7,7 @@
 // ChatInput is always visible at the bottom.
 // SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
@@ -34,6 +34,33 @@ export function ChatArea() {
 
   const hasDatasets = datasets.length > 0;
   const hasMessages = messages.length > 0;
+
+  // Track exit animation for SuggestedPrompts / OnboardingGuide
+  const [exitingPanel, setExitingPanel] = useState<"suggested" | "onboarding" | null>(null);
+  const prevShowSuggested = useRef(false);
+  const prevShowOnboarding = useRef(false);
+
+  const showSuggested = hasDatasets && !hasMessages;
+  const showOnboarding = !hasDatasets && !hasMessages;
+
+  useEffect(() => {
+    // SuggestedPrompts was visible, now it's not → animate exit
+    if (prevShowSuggested.current && !showSuggested) {
+      setExitingPanel("suggested");
+      const timer = setTimeout(() => setExitingPanel(null), 300);
+      prevShowSuggested.current = false;
+      return () => clearTimeout(timer);
+    }
+    // OnboardingGuide was visible, now it's not → animate exit
+    if (prevShowOnboarding.current && !showOnboarding) {
+      setExitingPanel("onboarding");
+      const timer = setTimeout(() => setExitingPanel(null), 300);
+      prevShowOnboarding.current = false;
+      return () => clearTimeout(timer);
+    }
+    prevShowSuggested.current = showSuggested;
+    prevShowOnboarding.current = showOnboarding;
+  }, [showSuggested, showOnboarding]);
 
   // Ref for chat input to enable keyboard shortcuts
   const chatInputRef = useRef<ChatInputHandle>(null);
@@ -116,15 +143,23 @@ export function ChatArea() {
       <div className="flex flex-col w-full max-w-3xl flex-1">
         {/* Main content area - conditional rendering */}
         <div className="flex-1 flex flex-col">
-          {!hasDatasets && !hasMessages && (
+          {showOnboarding && (
             <OnboardingGuide onSendPrompt={handleSend} />
           )}
 
-          {hasDatasets && !hasMessages && (
-            <SuggestedPrompts
-              datasets={datasets}
-              onSendPrompt={handleSend}
-            />
+          {(showSuggested || exitingPanel === "suggested") && (
+            <div className={exitingPanel === "suggested" ? "onboarding-exit" : ""}>
+              <SuggestedPrompts
+                datasets={datasets}
+                onSendPrompt={handleSend}
+              />
+            </div>
+          )}
+
+          {exitingPanel === "onboarding" && (
+            <div className="onboarding-exit">
+              <OnboardingGuide onSendPrompt={handleSend} />
+            </div>
           )}
 
           {hasMessages && <MessageList />}

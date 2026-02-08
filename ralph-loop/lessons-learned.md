@@ -5,7 +5,7 @@
 - **CSS-only solutions are free wins**: `content-visibility`, transitions, responsive padding — zero JS overhead, no test burden.
 - **Perceived performance > actual performance**: Skeletons, streaming placeholders, and micro-animations make the app *feel* faster.
 - **Zustand selective subscriptions beat React.memo**: Fine-grained state subscriptions prevent re-renders more effectively than memoization.
-- **Data shape heuristics work for chart detection**: Sample first 50 rows with a 70% threshold for type classification (numeric, date, categorical) to auto-detect chart types. Keep logic in a pure utility for easy testing.
-- **Simplify onboarding by reusing existing features**: Instead of building a new flow, wire CTAs to open existing modals. Less code, fewer tests, more consistent UX.
-- **Lift local state to store for external control**: When a modal's internal state (like view mode) needs to be set from outside (e.g., "open in chart view"), move that state to the Zustand store so any component can trigger the desired behavior.
-- **Schema data is already available — use it**: Dataset schemas with column names and types are already stored in `schema_json` and populated on load. Instead of showing generic suggestions, parse the schema to generate context-aware prompts. Column type categorization (numeric/date/categorical) is a simple but high-impact heuristic.
+- **Data shape heuristics work for chart detection**: Sample first 50 rows with a 70% threshold for type classification to auto-detect chart types. Keep logic in a pure utility for easy testing.
+- **Reuse existing features for onboarding**: Wire CTAs to open existing modals instead of building new flows. Less code, fewer tests, more consistent UX.
+- **Lift local state to store for external control**: When a modal's internal state needs to be set from outside, move it to Zustand so any component can trigger the desired behavior.
+- **Schema data is already available — use it**: Parse `schema_json` column types (numeric/date/categorical) for context-aware prompts instead of generic suggestions.

@@ -25,6 +25,10 @@ Risks and traps to watch for during improvement iterations.
 - **React re-render cascades**: Zustand store updates trigger re-renders in all subscribers. Keep store slices focused.
 - **Large Polars DataFrames**: Some datasets can be 100k+ rows. Always paginate/virtualize.
 
+## Loop Stability Pitfalls
+- **Claude CLI can hang silently**: Iteration 38 ran for 3h50m with 0 output, likely API timeout/stall. The `--max-budget-usd` flag doesn't cover wall-clock hangs.
+- **Mitigation**: Use `timeout` command to cap each claude invocation to ~15 minutes max.
+
 ## Scope Pitfalls
 - **Stay focused on polish**: Don't add new major features (auth providers, new data sources, etc.)
 - **Don't refactor for the sake of refactoring**: Each change must have measurable user benefit.

@@ -182,10 +182,12 @@ while true; do
   fi
 
   # Run Claude in print mode (non-interactive, no permission prompts)
-  log "Running Claude (model=$MODEL, budget=\$$MAX_BUDGET)..."
+  # timeout guards against silent hangs (iter 38 hung for 3h50m)
+  ITER_TIMEOUT="${RALPH_TIMEOUT:-900}"  # 15 min default
+  log "Running Claude (model=$MODEL, budget=\$$MAX_BUDGET, timeout=${ITER_TIMEOUT}s)..."
   set +e
   cd "$PROJECT_DIR"
-  $CLAUDE_BIN \
+  timeout "$ITER_TIMEOUT" $CLAUDE_BIN \
     --print \
     --model "$MODEL" \
     --dangerously-skip-permissions \
@@ -199,6 +201,11 @@ while true; do
 
   if [[ $exit_code -eq 0 ]]; then
     ok "Iteration #$iter_num completed successfully"
+  elif [[ $exit_code -eq 124 ]]; then
+    err "Iteration #$iter_num TIMED OUT after ${ITER_TIMEOUT}s"
+    warn "Reverting any uncommitted changes..."
+    git checkout -- . 2>/dev/null || true
+    git clean -fd 2>/dev/null || true
   else
     err "Iteration #$iter_num failed (exit code: $exit_code)"
     warn "Check log: $log_file"

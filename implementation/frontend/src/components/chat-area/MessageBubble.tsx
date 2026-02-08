@@ -89,10 +89,10 @@ export function MessageBubble({
 
         {/* Streaming indicator */}
         {isCurrentlyStreaming && !isShowingReasoning && (
-          <span data-testid="streaming-indicator" className="inline-flex gap-0.5 ml-1">
-            <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
-            <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
-            <span className="animate-bounce" style={{ animationDelay: "300ms" }}>.</span>
+          <span data-testid="streaming-indicator" className="inline-flex gap-1 ml-2 align-middle" style={{ opacity: 0.6 }}>
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
+            <span className="typing-dot"></span>
           </span>
         )}
 

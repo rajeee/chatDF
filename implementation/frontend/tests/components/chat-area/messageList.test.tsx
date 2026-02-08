@@ -364,6 +364,33 @@ describe("ML-STREAM-1: Streaming indicator shown", () => {
     expect(screen.queryByTestId("streaming-indicator")).not.toBeInTheDocument();
   });
 
+  it("shows typing animation dots in streaming indicator", () => {
+    const msg = makeMessage({
+      id: "msg-streaming",
+      role: "assistant",
+      content: "",
+    });
+    useChatStore.setState({
+      activeConversationId: "conv-1",
+      messages: [msg],
+      isStreaming: true,
+      streamingMessageId: "msg-streaming",
+      streamingTokens: "Thinking",
+    });
+
+    renderWithProviders(<MessageList />);
+
+    const indicator = screen.getByTestId("streaming-indicator");
+    const dots = indicator.querySelectorAll(".typing-dot");
+
+    // Should have 3 animated dots
+    expect(dots).toHaveLength(3);
+    // Each dot should have the typing-dot class for animation
+    dots.forEach((dot) => {
+      expect(dot).toHaveClass("typing-dot");
+    });
+  });
+
   it("shows streaming tokens content in the streaming message", () => {
     const msg = makeMessage({
       id: "msg-streaming",

@@ -38,8 +38,6 @@ cleanup() {
   [[ -n "$WATCHDOG_PID" ]] && kill "$WATCHDOG_PID" 2>/dev/null
   # Kill any remaining children
   pkill -P $$ 2>/dev/null || true
-  # Clean up temp files
-  rm -f /tmp/ralph-prompt-*.txt /tmp/ralph-wrapper-*.sh
   sleep 1
   echo -e "\033[0;32m[ralph] Stopped.\033[0m"
   exit 0
@@ -130,38 +128,24 @@ stop_watchdog() {
   fi
 }
 
-# ─── Run Claude with PTY (so output streams to terminal) ───
-# Uses `script` to allocate a pseudo-TTY. Claude sees a terminal,
-# streams tokens live. Output goes to both terminal and log file.
-# Runs in background + wait so Ctrl+C interrupts immediately.
+# ─── Run Claude with terminal output + Ctrl+C support ───
+# Pipeline (| tee) shows output on terminal AND saves to log.
+# Wrapped in backgrounded subshell so `wait` is interruptible by SIGINT.
+# When Ctrl+C fires, trap kills the subshell PID (and its children).
 run_claude() {
   local log_file="$1"
   local budget="$2"
   local model="$3"
   local prompt="$4"
 
-  # Write prompt to temp file (avoids quoting issues with script -c)
-  local prompt_file
-  prompt_file=$(mktemp /tmp/ralph-prompt-XXXXX.txt)
-  printf '%s' "$prompt" > "$prompt_file"
-
-  # Create wrapper script that reads prompt from file
-  local wrapper
-  wrapper=$(mktemp /tmp/ralph-wrapper-XXXXX.sh)
-  cat > "$wrapper" <<WEOF
-#!/bin/bash
-exec $CLAUDE_BIN --print --model $model --dangerously-skip-permissions --max-budget-usd $budget --verbose "\$(<"$prompt_file")"
-WEOF
-
-  # script -qf: quiet + flush every write (real-time streaming)
-  # Allocates PTY so Claude streams tokens; output goes to terminal + log
-  script -qfc "bash $wrapper" "$log_file" < /dev/null &
+  # Subshell in background: tee copies to terminal + log file
+  # Background + wait = Ctrl+C interrupts wait, trap kills subshell
+  ($CLAUDE_BIN --print --model "$model" --dangerously-skip-permissions \
+    --max-budget-usd "$budget" --verbose "$prompt" 2>&1 | tee "$log_file") &
   CLAUDE_PID=$!
   wait "$CLAUDE_PID" 2>/dev/null
   local rc=$?
   CLAUDE_PID=""
-
-  rm -f "$prompt_file" "$wrapper"
   return $rc
 }
 

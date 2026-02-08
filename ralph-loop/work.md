@@ -5,4 +5,4 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 
 ## Tasks
 
-- [ ] Add result visualization / plots using Plotly.js — when the LLM returns query results, offer a "Visualize" option that renders bar charts, line charts, scatter plots, box plots, histograms etc. Use plotly.js (react-plotly.js wrapper). This is a key differentiator from vision.md — users should be able to go from question to chart in one click. Start with auto-detecting the best chart type from the data shape, but also let users switch chart types.
+- [x] Add result visualization / plots using Plotly.js — Done (iteration 51). Added ChartVisualization component with auto-detect (bar, line, scatter, histogram, pie, box), Table/Chart toggle in result modal, "Visualize" shortcut button on query blocks, lazy-loaded Plotly.js. 20 unit tests for chart detection + 2 integration tests for SQLPanel.

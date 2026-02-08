@@ -16,3 +16,5 @@ Risks and traps to watch for during improvement iterations.
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts. Test immediate state instead.
 - **jsdom ignores layout and media queries**: `offsetParent` is always null; `hidden lg:flex` means always hidden. Test class/attribute presence, not computed styles.
 - **Pre-existing test failures (~60)**: API client/routing tests broken since iteration 18. Don't debug unless specifically tasked.
+- **Plotly.js is heavy (~1MB)**: Always lazy-load via `React.lazy()`. Never import it directly at module top-level or the initial bundle will balloon. Mock it in tests with `vi.mock("react-plotly.js", ...)`.
+- **Plotly types require @types/react-plotly.js**: The `Plotly.Data` and `Plotly.Layout` types come from `@types/plotly.js` (transitive dep). Don't forget the type package.

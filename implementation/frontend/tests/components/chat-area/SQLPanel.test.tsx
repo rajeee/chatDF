@@ -8,6 +8,11 @@ vi.mock("@/hooks/useCodeMirror", () => ({
   useCodeMirror: () => {},
 }));
 
+// Mock react-plotly.js to avoid loading the heavy library in tests
+vi.mock("react-plotly.js", () => ({
+  default: () => <div data-testid="mock-plotly-chart">Chart</div>,
+}));
+
 describe("SQLModal", () => {
   beforeEach(() => {
     useUiStore.setState({
@@ -212,5 +217,51 @@ describe("SQLModal", () => {
     // Should not show execution time (neither ms nor seconds format)
     expect(screen.queryByText(/\(\d+\.?\d*ms\)/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\(\d+\.?\d*s\)/)).not.toBeInTheDocument();
+  });
+
+  it("should show Visualize button for data with numeric columns", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT city, population FROM cities",
+          columns: ["city", "population"],
+          rows: [
+            ["NYC", 8000000],
+            ["LA", 4000000],
+            ["Chicago", 2700000],
+          ],
+          total_rows: 3,
+          error: null,
+          execution_time_ms: 10,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+    expect(screen.getByTestId("visualize-btn-0")).toBeInTheDocument();
+    expect(screen.getByText("Visualize")).toBeInTheDocument();
+  });
+
+  it("should NOT show Visualize button for text-only data", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT name, description FROM items",
+          columns: ["name", "description"],
+          rows: [
+            ["Item A", "Description A"],
+            ["Item B", "Description B"],
+          ],
+          total_rows: 2,
+          error: null,
+          execution_time_ms: 5,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+    expect(screen.queryByText("Visualize")).not.toBeInTheDocument();
   });
 });

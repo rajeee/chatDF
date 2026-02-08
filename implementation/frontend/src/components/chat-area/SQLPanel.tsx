@@ -6,7 +6,7 @@
 // Both modals are draggable (via header) and resizable (via corner handle).
 // Result modal supports sortable columns and CSV download.
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUiStore } from "@/stores/uiStore";
 import { useCodeMirror } from "@/hooks/useCodeMirror";
@@ -15,6 +15,8 @@ import { useResizable } from "@/hooks/useResizable";
 import { useSortedRows } from "@/hooks/useSortedRows";
 import { cellValue } from "@/utils/tableUtils";
 import { downloadCsv } from "@/utils/csvExport";
+import { detectChartTypes } from "@/utils/chartDetection";
+import { ChartVisualization } from "./ChartVisualization";
 import type { SqlExecution } from "@/stores/chatStore";
 
 // ---------------------------------------------------------------------------
@@ -57,11 +59,13 @@ function SQLQueryBlock({
   execution,
   index,
   onViewOutput,
+  onViewChart,
   onShowError,
 }: {
   execution: SqlExecution;
   index: number;
   onViewOutput: (index: number) => void;
+  onViewChart: (index: number) => void;
   onShowError: (index: number) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -77,6 +81,10 @@ function SQLQueryBlock({
   }, [execution.query]);
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
+  const hasChartData = useMemo(
+    () => hasOutput && detectChartTypes(execution.columns ?? [], execution.rows ?? []).length > 0,
+    [hasOutput, execution.columns, execution.rows],
+  );
 
   // Format execution time for display
   const formatExecutionTime = (ms: number | null | undefined): string => {
@@ -149,6 +157,20 @@ function SQLQueryBlock({
               }}
             >
               View Output ({execution.total_rows ?? execution.rows?.length ?? 0} rows)
+            </button>
+          )}
+          {hasChartData && (
+            <button
+              type="button"
+              onClick={() => onViewChart(index)}
+              className="text-xs px-2 py-1 rounded border hover:opacity-80 transition-opacity"
+              style={{
+                borderColor: "#34d399",
+                color: "#34d399",
+              }}
+              data-testid={`visualize-btn-${index}`}
+            >
+              Visualize
             </button>
           )}
         </div>
@@ -241,16 +263,24 @@ function SQLResultModal({
   index,
   onClose,
   initialWidth,
+  initialViewMode = "table",
 }: {
   execution: SqlExecution;
   index: number;
   onClose: () => void;
   initialWidth?: number;
+  initialViewMode?: "table" | "chart";
 }) {
   const columns = execution.columns ?? [];
   const rows = execution.rows ?? [];
   const totalRows = execution.total_rows ?? rows.length;
   const isTruncated = totalRows > rows.length;
+
+  const [viewMode, setViewMode] = useState<"table" | "chart">(initialViewMode);
+  const hasCharts = useMemo(
+    () => detectChartTypes(columns, rows).length > 0,
+    [columns, rows],
+  );
 
   const { pos, setPos, onMouseDown, justDragged } = useDraggable();
   const { size, onResizeMouseDown, justResized } = useResizable(400, 200, setPos);
@@ -295,11 +325,45 @@ function SQLResultModal({
             className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
             style={{ borderColor: "var(--color-border)" }}
           >
-            <h3 id={`sql-result-title-${index}`} className="text-sm font-semibold">
-              Query {index + 1} Results — {totalRows.toLocaleString()} rows
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 id={`sql-result-title-${index}`} className="text-sm font-semibold">
+                Query {index + 1} Results — {totalRows.toLocaleString()} rows
+              </h3>
+              {/* Table / Chart toggle */}
+              {hasCharts && (
+                <div
+                  className="flex rounded-md border overflow-hidden"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("table")}
+                    className="text-xs px-2.5 py-1 transition-colors"
+                    style={{
+                      backgroundColor: viewMode === "table" ? "var(--color-accent)" : "transparent",
+                      color: viewMode === "table" ? "#fff" : "var(--color-text-secondary)",
+                    }}
+                    data-testid="view-table-btn"
+                  >
+                    Table
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("chart")}
+                    className="text-xs px-2.5 py-1 transition-colors"
+                    style={{
+                      backgroundColor: viewMode === "chart" ? "var(--color-accent)" : "transparent",
+                      color: viewMode === "chart" ? "#fff" : "var(--color-text-secondary)",
+                    }}
+                    data-testid="view-chart-btn"
+                  >
+                    Chart
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
-              {sortKeys.length > 0 && (
+              {viewMode === "table" && sortKeys.length > 0 && (
                 <button
                   onClick={clearSort}
                   className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
@@ -308,13 +372,15 @@ function SQLResultModal({
                   Clear Sort
                 </button>
               )}
-              <button
-                onClick={() => downloadCsv(columns, sortedRows, `query_${index + 1}.csv`)}
-                className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
-                style={{ color: "var(--color-accent)" }}
-              >
-                Download CSV
-              </button>
+              {viewMode === "table" && (
+                <button
+                  onClick={() => downloadCsv(columns, sortedRows, `query_${index + 1}.csv`)}
+                  className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                >
+                  Download CSV
+                </button>
+              )}
               <button
                 onClick={onClose}
                 aria-label="Close results"
@@ -325,7 +391,15 @@ function SQLResultModal({
             </div>
           </div>
 
-          {/* Table with virtualization */}
+          {/* Chart view */}
+          {viewMode === "chart" && hasCharts && (
+            <div className="flex-1 min-h-0">
+              <ChartVisualization columns={columns} rows={rows} />
+            </div>
+          )}
+
+          {/* Table view with virtualization */}
+          {viewMode === "table" && (
           <div ref={tableContainerRef} className="flex-1 overflow-auto px-4 py-3">
             {/* Header - sticky at top */}
             <div className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-bg)" }}>
@@ -388,6 +462,7 @@ function SQLResultModal({
               })}
             </div>
           </div>
+          )}
 
           {/* Footer */}
           {isTruncated && (
@@ -422,8 +497,19 @@ export function SQLModal() {
   const { pos, setPos, onMouseDown, justDragged } = useDraggable();
   const { size, onResizeMouseDown, justResized } = useResizable(400, 200, setPos);
 
-  // Local state for error modal
+  // Local state for error modal and chart mode
   const [errorModalIndex, setErrorModalIndex] = useState<number | null>(null);
+  const [resultViewMode, setResultViewMode] = useState<"table" | "chart">("table");
+
+  const handleViewChart = useCallback((index: number) => {
+    setResultViewMode("chart");
+    openSqlResultModal(index);
+  }, [openSqlResultModal]);
+
+  const handleViewOutput = useCallback((index: number) => {
+    setResultViewMode("table");
+    openSqlResultModal(index);
+  }, [openSqlResultModal]);
 
   // Measure the chat area to use as initial width
   const [chatAreaWidth, setChatAreaWidth] = useState<number | null>(null);
@@ -526,7 +612,8 @@ export function SQLModal() {
                   key={i}
                   execution={ex}
                   index={i}
-                  onViewOutput={openSqlResultModal}
+                  onViewOutput={handleViewOutput}
+                  onViewChart={handleViewChart}
                   onShowError={setErrorModalIndex}
                 />
               ))}
@@ -545,6 +632,7 @@ export function SQLModal() {
           index={sqlResultModalIndex}
           onClose={closeSqlResultModal}
           initialWidth={initialWidth}
+          initialViewMode={resultViewMode}
         />
       )}
 

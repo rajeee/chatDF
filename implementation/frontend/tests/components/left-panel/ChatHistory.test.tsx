@@ -16,6 +16,7 @@ import { resetAllStores } from "../../helpers/stores";
 import { server } from "../../helpers/mocks/server";
 import { createConversationList, createConversation } from "../../helpers/mocks/data";
 import { useChatStore } from "@/stores/chatStore";
+import { useUiStore } from "@/stores/uiStore";
 import { ChatHistory } from "@/components/left-panel/ChatHistory";
 
 beforeEach(() => {
@@ -572,5 +573,78 @@ describe("CH-7: New Chat button", () => {
       expect(postCalled).toBe(true);
     });
     expect(useChatStore.getState().activeConversationId).toBe("conv-new");
+  });
+});
+
+describe("Mobile: auto-close left panel on conversation select", () => {
+  it("closes left panel when selecting a conversation on mobile viewport", async () => {
+    const conversations = [
+      createConversation({ id: "conv-mobile", title: "Mobile Chat" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    // Simulate mobile viewport
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 768,
+    });
+
+    // Left panel starts open
+    useUiStore.setState({ leftPanelOpen: true });
+
+    const user = userEvent.setup();
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Mobile Chat")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Mobile Chat"));
+
+    // Panel should be closed after selecting
+    expect(useUiStore.getState().leftPanelOpen).toBe(false);
+    // Conversation should still be selected
+    expect(useChatStore.getState().activeConversationId).toBe("conv-mobile");
+  });
+
+  it("does NOT close left panel when selecting a conversation on desktop viewport", async () => {
+    const conversations = [
+      createConversation({ id: "conv-desktop", title: "Desktop Chat" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    // Simulate desktop viewport
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 1280,
+    });
+
+    useUiStore.setState({ leftPanelOpen: true });
+
+    const user = userEvent.setup();
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Desktop Chat")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Desktop Chat"));
+
+    // Panel should remain open on desktop
+    expect(useUiStore.getState().leftPanelOpen).toBe(true);
+    // Conversation should still be selected
+    expect(useChatStore.getState().activeConversationId).toBe("conv-desktop");
   });
 });

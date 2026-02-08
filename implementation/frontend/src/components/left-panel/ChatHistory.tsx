@@ -12,6 +12,7 @@ import {
 import { apiGet, apiPatch, apiDelete, apiPost } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useUiStore } from "@/stores/uiStore";
 
 interface ConversationSummary {
   id: string;
@@ -99,8 +100,15 @@ export function ChatHistory() {
     },
   });
 
+  const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+
   function handleSelect(id: string) {
     setActiveConversation(id);
+    // On mobile (<1024px), close the left panel overlay after selecting
+    if (leftPanelOpen && window.innerWidth < 1024) {
+      toggleLeftPanel();
+    }
   }
 
   function handleDoubleClick(conv: ConversationSummary) {

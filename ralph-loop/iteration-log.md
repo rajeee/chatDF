@@ -62,4 +62,5 @@ Track each improvement cycle: what was done, what was learned.
 | 56 | 2026-02-08 | Inline Visualize button in chat message bubbles | work.md task | 446/510 frontend (5 new pass), 64/65 backend | 5b00fdb |
 | 57 | 2026-02-08 | Smart schema-based suggested prompts | U29 | 456/520 frontend (10 new pass), 64/65 backend | afe1ed2 |
 | 58 | 2026-02-08 | Pulsing cursor for streaming messages | U33 | 462/526 frontend (+6 from relocated tests), 64/65 backend | c9343e9 |
-| 59 | 2026-02-08 | Smooth exit animation for SuggestedPrompts | U32 | 465/529 frontend (3 new pass), 64/65 backend | pending |
+| 59 | 2026-02-08 | Smooth exit animation for SuggestedPrompts | U32 | 465/529 frontend (3 new pass), 64/65 backend | 0d509bc |
+| 60 | 2026-02-08 | Remove redundant Copy SQL button from chat bubbles | work.md task | 463/527 frontend (-2 removed tests), 64/65 backend | 4007735 |

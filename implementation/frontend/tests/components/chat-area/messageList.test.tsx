@@ -500,3 +500,12 @@ describe("Message animations", () => {
     expect(assistantRow).toHaveClass("message-appear");
   });
 });
+
+describe("Performance: MessageBubble memoization", () => {
+  it("MessageBubble is wrapped with React.memo", () => {
+    // Verify that MessageBubble has been memoized (will have $$typeof property)
+    const { MessageBubble } = require("@/components/chat-area/MessageBubble");
+    // Memoized components have a specific $$typeof symbol
+    expect(MessageBubble.$$typeof.toString()).toContain("react.memo");
+  });
+});

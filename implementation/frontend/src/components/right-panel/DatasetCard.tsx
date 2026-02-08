@@ -3,6 +3,7 @@
 // Card component for a single dataset entry.
 // Three states: loading (progress bar), ready (name + dims), error (retry).
 
+import { memo } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -23,7 +24,7 @@ function getHostname(url: string): string {
   }
 }
 
-export function DatasetCard({ dataset }: DatasetCardProps) {
+function DatasetCardComponent({ dataset }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
 
@@ -143,3 +144,6 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
     </div>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders when sibling datasets update
+export const DatasetCard = memo(DatasetCardComponent);

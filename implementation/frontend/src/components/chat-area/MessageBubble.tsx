@@ -4,6 +4,7 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 
@@ -32,7 +33,7 @@ function formatTimestamp(isoString: string): string {
   return date.toLocaleDateString();
 }
 
-export function MessageBubble({
+function MessageBubbleComponent({
   message,
   displayContent,
   isCurrentlyStreaming,
@@ -169,3 +170,6 @@ export function MessageBubble({
     </div>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders when parent updates
+export const MessageBubble = memo(MessageBubbleComponent);

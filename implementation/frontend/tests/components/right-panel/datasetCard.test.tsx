@@ -208,3 +208,12 @@ describe("DC-CLICK-1: Click opens schema modal", () => {
     expect(useUiStore.getState().schemaModalDatasetId).toBeNull();
   });
 });
+
+describe("Performance: DatasetCard memoization", () => {
+  it("DatasetCard is wrapped with React.memo", () => {
+    // Verify that DatasetCard has been memoized (will have $$typeof property)
+    const { DatasetCard } = require("@/components/right-panel/DatasetCard");
+    // Memoized components have a specific $$typeof symbol
+    expect(DatasetCard.$$typeof.toString()).toContain("react.memo");
+  });
+});

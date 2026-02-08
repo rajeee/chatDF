@@ -16,4 +16,3 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
-| A4 | Focus visible outlines for all interactive elements | 3 | 2 | 1.5 | done |

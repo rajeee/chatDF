@@ -7,9 +7,10 @@
 // ChatInput is always visible at the bottom.
 // SQLModal is rendered as a portal-style fixed overlay (self-managed via uiStore).
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore } from "@/stores/datasetStore";
+import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
 import { apiPost } from "@/api/client";
 import { OnboardingGuide } from "./OnboardingGuide";
 import { SuggestedPrompts } from "./SuggestedPrompts";
@@ -29,6 +30,9 @@ export function ChatArea() {
 
   const hasDatasets = datasets.length > 0;
   const hasMessages = messages.length > 0;
+
+  // Ref for chat input to enable keyboard shortcuts
+  const chatInputRef = useRef<ChatInputHandle>(null);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -71,6 +75,11 @@ export function ChatArea() {
     [addMessage, setStreaming, setLoadingPhase, activeConversationId, setActiveConversation]
   );
 
+  // Enable global keyboard shortcuts
+  useKeyboardShortcuts({
+    chatInputRef,
+  });
+
   const handleStop = useCallback(async () => {
     if (!activeConversationId) return;
     try {
@@ -112,7 +121,7 @@ export function ChatArea() {
             backgroundColor: "var(--color-bg)",
           }}
         >
-          <ChatInput onSend={handleSend} onStop={handleStop} />
+          <ChatInput ref={chatInputRef} onSend={handleSend} onStop={handleStop} />
         </div>
       </div>
 

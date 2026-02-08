@@ -4,7 +4,7 @@
 // 2000 char limit with counter at 1800+, send/stop button toggle,
 // disabled when daily rate limit reached.
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useChatStore } from "@/stores/chatStore";
 
 const CHAR_LIMIT = 2000;
@@ -15,20 +15,27 @@ interface ChatInputProps {
   onStop: () => void;
 }
 
-export function ChatInput({ onSend, onStop }: ChatInputProps) {
-  const [inputValue, setInputValue] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+// Expose both the textarea element and send functionality
+export interface ChatInputHandle {
+  focus: () => void;
+  sendMessage: () => void;
+}
 
-  const isStreaming = useChatStore((s) => s.isStreaming);
-  const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
+  ({ onSend, onStop }, ref) => {
+    const [inputValue, setInputValue] = useState("");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const charCount = inputValue.length;
-  const trimmedEmpty = inputValue.trim().length === 0;
+    const isStreaming = useChatStore((s) => s.isStreaming);
+    const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
 
-  // Auto-focus on mount
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+    const charCount = inputValue.length;
+    const trimmedEmpty = inputValue.trim().length === 0;
+
+    // Auto-focus on mount
+    useEffect(() => {
+      textareaRef.current?.focus();
+    }, []);
 
   // Auto-resize textarea height
   const resizeTextarea = useCallback(() => {
@@ -58,6 +65,16 @@ export function ChatInput({ onSend, onStop }: ChatInputProps) {
       }
     });
   }, [inputValue, dailyLimitReached, onSend]);
+
+  // Expose focus and sendMessage methods to parent via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => textareaRef.current?.focus(),
+      sendMessage: handleSend,
+    }),
+    [handleSend]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -96,75 +113,78 @@ export function ChatInput({ onSend, onStop }: ChatInputProps) {
   const formattedCount = charCount.toLocaleString();
   const formattedLimit = CHAR_LIMIT.toLocaleString();
 
-  return (
-    <div className="relative flex flex-col gap-1">
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          aria-label="Message input"
-          className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
-          style={{
-            borderColor: "var(--color-border)",
-            backgroundColor: "var(--color-bg)",
-            color: "var(--color-text)",
-          }}
-          rows={1}
-          value={inputValue}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={placeholder}
-          disabled={dailyLimitReached}
-        />
+    return (
+      <div className="relative flex flex-col gap-1">
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
+            aria-label="Message input"
+            className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{
+              borderColor: "var(--color-border)",
+              backgroundColor: "var(--color-bg)",
+              color: "var(--color-text)",
+            }}
+            rows={1}
+            value={inputValue}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={placeholder}
+            disabled={dailyLimitReached}
+          />
 
-        {isStreaming ? (
-          <button
-            type="button"
-            aria-label="Stop generating"
-            className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-red-100 active:scale-95"
-            onClick={onStop}
-          >
-            {/* Square stop icon */}
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
+          {isStreaming ? (
+            <button
+              type="button"
+              aria-label="Stop generating"
+              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-red-100 active:scale-95"
+              onClick={onStop}
             >
-              <rect x="4" y="4" width="12" height="12" rx="2" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            type="button"
-            aria-label="Send message"
-            className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={handleSend}
-            disabled={trimmedEmpty || dailyLimitReached}
-          >
-            {/* Arrow send icon */}
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
+              {/* Square stop icon */}
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <rect x="4" y="4" width="12" height="12" rx="2" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="Send message"
+              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleSend}
+              disabled={trimmedEmpty || dailyLimitReached}
             >
-              <path d="M3.105 2.289a.75.75 0 0 1 .814.073l13 10a.75.75 0 0 1 0 1.176l-13 10A.75.75 0 0 1 2.75 23V1a.75.75 0 0 1 .355-.711Z" />
-            </svg>
-          </button>
+              {/* Arrow send icon */}
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M3.105 2.289a.75.75 0 0 1 .814.073l13 10a.75.75 0 0 1 0 1.176l-13 10A.75.75 0 0 1 2.75 23V1a.75.75 0 0 1 .355-.711Z" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {showCounter && (
+          <span
+            data-testid="char-counter"
+            className={`text-xs text-right ${atLimit ? "text-red-500" : "text-gray-500"}`}
+          >
+            {formattedCount} / {formattedLimit}
+          </span>
         )}
       </div>
+    );
+  }
+);
 
-      {showCounter && (
-        <span
-          data-testid="char-counter"
-          className={`text-xs text-right ${atLimit ? "text-red-500" : "text-gray-500"}`}
-        >
-          {formattedCount} / {formattedLimit}
-        </span>
-      )}
-    </div>
-  );
-}
+ChatInput.displayName = "ChatInput";

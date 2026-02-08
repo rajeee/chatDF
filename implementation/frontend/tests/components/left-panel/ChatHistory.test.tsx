@@ -576,6 +576,65 @@ describe("CH-7: New Chat button", () => {
   });
 });
 
+describe("CH-8: Relative timestamps", () => {
+  it("displays relative time for each conversation", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-recent",
+        title: "Recent Chat",
+        updated_at: new Date().toISOString(),
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Recent Chat")).toBeInTheDocument();
+    });
+
+    // Should show a relative time element
+    const timeEl = screen.getByTestId("conversation-time");
+    expect(timeEl).toBeInTheDocument();
+    expect(timeEl.textContent).toBe("just now");
+  });
+
+  it("shows relative time for each conversation in a list", async () => {
+    const conversations = [
+      createConversation({
+        title: "Chat A",
+        updated_at: new Date().toISOString(),
+      }),
+      createConversation({
+        title: "Chat B",
+        updated_at: new Date(Date.now() - 3600 * 1000).toISOString(),
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat A")).toBeInTheDocument();
+    });
+
+    const timeEls = screen.getAllByTestId("conversation-time");
+    expect(timeEls).toHaveLength(2);
+    expect(timeEls[0].textContent).toBe("just now");
+    expect(timeEls[1].textContent).toBe("1h ago");
+  });
+});
+
 describe("Mobile: auto-close left panel on conversation select", () => {
   it("closes left panel when selecting a conversation on mobile viewport", async () => {
     const conversations = [

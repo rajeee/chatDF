@@ -13,6 +13,7 @@ import { apiGet, apiPatch, apiDelete, apiPost } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+import { formatRelativeTime } from "@/utils/relativeTime";
 
 interface ConversationSummary {
   id: string;
@@ -202,7 +203,7 @@ export function ChatHistory() {
               data-testid="conversation-item"
               data-active={activeConversationId === conv.id ? "true" : "false"}
               aria-current={activeConversationId === conv.id ? "page" : undefined}
-              className={`group relative flex items-center px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${
+              className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-colors ${
                 activeConversationId === conv.id
                   ? "bg-blue-500/10"
                   : "hover:bg-gray-500/10"
@@ -222,15 +223,25 @@ export function ChatHistory() {
                 />
               ) : (
                 <>
-                  <span
-                    className={`flex-1 truncate${conv.title ? "" : " italic opacity-50"}`}
+                  <div
+                    className="flex-1 min-w-0"
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       handleDoubleClick(conv);
                     }}
                   >
-                    {conv.title || "Untitled"}
-                  </span>
+                    <span
+                      className={`block truncate${conv.title ? "" : " italic opacity-50"}`}
+                    >
+                      {conv.title || "Untitled"}
+                    </span>
+                    <span
+                      className="block text-xs opacity-40 truncate"
+                      data-testid="conversation-time"
+                    >
+                      {formatRelativeTime(conv.updated_at)}
+                    </span>
+                  </div>
 
                   {confirmingDeleteId === conv.id ? (
                     <span

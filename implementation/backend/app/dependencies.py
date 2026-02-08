@@ -3,12 +3,14 @@
 Implements: spec/backend/plan.md#Dependency-Injection
 
 Provides:
-- ``get_db(request)``: Returns the shared database connection.
+- ``get_db(request)``: Returns a database connection from the pool.
 - ``get_current_user(request, db)``: Validates session cookie, returns user dict.
 - ``get_conversation(conversation_id, user, db)``: Loads and authorises conversation access.
 """
 
 from __future__ import annotations
+
+from collections.abc import AsyncIterator
 
 import aiosqlite
 from fastapi import Depends, HTTPException, Request
@@ -22,9 +24,37 @@ from app.services import auth_service
 # ---------------------------------------------------------------------------
 
 
-async def get_db(request: Request) -> aiosqlite.Connection:
-    """Return the shared database connection from ``request.app.state.db``."""
-    return request.app.state.db
+async def get_db(request: Request) -> AsyncIterator[aiosqlite.Connection]:
+    """Return a database connection from the pool (or shared connection for tests).
+
+    In production: Uses connection pool with read/write separation.
+    In tests: Falls back to shared connection (app.state.db).
+
+    For GET/HEAD requests, acquires a read connection from the pool.
+    For POST/PATCH/DELETE/PUT requests, returns the dedicated write connection.
+    For OPTIONS requests, still provides connection (endpoints may use it).
+    """
+    from app.database import DatabasePool
+
+    # Check if we have a pool (production) or single connection (tests)
+    # Use isinstance check to ensure it's actually a DatabasePool, not a mock
+    if hasattr(request.app.state, "db_pool") and isinstance(request.app.state.db_pool, DatabasePool):
+        pool: DatabasePool = request.app.state.db_pool
+
+        # For write operations, use the dedicated write connection
+        # OPTIONS is treated as read-only for CORS preflight
+        if request.method in ("POST", "PATCH", "DELETE", "PUT"):
+            yield pool.get_write_connection()
+        else:
+            # For read operations (GET, HEAD, OPTIONS), acquire from pool
+            conn = await pool.acquire_read()
+            try:
+                yield conn
+            finally:
+                await pool.release_read(conn)
+    else:
+        # Fallback for tests: use shared connection
+        yield request.app.state.db
 
 
 # ---------------------------------------------------------------------------

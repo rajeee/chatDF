@@ -69,10 +69,11 @@ async def _insert_conversation(db: aiosqlite.Connection, conv: dict) -> None:
     await db.commit()
 
 
-def _make_request(db: aiosqlite.Connection, session_token: str | None = None) -> MagicMock:
+def _make_request(db: aiosqlite.Connection, session_token: str | None = None, method: str = "GET") -> MagicMock:
     """Build a fake FastAPI Request with app.state.db and optional session cookie."""
     request = MagicMock()
     request.app.state.db = db
+    request.method = method
     cookies: dict[str, str] = {}
     if session_token is not None:
         cookies["session_token"] = session_token
@@ -88,12 +89,19 @@ def _make_request(db: aiosqlite.Connection, session_token: str | None = None) ->
 @pytest.mark.asyncio
 @pytest.mark.unit
 async def test_get_db_returns_connection_from_app_state(fresh_db):
-    """get_db should return request.app.state.db."""
+    """get_db should return request.app.state.db (via async generator)."""
     from app.dependencies import get_db
 
     request = _make_request(fresh_db)
-    result = await get_db(request)
+    # get_db is now an async generator, use it as async context manager
+    gen = get_db(request)
+    result = await gen.__anext__()
     assert result is fresh_db
+    # Clean up the generator
+    try:
+        await gen.__anext__()
+    except StopAsyncIteration:
+        pass
 
 
 # ---------------------------------------------------------------------------

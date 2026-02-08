@@ -4,10 +4,14 @@ Implements: spec/backend/database/plan.md
 
 Provides:
 - ``init_db(conn)``: Enable PRAGMAs, create all 7 tables and 7 indexes.
-- ``get_db(request)``: FastAPI dependency returning the shared connection.
+- ``get_db(request)``: FastAPI dependency returning a connection from the pool.
+- ``DatabasePool``: Simple connection pool for concurrent reads.
 """
 
 from __future__ import annotations
+
+import asyncio
+from collections.abc import AsyncIterator
 
 import aiosqlite
 from fastapi import Request
@@ -97,13 +101,80 @@ CREATE INDEX IF NOT EXISTS idx_token_usage_user_timestamp ON token_usage(user_id
 
 
 # ---------------------------------------------------------------------------
+# Connection Pool
+# ---------------------------------------------------------------------------
+
+
+class DatabasePool:
+    """Simple connection pool for concurrent read operations.
+
+    SQLite with WAL mode allows multiple concurrent readers but only one writer.
+    This pool maintains a small number of read connections to handle concurrent
+    GET requests while keeping a single write connection for INSERT/UPDATE/DELETE.
+    """
+
+    def __init__(self, db_path: str, pool_size: int = 5):
+        """Initialize the pool with the database path and size."""
+        self.db_path = db_path
+        self.pool_size = pool_size
+        self._pool: asyncio.Queue[aiosqlite.Connection] = asyncio.Queue(maxsize=pool_size)
+        self._write_conn: aiosqlite.Connection | None = None
+
+    async def initialize(self) -> None:
+        """Create all connections and initialize the database schema."""
+        # Create the write connection first
+        self._write_conn = await aiosqlite.connect(self.db_path)
+        self._write_conn.row_factory = aiosqlite.Row
+        await init_db_schema(self._write_conn)
+
+        # Create pool of read connections
+        for _ in range(self.pool_size):
+            conn = await aiosqlite.connect(self.db_path)
+            conn.row_factory = aiosqlite.Row
+            # Read-only connections don't need full init, just PRAGMAs
+            await conn.execute("PRAGMA journal_mode=WAL")
+            await conn.execute("PRAGMA foreign_keys=ON")
+            await self._pool.put(conn)
+
+    async def close(self) -> None:
+        """Close all connections in the pool."""
+        # Close write connection
+        if self._write_conn:
+            await self._write_conn.close()
+            self._write_conn = None
+
+        # Close all read connections
+        while not self._pool.empty():
+            conn = await self._pool.get()
+            await conn.close()
+
+    async def acquire_read(self) -> aiosqlite.Connection:
+        """Acquire a read connection from the pool."""
+        return await self._pool.get()
+
+    async def release_read(self, conn: aiosqlite.Connection) -> None:
+        """Release a read connection back to the pool."""
+        await self._pool.put(conn)
+
+    def get_write_connection(self) -> aiosqlite.Connection:
+        """Get the dedicated write connection.
+
+        Use this for INSERT, UPDATE, DELETE operations.
+        The write connection ensures proper serialization of writes.
+        """
+        if not self._write_conn:
+            raise RuntimeError("Pool not initialized")
+        return self._write_conn
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-async def init_db(conn: aiosqlite.Connection) -> None:
+async def init_db_schema(conn: aiosqlite.Connection) -> None:
     """Initialise the database: enable PRAGMAs, create tables and indexes.
 
-    Called once during FastAPI lifespan startup, after the connection is opened.
+    Called once during pool initialization for the write connection.
     The caller is responsible for opening and closing the connection.
     """
     await conn.execute("PRAGMA journal_mode=WAL")
@@ -119,10 +190,27 @@ async def init_db(conn: aiosqlite.Connection) -> None:
         pass  # Column already exists
 
 
-async def get_db(request: Request) -> aiosqlite.Connection:
-    """FastAPI dependency that returns the shared database connection.
+# Backward compatibility alias
+init_db = init_db_schema
 
-    The connection is stored on ``request.app.state.db`` by the lifespan
-    handler in ``main.py``.
+
+async def get_db(request: Request) -> AsyncIterator[aiosqlite.Connection]:
+    """FastAPI dependency that returns a connection from the pool.
+
+    For read operations (GET requests), acquires a connection from the pool.
+    For write operations (POST/PATCH/DELETE), returns the dedicated write connection.
+
+    The pool is stored on ``request.app.state.db_pool`` by the lifespan handler.
     """
-    return request.app.state.db
+    pool: DatabasePool = request.app.state.db_pool
+
+    # For write operations, use the dedicated write connection
+    if request.method in ("POST", "PATCH", "DELETE", "PUT"):
+        yield pool.get_write_connection()
+    else:
+        # For read operations, acquire from pool and release when done
+        conn = await pool.acquire_read()
+        try:
+            yield conn
+        finally:
+            await pool.release_read(conn)

@@ -19,7 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.database import init_db
+from app.database import DatabasePool
 from app.exceptions import ConflictError, ForbiddenError, NotFoundError, RateLimitError
 from app.routers import auth, conversations, datasets, usage
 from app.routers.websocket import router as ws_router
@@ -37,16 +37,17 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    """Open the database and start worker pool on startup; clean up on shutdown."""
+    """Open the database pool and start worker pool on startup; clean up on shutdown."""
     settings = get_settings()
 
-    # -- Database --
+    # -- Database Pool --
     db_path = settings.database_url.replace("sqlite:///", "")
-    conn = await aiosqlite.connect(db_path)
-    conn.row_factory = aiosqlite.Row
-    await init_db(conn)
+    db_pool = DatabasePool(db_path, pool_size=5)
+    await db_pool.initialize()
 
-    application.state.db = conn
+    application.state.db_pool = db_pool
+    # Keep backward compatibility for code that accesses db directly
+    application.state.db = db_pool.get_write_connection()
     application.state.connection_manager = ConnectionManager()
 
     # -- Worker pool --
@@ -59,7 +60,7 @@ async def lifespan(application: FastAPI):
     # -- Shutdown --
     # Implements: spec/backend/plan.md#Lifespan (drain pool, close DB on shutdown)
     worker_pool.shutdown(pool)
-    await conn.close()
+    await db_pool.close()
 
 
 # ---------------------------------------------------------------------------

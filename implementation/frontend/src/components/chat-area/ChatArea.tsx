@@ -134,6 +134,7 @@ export function ChatArea() {
         console.error("Failed to send message:", err);
         const errorMsg = err instanceof Error ? err.message : "Failed to send message";
         useToastStore.getState().error(errorMsg);
+        useChatStore.getState().markMessageFailed(userMessage.id);
         setLoadingPhase("idle");
         setStreaming(false);
       }
@@ -166,6 +167,16 @@ export function ChatArea() {
     }
   }, [activeConversationId]);
 
+  const handleRetry = useCallback(
+    (messageId: string, content: string) => {
+      // Remove the failed message
+      useChatStore.getState().removeMessage(messageId);
+      // Re-send
+      handleSend(content);
+    },
+    [handleSend]
+  );
+
   return (
     <section
       id="main-content"
@@ -197,12 +208,12 @@ export function ChatArea() {
             </div>
           )}
 
-          {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} />}
+          {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} onRetry={handleRetry} />}
         </div>
 
         {/* Chat input - sticky at bottom */}
         <div
-          className="p-2 sm:p-4 border-t sticky bottom-0"
+          className="p-2 sm:p-4 border-t sticky bottom-0 safe-area-bottom"
           style={{
             borderColor: "var(--color-border)",
             backgroundColor: "var(--color-bg)",

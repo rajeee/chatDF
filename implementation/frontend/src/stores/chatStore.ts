@@ -18,6 +18,7 @@ export interface Message {
   sql_executions: SqlExecution[];
   reasoning: string | null;
   created_at: string;
+  sendFailed?: boolean;
 }
 
 /** Parse sql_query column into structured SqlExecution[].
@@ -81,6 +82,8 @@ interface ChatActions {
   finalizeStreamingMessage: (extras?: Partial<Message>) => void;
   setLoadingPhase: (phase: LoadingPhase) => void;
   setDailyLimitReached: (reached: boolean) => void;
+  markMessageFailed: (messageId: string) => void;
+  removeMessage: (messageId: string) => void;
   reset: () => void;
 }
 
@@ -150,6 +153,18 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
 
   setDailyLimitReached: (reached) =>
     set({ dailyLimitReached: reached }),
+
+  markMessageFailed: (messageId) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === messageId ? { ...m, sendFailed: true } : m
+      ),
+    })),
+
+  removeMessage: (messageId) =>
+    set((state) => ({
+      messages: state.messages.filter((m) => m.id !== messageId),
+    })),
 
   reset: () => set(initialState),
 }));

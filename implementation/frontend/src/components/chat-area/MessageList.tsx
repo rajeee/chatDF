@@ -16,9 +16,10 @@ const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 interface MessageListProps {
   /** When true, the first message gets a more dramatic entrance animation */
   isFirstMessageEntrance?: boolean;
+  onRetry?: (messageId: string, content: string) => void;
 }
 
-export function MessageList({ isFirstMessageEntrance = false }: MessageListProps) {
+export function MessageList({ isFirstMessageEntrance = false, onRetry }: MessageListProps) {
   const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
@@ -194,6 +195,7 @@ export function MessageList({ isFirstMessageEntrance = false }: MessageListProps
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}
               onVisualize={handleVisualize}
+              onRetry={onRetry}
             />
           );
         })}

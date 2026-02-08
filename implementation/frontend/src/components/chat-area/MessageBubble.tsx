@@ -4,7 +4,7 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { CodeBlock } from "./CodeBlock";
@@ -18,6 +18,7 @@ interface MessageBubbleProps {
   onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
   onVisualize: (executions: SqlExecution[], index: number) => void;
+  onRetry?: (messageId: string, content: string) => void;
 }
 
 function formatTimestamp(isoString: string): string {
@@ -39,6 +40,7 @@ function MessageBubbleComponent({
   onShowReasoning,
   onCopy,
   onVisualize,
+  onRetry,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const reasoningContent = message.reasoning;
@@ -55,6 +57,13 @@ function MessageBubbleComponent({
   }, [message.sql_executions]);
 
   const [sqlExpanded, setSqlExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyClick = useCallback(() => {
+    onCopy(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [onCopy, message.content]);
 
   return (
     <div
@@ -105,6 +114,29 @@ function MessageBubbleComponent({
           </div>
         )}
 
+        {/* Failed send indicator with retry button */}
+        {isUser && message.sendFailed && onRetry && (
+          <div
+            data-testid={`retry-send-${message.id}`}
+            className="mt-1.5 flex items-center gap-2 text-xs"
+            style={{ color: "rgba(255,255,255,0.9)" }}
+          >
+            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>Failed to send</span>
+            <button
+              data-testid={`retry-btn-${message.id}`}
+              className="underline font-medium hover:opacity-80 active:scale-95 transition-all"
+              onClick={() => onRetry(message.id, message.content)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Inline SQL preview - collapsed by default */}
         {!isUser && !isCurrentlyStreaming && message.sql_executions.length > 0 && (
           <div
@@ -150,6 +182,34 @@ function MessageBubbleComponent({
                 {message.sql_executions.map((exec, i) => exec.query).join(";\n\n")}
               </pre>
             )}
+          </div>
+        )}
+
+        {/* Inline SQL error display */}
+        {!isUser && !isCurrentlyStreaming && message.sql_executions.some(e => e.error) && (
+          <div
+            data-testid={`sql-error-${message.id}`}
+            className="mt-2 rounded text-xs px-3 py-2 flex items-start gap-2"
+            style={{
+              backgroundColor: "rgba(220, 38, 38, 0.08)",
+              border: "1px solid var(--color-error)",
+              color: "var(--color-error)",
+            }}
+          >
+            <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span className="break-words min-w-0">
+              {message.sql_executions.filter(e => e.error).map((e, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  {message.sql_executions.filter(e => e.error).length > 1 && <strong>Query {message.sql_executions.indexOf(e) + 1}: </strong>}
+                  {e.error}
+                </span>
+              ))}
+            </span>
           </div>
         )}
 
@@ -202,18 +262,37 @@ function MessageBubbleComponent({
           </div>
         )}
 
-        {/* Copy button - always visible at subtle opacity, brightens on hover */}
+        {/* Copy button - shows checkmark + "Copied!" for 1.5s after click */}
         <button
           data-testid={`copy-btn-${message.id}`}
-          className="touch-action-btn absolute top-1 right-1 p-1 rounded text-xs opacity-40 hover:opacity-100 hover:bg-white/10 active:scale-90 transition-all duration-150"
-          style={{ color: isUser ? "var(--color-white)" : "var(--color-text)" }}
-          onClick={() => onCopy(message.content)}
-          aria-label="Copy message"
+          className={`touch-action-btn absolute top-1 right-1 p-1 rounded text-xs transition-all duration-150 ${
+            copied
+              ? "opacity-100"
+              : "opacity-40 hover:opacity-100 hover:bg-white/10"
+          } active:scale-90`}
+          style={{
+            color: copied
+              ? "var(--color-success)"
+              : isUser
+                ? "var(--color-white)"
+                : "var(--color-text)",
+          }}
+          onClick={handleCopyClick}
+          aria-label={copied ? "Copied" : "Copy message"}
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" />
-            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-          </svg>
+          {copied ? (
+            <span className="flex items-center gap-0.5">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span className="text-[10px] font-medium">Copied!</span>
+            </span>
+          ) : (
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+          )}
         </button>
       </div>
 

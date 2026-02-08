@@ -28,17 +28,18 @@ DRY_RUN=false
 # ─── Cleanup on Ctrl+C / kill ───
 WATCHDOG_PID=""
 TAIL_PID=""
-STOP_REQUESTED=false
+CLAUDE_PID=""
 
 cleanup() {
-  STOP_REQUESTED=true
   echo ""
   echo -e "\033[1;33m[ralph] Caught signal — shutting down...\033[0m"
+  # Kill Claude if running
+  [[ -n "$CLAUDE_PID" ]] && kill "$CLAUDE_PID" 2>/dev/null
   # Kill tail follower if running
   [[ -n "$TAIL_PID" ]] && kill "$TAIL_PID" 2>/dev/null
   # Kill watchdog if running
   [[ -n "$WATCHDOG_PID" ]] && kill "$WATCHDOG_PID" 2>/dev/null
-  # Kill any claude --print children we spawned
+  # Kill any remaining children
   pkill -P $$ 2>/dev/null || true
   sleep 1
   echo -e "\033[0;32m[ralph] Stopped.\033[0m"
@@ -338,12 +339,11 @@ while true; do
   touch "$log_file"
   start_watchdog "$log_file"
 
-  # Stream log to terminal via background tail (avoids pipeline that breaks Ctrl+C)
+  # Stream log to terminal via background tail
   tail -f "$log_file" &
   TAIL_PID=$!
 
-  # Run Claude as DIRECT foreground child (no pipeline) — Ctrl+C reaches bash properly
-  set +e
+  # Run Claude in BACKGROUND + wait (wait is interruptible by SIGINT, unlike foreground)
   cd "$PROJECT_DIR"
   $CLAUDE_BIN \
     --print \
@@ -352,9 +352,11 @@ while true; do
     --max-budget-usd "$MAX_BUDGET" \
     --verbose \
     "$prompt" \
-    >> "$log_file" 2>&1
+    >> "$log_file" 2>&1 &
+  CLAUDE_PID=$!
+  wait "$CLAUDE_PID" 2>/dev/null
   exit_code=$?
-  set -e
+  CLAUDE_PID=""
 
   # Stop tail follower
   kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null || true
@@ -362,9 +364,6 @@ while true; do
 
   # Stop watchdog
   stop_watchdog
-
-  # Check if user requested stop (Ctrl+C during Claude run)
-  if $STOP_REQUESTED; then exit 0; fi
 
   echo ""
   if [[ $exit_code -eq 0 ]]; then
@@ -392,7 +391,6 @@ while true; do
   tail -f "$prune_log" &
   TAIL_PID=$!
 
-  set +e
   $CLAUDE_BIN \
     --print \
     --model "$PRUNE_MODEL" \
@@ -400,15 +398,14 @@ while true; do
     --max-budget-usd 0.50 \
     --verbose \
     "$prune_prompt" \
-    >> "$prune_log" 2>&1
+    >> "$prune_log" 2>&1 &
+  CLAUDE_PID=$!
+  wait "$CLAUDE_PID" 2>/dev/null
   prune_exit=$?
-  set -e
+  CLAUDE_PID=""
 
   kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null || true
   TAIL_PID=""
-
-  # Check if user requested stop
-  if $STOP_REQUESTED; then exit 0; fi
 
   echo ""
   if [[ $prune_exit -eq 0 ]]; then

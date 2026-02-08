@@ -162,6 +162,14 @@ Insights accumulated through improvement iterations.
 - **Test updates required**: All ws_messages tests needed field name updates (`assert result["type"] == "ct"` instead of `"chat_token"`, `result["t"]` instead of `result["token"]`, etc.). Added tests for new message types (reasoning_token, reasoning_complete, tool_call_start, conversation_title_updated, usage_update).
 - **Pre-existing test failures unchanged**: Frontend still at 322/372 passing (50 pre-existing failures from iteration 18/20). Backend websocket tests all pass (77/77). Other backend test failures are environmental/pre-existing.
 
+### Iteration 24 (2026-02-08)
+- **Code organization refactoring**: Split 750-line SQLPanel.tsx into focused, reusable modules. Extracted 3 custom hooks (useDraggable, useResizable, useSortedRows) and 2 utility modules (tableUtils, csvExport). Result: 546-line main file (27% smaller), +204 lines in reusable modules.
+- **Refactoring benefits**: Smaller files are easier to understand, navigate, and modify. Extracted hooks and utils can be reused elsewhere (e.g., other modal components that need drag/resize). Tests for extracted code are simpler to write and maintain in isolation.
+- **Extract patterns, not premature abstractions**: Only extract code when there's clear benefit - when files are too large (>700 lines), when logic is truly reusable, or when testing would be simpler in isolation. Don't extract for the sake of extraction.
+- **Test coverage for extracted modules**: When splitting large files, add comprehensive tests for the extracted modules. This ensures the refactoring didn't break behavior and provides safety net for future changes.
+- **Module boundaries matter**: Hooks (stateful, React-specific) go in `hooks/`, pure functions go in `utils/`. Keep interfaces clean - e.g., `useSortedRows` returns toggleSort/clearSort functions, not raw state setters.
+- **All tests remain stable**: Frontend 322/372 passing (same as iteration 23), backend tests unchanged. Refactoring that doesn't break tests is good refactoring.
+
 ---
 
 ## General Principles

@@ -21,7 +21,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
-| P1 | Split SQLPanel.tsx (720 lines) into smaller components | 3 | 3 | 1.0 | pending |
+| P1 | Split SQLPanel.tsx (720 lines) into smaller components | 3 | 3 | 1.0 | done |
 | P2 | Virtualize large data tables (react-window or similar) | 4 | 3 | 1.3 | done |
 | P3 | Lazy load CodeMirror (dynamic import) | 3 | 1 | 3.0 | blocked |
 | P4 | Add React.memo to expensive components (MessageBubble, DatasetCard) | 3 | 1 | 3.0 | done |

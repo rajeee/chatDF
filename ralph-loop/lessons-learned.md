@@ -116,6 +116,14 @@ Insights accumulated through improvement iterations.
 - **Code splitting impact**: With proper chunking, vendor code (636 KB total) is separated from app code (116 KB). When app code changes, users only re-download the small app chunk, not the large vendor libraries.
 - **Pre-existing features found**: Discovered C3 (optimistic UI updates) and C8 (confirmation dialogs) were already implemented in the codebase. Always check existing code before assuming features need implementation.
 
+### Iteration 18 (2026-02-08)
+- **Request timeout handling for reliability**: Added 30-second default timeout to all API requests using AbortController to prevent hanging connections. Prevents frustrating "stuck" states when network is slow or servers unresponsive.
+- **TimeoutError class for clear error messages**: Created dedicated TimeoutError that extends Error, so existing error handlers catch it automatically. User-friendly message: "Request timed out. Please check your connection and try again."
+- **AbortController cleanup pattern**: Always call `clearTimeout()` in both success and error paths to prevent memory leaks. Store timeout ID, clear it before returning/throwing.
+- **Optional timeout parameter**: All API methods accept optional `timeoutMs` parameter for customization. Default is 30s, but can be increased for large file uploads or decreased for fast-fail scenarios.
+- **Testing fetch with AbortController**: MSW and vitest don't play well with mocked fetch + AbortSignal due to signal validation. For timeout features, rely on manual testing or integration tests rather than unit tests with mocked fetch.
+- **Error inheritance simplifies handling**: Since `TimeoutError extends Error`, existing `err instanceof Error` checks work fine. No need to update all error handlers to check for TimeoutError specifically.
+
 ---
 
 ## General Principles

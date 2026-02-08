@@ -1,7 +1,7 @@
 #!/bin/bash
 # ralph-loop.sh — Autonomous continuous improvement loop for ChatDF
 # Calls Claude CLI in print mode (no human input) each iteration.
-# Each cycle: pick idea → implement → write tests → run tests → commit → push → update knowledge
+# Each cycle: check work.md → pick idea → implement → test → commit → push
 #
 # Usage:
 #   ./ralph-loop.sh              # run loop (default: unlimited iterations)
@@ -15,7 +15,7 @@ PROJECT_DIR="$SCRIPT_DIR"
 LOOP_DIR="$PROJECT_DIR/ralph-loop"
 LOG_DIR="$LOOP_DIR/logs"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
-MODEL="${RALPH_MODEL:-sonnet}"
+MODEL="${RALPH_MODEL:-opus}"
 MAX_BUDGET="${RALPH_BUDGET:-5.00}"
 COOLDOWN="${RALPH_COOLDOWN:-30}"
 MAX_ITERATIONS="${RALPH_MAX_ITER:-0}"  # 0 = unlimited
@@ -53,7 +53,6 @@ get_iteration_number() {
   local count=0
   if [[ -f "$LOOP_DIR/iteration-log.md" ]]; then
     count=$(grep -c '^| [0-9]' "$LOOP_DIR/iteration-log.md" 2>/dev/null || true)
-    # grep -c may return empty string on no match
     count=${count:-0}
   fi
   echo $((count + 1))
@@ -72,38 +71,41 @@ Make ONE focused improvement to the ChatDF codebase per iteration. The goal is t
 - Project root: /home/ubuntu/chatDF
 - Frontend: React + Vite + Tailwind at implementation/frontend/
 - Backend: FastAPI + Python at implementation/backend/
-- Tests: Vitest (frontend), Pytest (backend) — 319 tests currently passing
+- Tests: Vitest (frontend), Pytest (backend) — 319+ tests currently passing
 - Bun runtime (no node/npm) — use ~/.bun/bin/bun
 - Backend venv: implementation/backend/.venv/
 
-## Knowledge Files (READ THESE FIRST)
-1. /home/ubuntu/chatDF/ralph-loop/potential-ideas.md — ranked ideas with priority scores
-2. /home/ubuntu/chatDF/ralph-loop/potential-pitfalls.md — traps to avoid
-3. /home/ubuntu/chatDF/ralph-loop/lessons-learned.md — accumulated wisdom
-4. /home/ubuntu/chatDF/ralph-loop/iteration-log.md — history of past iterations
+## Knowledge Files (READ THESE FIRST — in this order)
+1. /home/ubuntu/chatDF/ralph-loop/work.md — **PRIORITY QUEUE from the human**. Check this FIRST every iteration. If there are pending tasks here, do the top one BEFORE anything from ideas.md. When done, mark the task `[x]` completed.
+2. /home/ubuntu/chatDF/ralph-loop/vision.md — **North star**. Read this to understand where the product is heading. Use it to generate new ideas and prioritize existing ones. All improvements should move toward this vision.
+3. /home/ubuntu/chatDF/ralph-loop/potential-ideas.md — ranked ideas with priority scores
+4. /home/ubuntu/chatDF/ralph-loop/potential-pitfalls.md — traps to avoid
+5. /home/ubuntu/chatDF/ralph-loop/lessons-learned.md — accumulated wisdom
+6. /home/ubuntu/chatDF/ralph-loop/iteration-log.md — history of past iterations
 
 ## Your Process (follow exactly)
 
 ### Step 1: Read Knowledge Files
-Read all 4 knowledge files above to understand what's been done and what to do next.
+Read ALL 6 knowledge files above. Start with work.md and vision.md.
 
-### Step 2: Pick ONE Idea
-- Pick the highest-priority PENDING idea from potential-ideas.md
-- If you see a new idea that's even better (higher priority), add it first then pick it
-- Focus on: UI polish, speed feel, resource efficiency, completeness
-- Do NOT add features that increase scope (no new auth providers, no new data sources, etc.)
-- Prefer changes the user will immediately notice and appreciate
+### Step 2: Pick What to Work On
+**Priority order:**
+1. **work.md first**: If there are unchecked `[ ]` tasks in work.md, do the FIRST one. These are human-injected and always take priority.
+2. **vision-aligned ideas**: If work.md is empty/all done, pick the highest-priority PENDING idea from potential-ideas.md. Prefer ideas that align with vision.md.
+3. **New ideas**: If you spot a new high-impact idea inspired by vision.md, add it to potential-ideas.md and pick it if it's highest priority.
+
+Do NOT add features that increase scope beyond what vision.md describes.
 
 ### Step 3: Implement
 - Read the relevant source files first
 - Make the implementation change
-- Keep changes minimal and focused — one idea per iteration
+- Keep changes minimal and focused — one task per iteration
 - Follow existing code patterns and style
 - Do NOT over-engineer
 
 ### Step 4: Write or Update Tests
 - Add unit tests for any new logic
-- For frontend: add to existing test files or create new ones under implementation/frontend/src/__tests__/
+- For frontend: add to existing test files or create new ones under implementation/frontend/tests/
 - For backend: add to existing test files under implementation/backend/tests/
 - Tests should be meaningful, not just coverage padding
 
@@ -131,13 +133,14 @@ Read all 4 knowledge files above to understand what's been done and what to do n
   git push origin main
 
 ### Step 7: Update Knowledge Files
-- In potential-ideas.md: mark the completed idea as "done" and add any new ideas you discovered
-- In lessons-learned.md: add what you learned during this iteration
-- In potential-pitfalls.md: add any new pitfalls discovered
-- In iteration-log.md: add a row with iteration number, date, focus, ideas completed, test status, commit hash
+- **work.md**: If you completed a work.md task, mark it `[x]` with a brief note of what was done
+- **potential-ideas.md**: Mark completed ideas as "done". Add any new ideas inspired by vision.md.
+- **lessons-learned.md**: Add what you learned during this iteration
+- **potential-pitfalls.md**: Add any new pitfalls discovered
+- **iteration-log.md**: Add a row with iteration number, date, focus, ideas completed, test status, commit hash
 
 ## Rules
-- NEVER skip tests. All 319+ tests must pass before committing.
+- NEVER skip tests. All existing tests must pass before committing.
 - NEVER use git add -A or git add . (could include secrets/db files)
 - NEVER modify .env files or credentials
 - NEVER install new heavyweight dependencies (>50KB gzipped) without justification

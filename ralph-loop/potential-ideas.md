@@ -7,13 +7,3 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
 | U28 | Loading state visual hierarchy (color-coded phases) | 3 | 2 | 1.5 | Pending |
-
-## Performance & Resource Efficiency
-
-| ID | Idea | Impact | Effort | Priority | Status |
-|----|------|--------|--------|----------|--------|
-
-## Completeness & Robustness
-
-| ID | Idea | Impact | Effort | Priority | Status |
-|----|------|--------|--------|----------|--------|

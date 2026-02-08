@@ -1,5 +1,6 @@
-// Tests: Exact timestamp tooltip on message bubbles
-// Verifies that hovering over the relative timestamp shows the exact date/time via title attribute.
+// Tests: Custom tooltip on message bubble timestamps
+// Verifies that the timestamp shows a styled custom tooltip with the full date/time
+// instead of a native title attribute.
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderWithProviders, screen } from "../../helpers/render";
@@ -22,8 +23,8 @@ beforeEach(() => {
   resetAllStores();
 });
 
-describe("Timestamp tooltip shows exact date/time", () => {
-  it("renders the timestamp span with a title attribute containing the formatted date", () => {
+describe("Timestamp custom tooltip shows exact date/time", () => {
+  it("renders a tooltip element with the formatted full date including weekday", () => {
     renderWithProviders(
       <MessageBubble
         message={testMessage}
@@ -35,17 +36,14 @@ describe("Timestamp tooltip shows exact date/time", () => {
       />
     );
 
-    const timestampEl = screen.getByTestId("timestamp-msg-1");
-    expect(timestampEl).toBeInTheDocument();
+    const tooltipEl = screen.getByTestId("timestamp-tooltip-msg-1");
+    expect(tooltipEl).toBeInTheDocument();
 
-    const titleAttr = timestampEl.getAttribute("title");
-    expect(titleAttr).toBeTruthy();
-
-    // The title should contain the formatted date from the created_at value.
-    // new Date("2026-02-05T15:30:00Z").toLocaleString() will produce a locale-specific string.
-    // We verify key parts are present: year, day, and time components.
+    // The tooltip should contain the formatted date from the created_at value,
+    // now including the weekday.
     const expectedDate = new Date("2026-02-05T15:30:00Z");
     const expectedFormatted = expectedDate.toLocaleString(undefined, {
+      weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -54,10 +52,10 @@ describe("Timestamp tooltip shows exact date/time", () => {
       second: "2-digit",
     });
 
-    expect(titleAttr).toBe(expectedFormatted);
+    expect(tooltipEl.textContent).toBe(expectedFormatted);
   });
 
-  it("title attribute contains the year, month, and time from the message timestamp", () => {
+  it("does NOT use a native title attribute on the timestamp", () => {
     renderWithProviders(
       <MessageBubble
         message={testMessage}
@@ -70,15 +68,32 @@ describe("Timestamp tooltip shows exact date/time", () => {
     );
 
     const timestampEl = screen.getByTestId("timestamp-msg-1");
-    const titleAttr = timestampEl.getAttribute("title")!;
-
-    // Verify key date components are present regardless of locale formatting
-    expect(titleAttr).toContain("2026");
-    expect(titleAttr).toContain("February");
-    expect(titleAttr).toContain("5");
+    expect(timestampEl.getAttribute("title")).toBeNull();
   });
 
-  it("user messages also have the exact timestamp tooltip", () => {
+  it("tooltip contains the year, weekday, month, and time from the message timestamp", () => {
+    renderWithProviders(
+      <MessageBubble
+        message={testMessage}
+        isCurrentlyStreaming={false}
+        onShowSQL={noop}
+        onShowReasoning={noop}
+        onCopy={noop}
+        onVisualize={noop}
+      />
+    );
+
+    const tooltipEl = screen.getByTestId("timestamp-tooltip-msg-1");
+    const tooltipText = tooltipEl.textContent!;
+
+    // Verify key date components are present regardless of locale formatting
+    expect(tooltipText).toContain("2026");
+    expect(tooltipText).toContain("February");
+    expect(tooltipText).toContain("5");
+    expect(tooltipText).toContain("Thursday");
+  });
+
+  it("user messages also have the custom tooltip", () => {
     const userMessage = {
       ...testMessage,
       id: "msg-user-1",
@@ -98,10 +113,32 @@ describe("Timestamp tooltip shows exact date/time", () => {
       />
     );
 
+    const tooltipEl = screen.getByTestId("timestamp-tooltip-msg-user-1");
+    expect(tooltipEl).toBeInTheDocument();
+
+    const tooltipText = tooltipEl.textContent!;
+    expect(tooltipText).toContain("2026");
+    expect(tooltipText).toContain("January");
+    expect(tooltipText).toContain("Thursday");
+
+    // Verify no title attribute on the timestamp itself
     const timestampEl = screen.getByTestId("timestamp-msg-user-1");
-    const titleAttr = timestampEl.getAttribute("title");
-    expect(titleAttr).toBeTruthy();
-    expect(titleAttr).toContain("2026");
-    expect(titleAttr).toContain("January");
+    expect(timestampEl.getAttribute("title")).toBeNull();
+  });
+
+  it("tooltip has pointer-events-none class to avoid click interference", () => {
+    renderWithProviders(
+      <MessageBubble
+        message={testMessage}
+        isCurrentlyStreaming={false}
+        onShowSQL={noop}
+        onShowReasoning={noop}
+        onCopy={noop}
+        onVisualize={noop}
+      />
+    );
+
+    const tooltipEl = screen.getByTestId("timestamp-tooltip-msg-1");
+    expect(tooltipEl.className).toContain("pointer-events-none");
   });
 });

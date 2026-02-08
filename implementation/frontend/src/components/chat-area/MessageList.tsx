@@ -10,6 +10,7 @@ import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { MessageBubble } from "./MessageBubble";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
+import { exportAsJson, downloadJson } from "@/utils/exportJson";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
@@ -127,8 +128,41 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
     [openChartModal]
   );
 
-  const handleExport = useCallback(() => {
-    // Try to get conversation title from TanStack Query cache
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close export dropdown on click outside
+  useEffect(() => {
+    if (!exportDropdownOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        exportDropdownRef.current &&
+        !exportDropdownRef.current.contains(e.target as Node)
+      ) {
+        setExportDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [exportDropdownOpen]);
+
+  // Close export dropdown on Escape
+  useEffect(() => {
+    if (!exportDropdownOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setExportDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [exportDropdownOpen]);
+
+  const getExportTitle = useCallback(() => {
     let title = "Conversation";
     if (activeConversationId) {
       const cached = queryClient.getQueryData<{ title?: string }>([
@@ -139,39 +173,124 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         title = cached.title;
       }
     }
+    return title;
+  }, [activeConversationId, queryClient]);
+
+  const handleExportMarkdown = useCallback(() => {
+    const title = getExportTitle();
     const markdown = exportAsMarkdown(messages, title);
     const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
     downloadMarkdown(markdown, `${safeTitle}.md`);
-  }, [messages, activeConversationId, queryClient]);
+    setExportDropdownOpen(false);
+  }, [messages, getExportTitle]);
+
+  const handleExportJson = useCallback(() => {
+    const title = getExportTitle();
+    const json = exportAsJson(messages, title);
+    const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+    downloadJson(json, `${safeTitle}.json`);
+    setExportDropdownOpen(false);
+  }, [messages, getExportTitle]);
 
   return (
     <div className="flex flex-col">
       {messages.length > 0 && (
         <div className="flex justify-end px-2 sm:px-4 pt-2">
-          <button
-            data-testid="export-markdown-btn"
-            className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
-            style={{ color: "var(--color-text)" }}
-            onClick={handleExport}
-            title="Export as Markdown"
-            aria-label="Export conversation as Markdown"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              data-testid="export-btn"
+              className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
+              style={{ color: "var(--color-text)" }}
+              onClick={() => setExportDropdownOpen((o) => !o)}
+              title="Export conversation"
+              aria-label="Export conversation"
+              aria-expanded={exportDropdownOpen}
+              aria-haspopup="true"
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+
+            {exportDropdownOpen && (
+              <div
+                data-testid="export-dropdown"
+                className="absolute right-0 mt-1 w-48 rounded-lg border shadow-lg z-50 py-1"
+                style={{
+                  backgroundColor: "var(--color-surface)",
+                  borderColor: "var(--color-border)",
+                }}
+                role="menu"
+              >
+                <button
+                  data-testid="export-markdown-btn"
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-gray-500/10 transition-colors"
+                  style={{ color: "var(--color-text)" }}
+                  onClick={handleExportMarkdown}
+                  role="menuitem"
+                >
+                  {/* Markdown icon (M) */}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M6 8v8l3-4 3 4V8" />
+                    <path d="M18 12l-2-2v4" />
+                  </svg>
+                  Export as Markdown
+                </button>
+                <button
+                  data-testid="export-json-btn"
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-gray-500/10 transition-colors"
+                  style={{ color: "var(--color-text)" }}
+                  onClick={handleExportJson}
+                  role="menuitem"
+                >
+                  {/* JSON icon (braces) */}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M8 3H6a2 2 0 0 0-2 2v2" />
+                    <path d="M4 13v2a2 2 0 0 0 2 2h2" />
+                    <path d="M16 3h2a2 2 0 0 1 2 2v2" />
+                    <path d="M20 13v2a2 2 0 0 1-2 2h-2" />
+                    <path d="M9 10h1" />
+                    <path d="M14 10h1" />
+                    <path d="M9 14h6" />
+                  </svg>
+                  Export as JSON
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

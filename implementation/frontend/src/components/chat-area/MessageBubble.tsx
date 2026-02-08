@@ -296,21 +296,34 @@ function MessageBubbleComponent({
         </button>
       </div>
 
-      {/* Timestamp */}
-      <span
-        data-testid={`timestamp-${message.id}`}
-        className="text-xs mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
-        style={{ color: "var(--color-text)" }}
-        title={new Date(message.created_at).toLocaleString(undefined, {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
-      >
-        {formatTimestamp(message.created_at)}
+      {/* Timestamp with custom tooltip */}
+      <span className="relative group/timestamp">
+        <span
+          data-testid={`timestamp-${message.id}`}
+          className="text-xs mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
+          style={{ color: "var(--color-text)" }}
+        >
+          {formatTimestamp(message.created_at)}
+        </span>
+        <span
+          data-testid={`timestamp-tooltip-${message.id}`}
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] rounded whitespace-nowrap opacity-0 group-hover/timestamp:opacity-100 transition-opacity duration-150 pointer-events-none z-50"
+          style={{
+            background: "var(--color-surface)",
+            color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          {new Date(message.created_at).toLocaleString(undefined, {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </span>
       </span>
     </div>
   );

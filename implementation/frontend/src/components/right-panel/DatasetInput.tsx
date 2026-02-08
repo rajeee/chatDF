@@ -12,6 +12,21 @@ import { apiPost, TimeoutError } from "@/api/client";
 
 const URL_REGEX = /^https?:\/\/[^/]+\.[^/]+/;
 
+/** Patterns that suggest the URL points to a data source (no warning needed). */
+const DATA_URL_PATTERNS = [
+  /\.parquet(\.\w+)?$/i,
+  /datasets?\//i,
+  /\bdata\./i,
+  /s3\.amazonaws\.com/i,
+  /huggingface\.co/i,
+  /storage\.googleapis\.com/i,
+];
+
+interface ValidationResult {
+  error: string | null;
+  warning: string | null;
+}
+
 interface DatasetInputProps {
   conversationId: string;
   datasetCount: number;
@@ -20,6 +35,8 @@ interface DatasetInputProps {
 export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [validated, setValidated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -35,19 +52,24 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
   const atLimit = datasetCount >= 50;
 
-  // Validate a URL synchronously, returning an error string or null.
+  // Validate a URL synchronously, returning error and/or warning.
   const validate = useCallback(
-    (value: string): string | null => {
+    (value: string): ValidationResult => {
       if (value.trim() === "") {
-        return null;
+        return { error: null, warning: null };
       }
       if (!URL_REGEX.test(value)) {
-        return "Invalid URL format";
+        return { error: "Invalid URL format", warning: null };
       }
       if (datasets.some((d) => d.url === value)) {
-        return "This dataset is already loaded";
+        return { error: "This dataset is already loaded", warning: null };
       }
-      return null;
+      // Check for data-URL patterns; warn if none match.
+      const looksLikeData = DATA_URL_PATTERNS.some((re) => re.test(value));
+      const warn = looksLikeData
+        ? null
+        : "This URL doesn't look like a Parquet dataset. ChatDF works best with Parquet files.";
+      return { error: null, warning: warn };
     },
     [datasets]
   );
@@ -56,28 +78,35 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   useEffect(() => {
     if (url.trim() === "") {
       setError(null);
+      setWarning(null);
+      setValidated(false);
       return;
     }
 
     const timer = setTimeout(() => {
-      setError(validate(url));
+      const result = validate(url);
+      setError(result.error);
+      setWarning(result.warning);
+      setValidated(true);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [url, validate]);
 
-  // Clear error immediately on input change.
+  // Clear error and warning immediately on input change.
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setUrl(e.target.value);
     setError(null);
+    setWarning(null);
+    setValidated(false);
   }
 
   async function submitUrl(urlToSubmit: string) {
     if (urlToSubmit.trim() === "" || isSubmitting) return;
 
-    const validationError = validate(urlToSubmit);
-    if (validationError) {
-      setError(validationError);
+    const result = validate(urlToSubmit);
+    if (result.error) {
+      setError(result.error);
       return;
     }
 
@@ -117,6 +146,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
 
       setUrl("");
       setError(null);
+      setWarning(null);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 1000);
       success("Dataset added successfully");
@@ -185,7 +215,15 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             className="w-full rounded border px-2 py-1 text-sm disabled:opacity-50"
             style={{
               backgroundColor: "var(--color-surface)",
-              borderColor: showSuccess ? "#22c55e" : "var(--color-border)",
+              borderColor: showSuccess
+                ? "#22c55e"
+                : error
+                  ? "#ef4444"
+                  : warning
+                    ? "#f59e0b"
+                    : validated && url.trim() && !error && !warning
+                      ? "#22c55e80"
+                      : "var(--color-border)",
               color: "var(--color-text)",
               paddingRight: url && !atLimit && !isSubmitting ? "1.75rem" : undefined,
               transition: "border-color 300ms ease",
@@ -196,7 +234,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
               type="button"
               data-testid="clear-url-btn"
               aria-label="Clear URL"
-              onClick={() => { setUrl(""); setError(null); }}
+              onClick={() => { setUrl(""); setError(null); setWarning(null); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity duration-150"
               style={{ color: "var(--color-text)" }}
             >
@@ -232,6 +270,11 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
       {error && (
         <p className="mt-1 text-sm text-red-500" data-testid="dataset-input-error">
           {error}
+        </p>
+      )}
+      {!error && warning && (
+        <p className="mt-1 text-sm" style={{ color: "#f59e0b" }} data-testid="dataset-input-warning">
+          {warning}
         </p>
       )}
     </div>

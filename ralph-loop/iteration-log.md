@@ -45,3 +45,5 @@ Track each improvement cycle: what was done, what was learned.
 | 39 | 2026-02-08 | Mobile-responsive right panel with overlay toggle | M1 | 346/407 frontend, 64/65 backend | 023873a |
 | 40 | 2026-02-08 | Mobile auto-close left panel on conversation select | M2 | 346/409 frontend, 64/65 backend | 99b016a |
 | 41 | 2026-02-08 | Responsive chat input layout for narrow screens | M3 (partial 41), M4 | 355/418 frontend, 64/65 backend | bff0ce9 |
+| 42 | 2026-02-08 | Focus trap for modal dialogs (accessibility) | A2 | 369/434 frontend, 64/65 backend | 31919d2 |
+| 43 | 2026-02-08 | Always-visible copy-message button | U23 | 369/434 frontend, 64/65 backend | 4a74850 |

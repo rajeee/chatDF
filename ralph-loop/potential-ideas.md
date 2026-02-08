@@ -41,7 +41,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | C3 | Optimistic UI updates for message send | 3 | 2 | 1.5 | pending |
 | C4 | Empty states for all lists (no conversations, no datasets) | 3 | 2 | 1.5 | pending |
 | C5 | Request timeout handling with user-friendly errors | 3 | 2 | 1.5 | pending |
-| C6 | Copy code block button in markdown responses | 4 | 2 | 2.0 | pending |
+| C6 | Copy code block button in markdown responses | 4 | 2 | 2.0 | done |
 | C7 | Copy SQL query button in message bubbles | 3 | 1 | 3.0 | done |
 | C8 | Confirmation dialogs for destructive actions (delete conversation/dataset) | 3 | 2 | 1.5 | pending |
 | C9 | Rate limit warning banner with remaining tokens | 2 | 1 | 2.0 | pending |

@@ -57,6 +57,14 @@ Insights accumulated through improvement iterations.
 - **Helper methods on store**: Providing convenience methods (`success()`, `error()`, `info()`) directly on the store makes toast usage simple and consistent across components. No need to call `addToast()` directly.
 - **Integration best practices**: Add toast notifications to mutation callbacks (`onSuccess`, `onError`) in TanStack Query for automatic feedback on async operations. Shows both inline validation errors AND toast notifications for comprehensive user feedback.
 
+### Iteration 10 (2026-02-08)
+- **Custom ReactMarkdown components**: Created custom `code` component renderer for ReactMarkdown to add copy buttons to code blocks. Pass components prop to ReactMarkdown with custom renderers: `components={{ code: CodeBlock }}`.
+- **Inline vs block code handling**: Check the `inline` prop to differentiate between inline `code` and fenced code blocks. Inline code renders as simple `<code>` tag, block code gets full UI with copy button and language label.
+- **DOM nesting warnings with markdown**: ReactMarkdown wraps content in `<p>` tags by default, causing warnings when rendering block elements like `<div>` inside. Fixed by adding custom `p` renderer that detects block-level children and renders them without wrapping.
+- **Language extraction from className**: ReactMarkdown passes language as className in format `language-python`. Extract with `className?.replace(/^language-/, "")`.
+- **Test clipboard API**: For testing clipboard functionality, use `Object.defineProperty(navigator, "clipboard", {...})` in global beforeEach (not nested within describe blocks) to ensure proper mock setup. Keep tests simple and focused on structure/rendering rather than complex interaction testing.
+- **High-impact polish features**: Copy buttons on code blocks are immediately noticeable and appreciated by users. Small UI additions that solve common pain points (copying code from AI responses) have outsized impact on perceived quality.
+
 ---
 
 ## General Principles

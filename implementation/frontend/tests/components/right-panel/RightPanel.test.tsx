@@ -49,6 +49,15 @@ describe("RP-EMPTY-1: Shows empty state when no datasets", () => {
     expect(emptyStateSvg).toBeInTheDocument();
     expect(emptyStateSvg).toHaveClass("w-16", "h-16", "opacity-20");
   });
+
+  it("empty state icon has floating animation class", () => {
+    useDatasetStore.setState({ datasets: [] });
+
+    const { container } = renderWithProviders(<RightPanel />);
+
+    const emptyStateSvg = container.querySelector('[data-testid="datasets-empty-state"] svg');
+    expect(emptyStateSvg).toHaveClass("empty-state-float");
+  });
 });
 
 describe("RP-MOBILE-1: Mobile responsive behavior", () => {

@@ -133,6 +133,63 @@ select:focus-visible {
   box-shadow: 0 0 0 2px var(--color-accent);
 }
 
+/* Prompt chip: interactive hover with lift & glow */
+.prompt-chip {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.prompt-chip:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 12px var(--color-shadow);
+  border-color: var(--color-accent);
+}
+
+.prompt-chip:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+/* Gentle floating animation for empty-state icons */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.empty-state-float {
+  animation: gentleFloat 3s ease-in-out infinite;
+}
+
+/* Onboarding fade-in for content sections */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-fade-in {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.onboarding-fade-in-delayed {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.15s forwards;
+}
+
+.onboarding-fade-in-delayed-2 {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.3s forwards;
+}
+
 /* Touch device support: show action buttons that are normally hover-only.
    On devices without hover (phones, tablets), these buttons would be permanently
    invisible since there's no hover state. Show them at subtle opacity instead. */

@@ -212,6 +212,73 @@ describe("OB-5: SuggestedPrompts shown when datasets exist but no messages", () 
   });
 });
 
+describe("OB-ANIM: Prompt chips and onboarding have animation classes", () => {
+  it("prompt chips in OnboardingGuide have prompt-chip class for hover effects", () => {
+    setDatasetsLoaded([IRIS_DATASET]);
+    const onSendPrompt = vi.fn();
+
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    const chipText = SAMPLE_PROMPT_CHIPS[0];
+    const chip = screen.getByText(chipText);
+    expect(chip).toHaveClass("prompt-chip");
+  });
+
+  it("prompt chips in SuggestedPrompts have prompt-chip class for hover effects", () => {
+    const onSendPrompt = vi.fn();
+
+    renderWithProviders(
+      <SuggestedPrompts
+        datasetNames={[IRIS_DATASET.name]}
+        onSendPrompt={onSendPrompt}
+      />
+    );
+
+    const buttons = screen.getAllByRole("button");
+    for (const button of buttons) {
+      expect(button).toHaveClass("prompt-chip");
+    }
+  });
+
+  it("OnboardingGuide title has onboarding-fade-in class", () => {
+    const onSendPrompt = vi.fn();
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    const title = screen.getByText("ChatDF");
+    expect(title).toHaveClass("onboarding-fade-in");
+  });
+
+  it("OnboardingGuide description has onboarding-fade-in-delayed class", () => {
+    const onSendPrompt = vi.fn();
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    const desc = screen.getByText(/Chat with your data using natural language/);
+    expect(desc).toHaveClass("onboarding-fade-in-delayed");
+  });
+
+  it("Try with sample data button has prompt-chip class", () => {
+    const onSendPrompt = vi.fn();
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    const button = screen.getByRole("button", { name: /Try with sample data/ });
+    expect(button).toHaveClass("prompt-chip");
+  });
+
+  it("SuggestedPrompts header text has onboarding-fade-in class", () => {
+    const onSendPrompt = vi.fn();
+
+    renderWithProviders(
+      <SuggestedPrompts
+        datasetNames={[IRIS_DATASET.name]}
+        onSendPrompt={onSendPrompt}
+      />
+    );
+
+    const header = screen.getByText("Try asking a question about your data");
+    expect(header).toHaveClass("onboarding-fade-in");
+  });
+});
+
 describe("OB-6: Clicking prompt chip calls onSendPrompt", () => {
   it("calls onSendPrompt with chip text in OnboardingGuide", async () => {
     setDatasetsLoaded([IRIS_DATASET]);

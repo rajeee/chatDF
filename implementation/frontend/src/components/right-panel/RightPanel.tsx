@@ -119,7 +119,7 @@ export function RightPanel() {
               className="flex flex-col items-center justify-center py-12 px-4 text-center"
             >
               <svg
-                className="w-16 h-16 mb-4 opacity-20"
+                className="w-16 h-16 mb-4 opacity-20 empty-state-float"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

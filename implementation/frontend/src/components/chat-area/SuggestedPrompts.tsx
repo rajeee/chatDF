@@ -30,17 +30,17 @@ export function SuggestedPrompts({
       className="flex-1 flex flex-col items-center justify-center px-8 py-12 space-y-4"
     >
       <p
-        className="text-sm font-medium"
+        className="text-sm font-medium onboarding-fade-in"
         style={{ color: "var(--color-text-muted)" }}
       >
         Try asking a question about your data
       </p>
-      <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+      <div className="flex flex-wrap gap-2 justify-center max-w-lg onboarding-fade-in-delayed">
         {suggestions.map((suggestion) => (
           <button
             key={suggestion}
             onClick={() => onSendPrompt(suggestion)}
-            className="px-4 py-2 rounded-full text-sm transition-colors cursor-pointer"
+            className="prompt-chip px-4 py-2 rounded-full text-sm cursor-pointer"
             style={{
               backgroundColor: "var(--color-surface)",
               color: "var(--color-text)",

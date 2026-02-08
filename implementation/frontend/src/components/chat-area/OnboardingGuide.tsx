@@ -40,13 +40,13 @@ export function OnboardingGuide({ onSendPrompt }: OnboardingGuideProps) {
     >
       {/* Title and description */}
       <h1
-        className="text-3xl font-bold"
+        className="text-3xl font-bold onboarding-fade-in"
         style={{ color: "var(--color-text)" }}
       >
         ChatDF
       </h1>
       <p
-        className="text-base max-w-md text-center"
+        className="text-base max-w-md text-center onboarding-fade-in-delayed"
         style={{ color: "var(--color-text-muted)" }}
       >
         Chat with your data using natural language
@@ -55,7 +55,7 @@ export function OnboardingGuide({ onSendPrompt }: OnboardingGuideProps) {
       {/* Before data loaded: step-by-step guide + CTA */}
       {!hasDatasets && (
         <>
-          <ol className="space-y-4 text-sm max-w-sm w-full">
+          <ol className="space-y-4 text-sm max-w-sm w-full onboarding-fade-in-delayed-2">
             <li className="flex items-start gap-3">
               <span
                 className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold"
@@ -106,7 +106,7 @@ export function OnboardingGuide({ onSendPrompt }: OnboardingGuideProps) {
           <button
             onClick={handleTrySample}
             disabled={sampleLoading}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50"
+            className="prompt-chip px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 onboarding-fade-in-delayed-2"
             style={{
               backgroundColor: "var(--color-accent)",
               color: "var(--color-bg)",
@@ -119,12 +119,12 @@ export function OnboardingGuide({ onSendPrompt }: OnboardingGuideProps) {
 
       {/* After data loaded: prompt chips */}
       {hasDatasets && (
-        <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+        <div className="flex flex-wrap gap-2 justify-center max-w-lg onboarding-fade-in-delayed">
           {SAMPLE_PROMPT_CHIPS.map((chip) => (
             <button
               key={chip}
               onClick={() => onSendPrompt(chip)}
-              className="px-4 py-2 rounded-full text-sm transition-colors cursor-pointer"
+              className="prompt-chip px-4 py-2 rounded-full text-sm cursor-pointer"
               style={{
                 backgroundColor: "var(--color-surface)",
                 color: "var(--color-text)",

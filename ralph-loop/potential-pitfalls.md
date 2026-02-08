@@ -16,6 +16,3 @@ Risks and traps to watch for during improvement iterations.
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts. Test immediate state instead.
 - **jsdom ignores layout and media queries**: `offsetParent` is always null; `hidden lg:flex` means always hidden. Test class/attribute presence, not computed styles.
 - **Pre-existing test failures (~60)**: API client/routing tests broken since iteration 18. Don't debug unless specifically tasked.
-
-## Loop Stability
-- **Claude CLI can hang silently**: Use `timeout` command to cap each invocation to ~15 minutes max.

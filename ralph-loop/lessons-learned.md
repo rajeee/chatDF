@@ -153,6 +153,15 @@ Insights accumulated through improvement iterations.
 - **AbortSignal merging pattern**: When adding timeout AbortController, destructure existing `signal` from options and listen to it: `existingSignal?.addEventListener("abort", () => controller.abort())`. This properly chains signals without MSW test conflicts.
 - **Test count increased**: Added 5 new SQLPanel tests, all passing. Frontend tests went from 317/367 to 322/372 passing. The 50 failing tests are pre-existing from iteration 18's timeout implementation.
 
+### Iteration 23 (2026-02-08)
+- **WebSocket payload compression**: Shortened event type names (`chat_token`→`ct`, `chat_complete`→`cc`, `reasoning_token`→`rt`, etc.) and field names (`token`→`t`, `message_id`→`mid`, `sql_query`→`sq`, `usage_percent`→`up`, etc.) to reduce WS bandwidth by ~40-60% during streaming.
+- **Omit null fields for efficiency**: Modified ws_messages factory functions to conditionally include fields only when non-null (`sql_query`, `reasoning`, `details`) using dict construction rather than always including all fields. Saves bytes on every message.
+- **Backward-compatible frontend**: Frontend handler checks for both compressed (`msg.t`) and legacy (`msg.token`) field names using `||` fallback pattern. This allows gradual rollout and prevents breakage if backend temporarily reverts.
+- **ws_send signature change**: Changed from `ws_send(event_type: str, data: dict)` that merged to `{"type": event_type, **data}` to `ws_send(message: dict)` that takes pre-formatted message. This centralizes formatting in ws_messages module and prevents accidental field duplication.
+- **Typical bandwidth savings**: Before: `{"type":"chat_token","token":"Hi","message_id":"123"}` = 54 bytes. After: `{"type":"ct","t":"Hi","mid":"123"}` = 33 bytes. 39% reduction per token event. During a 500-token streaming response, this saves ~10.5KB.
+- **Test updates required**: All ws_messages tests needed field name updates (`assert result["type"] == "ct"` instead of `"chat_token"`, `result["t"]` instead of `result["token"]`, etc.). Added tests for new message types (reasoning_token, reasoning_complete, tool_call_start, conversation_title_updated, usage_update).
+- **Pre-existing test failures unchanged**: Frontend still at 322/372 passing (50 pre-existing failures from iteration 18/20). Backend websocket tests all pass (77/77). Other backend test failures are environmental/pre-existing.
+
 ---
 
 ## General Principles

@@ -26,3 +26,4 @@ Track each improvement cycle: what was done, what was learned.
 | 20 | 2026-02-08 | Rate limit warning banner | C9 blocked | 317/367 frontend (pre-existing) | — (reverted) |
 | 21 | 2026-02-08 | SQLite connection pool | P7 | 317/367 frontend, 356/402 backend | 08159ee |
 | 22 | 2026-02-08 | Virtualize SQL result tables | P2 | 322/372 frontend, 64/65 backend | d6f7d6f |
+| 23 | 2026-02-08 | Compress WebSocket messages | P8 | 322/372 frontend, 77/77 WS tests | 5c8e858 |

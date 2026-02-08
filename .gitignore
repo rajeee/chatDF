@@ -47,3 +47,6 @@ screenshots/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Ralph-loop logs
+ralph-loop/logs/*.pid

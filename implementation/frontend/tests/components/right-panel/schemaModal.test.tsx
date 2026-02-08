@@ -26,6 +26,7 @@ import { useDatasetStore } from "@/stores/datasetStore";
 import { server } from "../../helpers/mocks/server";
 import { http, HttpResponse } from "msw";
 import { SchemaModal } from "@/components/right-panel/SchemaModal";
+import * as apiClient from "@/api/client";
 
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {
@@ -151,24 +152,71 @@ describe("SM-RENAME-1: Rename on blur saves", () => {
 });
 
 describe("SM-REFRESH-1: Refresh button calls API", () => {
-  it("shows spinner during refresh and calls POST endpoint", async () => {
-    let refreshCalled = false;
-    server.use(
-      http.post("/conversations/:id/datasets/:datasetId/refresh", () => {
-        refreshCalled = true;
-        return HttpResponse.json({
-          row_count: 2000,
-          column_count: 6,
-          columns: [
-            { name: "id", type: "Int64" },
-            { name: "product", type: "Utf8" },
-            { name: "price", type: "Float64" },
-            { name: "created", type: "DateTime" },
-            { name: "active", type: "Boolean" },
-            { name: "new_col", type: "String" },
-          ],
-        });
-      })
+  it("calls apiPost and updates store with refreshed schema columns", async () => {
+    const spy = vi.spyOn(apiClient, "apiPost").mockResolvedValue({
+      row_count: 2000,
+      column_count: 3,
+      schema: {
+        columns: [
+          { name: "x", type: "Int64" },
+          { name: "y", type: "Float64" },
+          { name: "z", type: "Utf8" },
+        ],
+      },
+    });
+
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    const user = userEvent.setup();
+    renderWithProviders(<SchemaModal />);
+
+    await user.click(screen.getByRole("button", { name: /refresh schema/i }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        "/conversations/conv-1/datasets/ds-1/refresh"
+      );
+      const ds = useDatasetStore.getState().datasets[0];
+      expect(ds.row_count).toBe(2000);
+      expect(ds.column_count).toBe(3);
+      const cols = JSON.parse(ds.schema_json);
+      expect(cols).toHaveLength(3);
+      expect(cols[0].name).toBe("x");
+    });
+
+    spy.mockRestore();
+  });
+
+  it("handles null schema in refresh response gracefully", async () => {
+    const spy = vi.spyOn(apiClient, "apiPost").mockResolvedValue({
+      row_count: 0,
+      column_count: 0,
+      schema: null,
+    });
+
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    const user = userEvent.setup();
+    renderWithProviders(<SchemaModal />);
+
+    await user.click(screen.getByRole("button", { name: /refresh schema/i }));
+
+    await waitFor(() => {
+      const ds = useDatasetStore.getState().datasets[0];
+      expect(ds.row_count).toBe(0);
+      expect(ds.schema_json).toBe("[]");
+    });
+
+    spy.mockRestore();
+  });
+
+  it("shows error message when refresh fails", async () => {
+    const spy = vi.spyOn(apiClient, "apiPost").mockRejectedValue(
+      new Error("Network error")
     );
 
     const dataset = makeDataset();
@@ -178,14 +226,36 @@ describe("SM-REFRESH-1: Refresh button calls API", () => {
     const user = userEvent.setup();
     renderWithProviders(<SchemaModal />);
 
-    const refreshBtn = screen.getByRole("button", {
-      name: /refresh schema/i,
-    });
-    await user.click(refreshBtn);
+    await user.click(screen.getByRole("button", { name: /refresh schema/i }));
 
     await waitFor(() => {
-      expect(refreshCalled).toBe(true);
+      expect(screen.getByText("Network error")).toBeInTheDocument();
     });
+
+    spy.mockRestore();
+  });
+});
+
+describe("parseColumns handles wrapped format", () => {
+  it("renders columns from wrapped {columns: [...]} schema_json", () => {
+    const dataset = makeDataset({
+      schema_json: JSON.stringify({
+        columns: [
+          { name: "a", type: "Int64" },
+          { name: "b", type: "Utf8" },
+        ],
+      }),
+      column_count: 2,
+    });
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    expect(screen.getByText("a")).toBeInTheDocument();
+    expect(screen.getByText("b")).toBeInTheDocument();
+    expect(screen.getByText("Integer")).toBeInTheDocument();
+    expect(screen.getByText("Text")).toBeInTheDocument();
   });
 });
 

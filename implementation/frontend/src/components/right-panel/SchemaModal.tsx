@@ -48,6 +48,10 @@ function parseColumns(schemaJson: string): Column[] {
     if (Array.isArray(parsed)) {
       return parsed;
     }
+    // Handle wrapped format: {"columns": [...]}
+    if (parsed && Array.isArray(parsed.columns)) {
+      return parsed.columns;
+    }
     return [];
   } catch {
     return [];
@@ -141,13 +145,13 @@ export function SchemaModal() {
       const result = await apiPost<{
         row_count: number;
         column_count: number;
-        columns: Column[];
+        schema: { columns: Column[] } | null;
       }>(`/conversations/${conversationId}/datasets/${dataset!.id}/refresh`);
 
       updateDataset(dataset!.id, {
         row_count: result.row_count,
         column_count: result.column_count,
-        schema_json: JSON.stringify(result.columns),
+        schema_json: JSON.stringify(result.schema?.columns ?? []),
       });
     } catch (err: unknown) {
       const message =

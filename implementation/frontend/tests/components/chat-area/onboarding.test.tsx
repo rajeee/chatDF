@@ -2,7 +2,7 @@
 // Verifies: spec/frontend/chat_area/onboarding/plan.md
 //
 // OB-1: Renders onboarding when no datasets and no messages
-// OB-2: "Try with sample data" button triggers dataset addition
+// OB-2: "Try with preset sources" button opens preset modal
 // OB-3: Prompt chips appear after data loads
 // OB-4: Hidden when messages exist
 // OB-5: SuggestedPrompts shown when datasets exist but no messages
@@ -19,7 +19,7 @@ import {
 import { OnboardingGuide } from "@/components/chat-area/OnboardingGuide";
 import { SuggestedPrompts } from "@/components/chat-area/SuggestedPrompts";
 import { ChatArea } from "@/components/chat-area/ChatArea";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useUiStore } from "@/stores/uiStore";
 import { SAMPLE_DATASET_URL, SAMPLE_PROMPT_CHIPS } from "@/lib/constants";
 
 const IRIS_DATASET: Dataset = {
@@ -37,37 +37,41 @@ beforeEach(() => {
   resetAllStores();
 });
 
-describe("OB-1: Renders onboarding when no datasets and no messages", () => {
-  it("renders the step-by-step guide", () => {
+describe("OB-1: Renders simplified onboarding when no datasets and no messages", () => {
+  it("renders the app title", () => {
     const onSendPrompt = vi.fn();
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
     expect(screen.getByTestId("onboarding-guide")).toBeInTheDocument();
-    expect(screen.getByText(/Add a dataset/)).toBeInTheDocument();
-    expect(screen.getByText(/Ask questions/)).toBeInTheDocument();
-    expect(screen.getByText(/Explore results/)).toBeInTheDocument();
+    expect(screen.getByText("chatDF")).toBeInTheDocument();
   });
 
-  it("renders the app title and description", () => {
+  it("renders the Try with preset sources button", () => {
     const onSendPrompt = vi.fn();
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
-    expect(screen.getByText("ChatDF")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Chat with your data using natural language/)
-    ).toBeInTheDocument();
-  });
-
-  it("renders the Try with sample data button", () => {
-    const onSendPrompt = vi.fn();
-    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
-
-    const button = screen.getByRole("button", { name: /Try with sample data/ });
+    const button = screen.getByRole("button", { name: /Try with preset sources/ });
     expect(button).toBeInTheDocument();
     expect(button).toBeEnabled();
   });
 
-  it("does not show prompt chips before sample data is loaded", () => {
+  it("renders the 'or load your own data' text", () => {
+    const onSendPrompt = vi.fn();
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    expect(screen.getByText(/or load your own data/)).toBeInTheDocument();
+  });
+
+  it("does not show the old numbered step list", () => {
+    const onSendPrompt = vi.fn();
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    expect(screen.queryByText(/Add a dataset/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ask questions/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Explore results/)).not.toBeInTheDocument();
+  });
+
+  it("does not show prompt chips before data is loaded", () => {
     const onSendPrompt = vi.fn();
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
@@ -77,44 +81,20 @@ describe("OB-1: Renders onboarding when no datasets and no messages", () => {
   });
 });
 
-describe("OB-2: Try with sample data button triggers dataset addition", () => {
-  it("calls datasetStore.addDataset when clicked", async () => {
+describe("OB-2: Try with preset sources button opens preset modal", () => {
+  it("opens preset modal when clicked", async () => {
     const user = userEvent.setup();
     const onSendPrompt = vi.fn();
-    const addDatasetSpy = vi.spyOn(useDatasetStore.getState(), "addDataset");
+    const openPresetSpy = vi.spyOn(useUiStore.getState(), "openPresetModal");
 
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
-    const button = screen.getByRole("button", { name: /Try with sample data/ });
+    const button = screen.getByRole("button", { name: /Try with preset sources/ });
     await user.click(button);
 
-    expect(addDatasetSpy).toHaveBeenCalledTimes(1);
-    const addedDataset = addDatasetSpy.mock.calls[0][0];
-    expect(addedDataset.url).toBe(SAMPLE_DATASET_URL);
-    expect(addedDataset.name).toBe("iris");
-    expect(addedDataset.status).toBe("loading");
+    expect(openPresetSpy).toHaveBeenCalledTimes(1);
 
-    addDatasetSpy.mockRestore();
-  });
-
-  it("transitions to prompt chips after clicking sample data button", async () => {
-    const user = userEvent.setup();
-    const onSendPrompt = vi.fn();
-
-    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
-
-    const button = screen.getByRole("button", { name: /Try with sample data/ });
-    await user.click(button);
-
-    // After click, the dataset is added synchronously to the store,
-    // so the component transitions: the button disappears, prompt chips appear.
-    expect(
-      screen.queryByRole("button", { name: /Try with sample data/ })
-    ).not.toBeInTheDocument();
-
-    for (const chip of SAMPLE_PROMPT_CHIPS) {
-      expect(screen.getByText(chip)).toBeInTheDocument();
-    }
+    openPresetSpy.mockRestore();
   });
 });
 
@@ -130,25 +110,24 @@ describe("OB-3: Prompt chips appear after data loads", () => {
     }
   });
 
-  it("hides the step-by-step guide when datasets are loaded", () => {
-    setDatasetsLoaded([IRIS_DATASET]);
-    const onSendPrompt = vi.fn();
-
-    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
-
-    // Step guide should be hidden when datasets exist
-    expect(screen.queryByText(/Add a dataset/)).not.toBeInTheDocument();
-  });
-
-  it("hides the Try with sample data button when datasets are loaded", () => {
+  it("hides the Try with preset sources button when datasets are loaded", () => {
     setDatasetsLoaded([IRIS_DATASET]);
     const onSendPrompt = vi.fn();
 
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
     expect(
-      screen.queryByRole("button", { name: /Try with sample data/ })
+      screen.queryByRole("button", { name: /Try with preset sources/ })
     ).not.toBeInTheDocument();
+  });
+
+  it("hides the 'or load your own data' text when datasets are loaded", () => {
+    setDatasetsLoaded([IRIS_DATASET]);
+    const onSendPrompt = vi.fn();
+
+    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
+
+    expect(screen.queryByText(/or load your own data/)).not.toBeInTheDocument();
   });
 });
 
@@ -244,23 +223,15 @@ describe("OB-ANIM: Prompt chips and onboarding have animation classes", () => {
     const onSendPrompt = vi.fn();
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
-    const title = screen.getByText("ChatDF");
+    const title = screen.getByText("chatDF");
     expect(title).toHaveClass("onboarding-fade-in");
   });
 
-  it("OnboardingGuide description has onboarding-fade-in-delayed class", () => {
+  it("Try with preset sources button has prompt-chip class", () => {
     const onSendPrompt = vi.fn();
     renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
 
-    const desc = screen.getByText(/Chat with your data using natural language/);
-    expect(desc).toHaveClass("onboarding-fade-in-delayed");
-  });
-
-  it("Try with sample data button has prompt-chip class", () => {
-    const onSendPrompt = vi.fn();
-    renderWithProviders(<OnboardingGuide onSendPrompt={onSendPrompt} />);
-
-    const button = screen.getByRole("button", { name: /Try with sample data/ });
+    const button = screen.getByRole("button", { name: /Try with preset sources/ });
     expect(button).toHaveClass("prompt-chip");
   });
 

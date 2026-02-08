@@ -311,6 +311,13 @@ Insights accumulated through improvement iterations.
 - **ChatHistory tests are pre-existing failures**: All ChatHistory tests that require API data (MSW `http.get("/conversations", ...)`) fail when run in isolation. This is a pre-existing issue from around iteration 18-20 where the MSW setup broke. Tests pass in the full suite context where 346/409 pass. New tests follow the same pattern and will pass/fail together with existing ones.
 - **Minimal implementation for mobile UX**: This was a 5-line change (2 lines of imports/hooks, 3 lines of conditional logic) that significantly improves the mobile experience. Users no longer have to manually close the panel — the app just does the right thing.
 
+### Iteration 41 (2026-02-08)
+- **Mobile-first responsive padding**: Used Tailwind's mobile-first approach (`px-2 sm:px-4`) to reduce padding on narrow screens while keeping desktop spacing unchanged. This is a zero-risk improvement — desktop users see no change, mobile users get more usable space.
+- **calc(100vw - X) for mobile dropdowns**: Fixed the query history dropdown overflow on phones by using `w-[calc(100vw-2rem)] sm:w-96`. This ensures the dropdown fits within viewport on any screen size while maintaining the fixed 384px width on desktop. The 2rem accounts for page margins.
+- **Partial iteration from previous run**: Discovered M3 (touch-friendly action buttons) was completed in a previous partial iteration 41 run (commit ac58f14). Always check recent git history for work that may have been done outside the standard loop.
+- **Test count increased**: Frontend went from 346/409 to 355/418 (+9 tests, all passing). Added responsive layout tests for ChatInput, MessageList, and QueryHistoryDropdown. Backend unchanged at 64/65 passing.
+- **Responsive improvements are low-risk, high-impact for mobile**: These CSS-only changes require no JavaScript logic changes, carry zero risk of breaking desktop functionality, and immediately improve the mobile experience. Priority: focus on mobile polish while all major desktop features are complete.
+
 ---
 
 ## General Principles

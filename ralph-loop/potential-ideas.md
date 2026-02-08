@@ -6,6 +6,10 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
+| U25 | Data grid row hover effect (subtle bg highlight) | 3 | 1 | 3.0 | Pending |
+| U26 | SQL modal entrance animation (scale+fade) | 3 | 1 | 3.0 | Pending |
+| U27 | Stagger animation for dataset cards appearing | 3 | 2 | 1.5 | Pending |
+| U28 | Loading state visual hierarchy (color-coded phases) | 3 | 2 | 1.5 | Pending |
 
 ## Performance & Resource Efficiency
 

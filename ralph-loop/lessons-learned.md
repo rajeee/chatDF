@@ -287,6 +287,15 @@ Insights accumulated through improvement iterations.
 - **Test count stable**: Frontend remains at 333/392 passing (59 pre-existing failures unchanged). Backend at 64/65 passing (1 pre-existing schema test failure). No new tests added due to complexity of testing ref forwarding patterns.
 - **Small UX improvements compound**: This ~10 line change makes the app feel more responsive and polished. Users switching between conversations no longer need to manually click the input - they can immediately start typing. Priority score 3.0 (impact 3, effort 1).
 
+### Iteration 38 (2026-02-08)
+- **ARIA accessibility is pure additive polish**: Adding `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `role="log"`, `aria-live`, and `aria-current` attributes requires zero behavior changes — just attributes on existing elements. No risk of breaking existing functionality, but massive impact for screen reader users.
+- **Modal ARIA pattern**: Every modal needs three things: (1) `role="dialog"` on the outermost container, (2) `aria-modal="true"` to indicate the page is inert behind it, (3) `aria-labelledby` pointing to the modal title's `id`. The title element gets a matching `id` attribute.
+- **Live regions for chat**: Message lists should have `role="log"` and `aria-live="polite"` so screen readers announce new messages as they arrive. The "polite" setting means announcements wait for the user to finish their current activity rather than interrupting.
+- **aria-current for navigation**: Use `aria-current="page"` on the active item in navigation lists. This is the semantic way to indicate selection, complementing visual highlighting.
+- **Comprehensive audit first, targeted implementation**: Running a thorough accessibility audit first (checking all components for ARIA gaps) allows you to prioritize the highest-impact changes. This iteration focused on the critical gaps (modals, live regions, navigation) while deferring lower-priority items (focus traps, skip links) to future iterations.
+- **Test ARIA attributes structurally**: Test for attribute presence using `toHaveAttribute("role", "dialog")` and verify `id` linkage between `aria-labelledby` and the title element. Simple, reliable tests.
+- **Test count increased**: Frontend went from 333/392 to 337/398 passing (+4 new tests). Backend unchanged at 64/65 passing. All pre-existing failures remain unchanged.
+
 ---
 
 ## General Principles

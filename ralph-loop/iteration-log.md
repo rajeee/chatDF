@@ -41,3 +41,4 @@ Track each improvement cycle: what was done, what was learned.
 | 35 | 2026-02-08 | Loading spinner on delete button | U19 | 331/390 frontend, 64/65 backend | dbba128 |
 | 36 | 2026-02-08 | Loading spinner on retry button | U20 | 333/392 frontend, 64/65 backend | 8d7439b |
 | 37 | 2026-02-08 | Auto-focus chat input on conversation switch | U21 | 333/392 frontend, 64/65 backend | 6d91676 |
+| 38 | 2026-02-08 | ARIA accessibility attributes for modals, messages, navigation | A1 | 337/398 frontend, 64/65 backend | 7a84627 |

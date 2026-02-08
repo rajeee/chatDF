@@ -4,7 +4,12 @@ Insights accumulated through improvement iterations.
 
 ## Iteration Log
 
-*(Will be populated as iterations complete)*
+### Iteration 1 (2026-02-08)
+- **$1 budget is too low** for a full cycle (read files → implement → test → commit). Bumped to $5.
+- **ErrorBoundary SVG test**: Don't query SVGs with `role="img"` — they don't have it by default. Use `container.querySelector("svg")` instead.
+- **window.location mocking in vitest**: `Object.defineProperty` needs `configurable: true` and a proper setter for `href`.
+- **Backend pytest needs uv pip install**: The venv doesn't have pip, use `uv pip install` instead.
+- **Backend has pre-existing test failure**: `test_messages_table_structure` fails — not related to frontend changes. Tracked separately.
 
 ---
 

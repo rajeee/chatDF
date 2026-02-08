@@ -108,6 +108,14 @@ Insights accumulated through improvement iterations.
 - **Hover states on cards**: Cards (like DatasetCard) benefit from `hover:shadow-md` + `hover:border-accent/50` to make them feel clickable without being heavy-handed. Subtle shadow changes are more elegant than color changes for large surface areas.
 - **Test coverage for interactive states**: Testing for className presence (e.g., `expect(button.className).toContain("active:scale-95")`) is simple and effective. Don't test actual animation behavior, just verify the right classes are applied.
 
+### Iteration 17 (2026-02-08)
+- **Production build code splitting**: Configured Vite's `manualChunks` to separate vendor libraries (React, TanStack Query, CodeMirror, React Markdown) into separate chunks. This enables better browser caching since vendor code changes rarely while app code changes frequently.
+- **Build was broken before this iteration**: The `bun run build` command had never worked due to TypeScript errors from test files being included in build. Fixed by creating `tsconfig.build.json` that excludes test files and using `-p tsconfig.build.json` in build script.
+- **vite-env.d.ts required**: Vite requires a `src/vite-env.d.ts` file to declare `ImportMeta.env` types. Without this, `import.meta.env.VITE_*` variables cause TypeScript errors during build.
+- **Manual chunks must reference installed dependencies**: Only include packages in `manualChunks` that are actually installed in `package.json`. Vite will error if you reference a non-existent package (e.g., `remark-gfm` wasn't installed).
+- **Code splitting impact**: With proper chunking, vendor code (636 KB total) is separated from app code (116 KB). When app code changes, users only re-download the small app chunk, not the large vendor libraries.
+- **Pre-existing features found**: Discovered C3 (optimistic UI updates) and C8 (confirmation dialogs) were already implemented in the codebase. Always check existing code before assuming features need implementation.
+
 ---
 
 ## General Principles

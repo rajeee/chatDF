@@ -20,3 +20,4 @@ Track each improvement cycle: what was done, what was learned.
 | 14 | 2026-02-08 | Favicon and meta tags | C10 | 356/356 frontend | d3de012 |
 | 15 | 2026-02-08 | Theme token consolidation | U6 | 356/356 frontend | ea51eca |
 | 16 | 2026-02-08 | Hover/active states | U10 | 356/356 frontend | 7d71492 |
+| 17 | 2026-02-08 | Production build + code splitting | P9 (C3, C8 found pre-existing) | 356/356 frontend | 2ddb601 |

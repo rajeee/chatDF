@@ -49,7 +49,7 @@ export function MessageBubble({
   return (
     <div
       data-testid={`message-row-${message.id}`}
-      className={`flex flex-col ${isUser ? "items-end" : "items-start"} group`}
+      className={`flex flex-col ${isUser ? "items-end" : "items-start"} group message-appear`}
     >
       <div
         data-testid={`message-bubble-${message.id}`}

@@ -420,3 +420,20 @@ describe("Timestamp on hover", () => {
     expect(screen.getByTestId("timestamp-msg-1")).toBeInTheDocument();
   });
 });
+
+describe("Message animations", () => {
+  it("applies message-appear animation class to message rows", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+      makeMessage({ id: "msg-2", role: "assistant", content: "Hi there" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const userRow = screen.getByTestId("message-row-msg-1");
+    const assistantRow = screen.getByTestId("message-row-msg-2");
+
+    expect(userRow).toHaveClass("message-appear");
+    expect(assistantRow).toHaveClass("message-appear");
+  });
+});

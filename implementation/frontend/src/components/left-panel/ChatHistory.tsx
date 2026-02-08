@@ -371,12 +371,12 @@ export function ChatHistory() {
                     data-pinned={conv.is_pinned ? "true" : "false"}
                     data-active={activeConversationId === conv.id ? "true" : "false"}
                     aria-current={activeConversationId === conv.id ? "page" : undefined}
-                    className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-colors ${
+                    className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 ${
                       conv.is_pinned ? "border-l-2 border-blue-400/50" : ""
                     } ${
                       activeConversationId === conv.id
                         ? "bg-blue-500/10"
-                        : "hover:bg-gray-500/10"
+                        : "hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
                     }`}
                     onClick={() => handleSelect(conv.id)}
                   >

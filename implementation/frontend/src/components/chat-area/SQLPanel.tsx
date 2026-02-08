@@ -27,12 +27,16 @@ function ResizeHandle({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => v
   return (
     <div
       onMouseDown={onMouseDown}
-      className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+      className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize hover:opacity-70 transition-opacity duration-150"
       style={{ zIndex: 10 }}
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" className="opacity-40">
-        <path d="M14 14L8 14L14 8Z" fill="currentColor" />
-        <path d="M14 14L11 14L14 11Z" fill="currentColor" />
+      <svg width="16" height="16" viewBox="0 0 16 16" className="opacity-30">
+        <circle cx="8" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="12" cy="8" r="1.2" fill="currentColor" />
+        <circle cx="4" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+        <circle cx="12" cy="4" r="1.2" fill="currentColor" />
       </svg>
     </div>
   );

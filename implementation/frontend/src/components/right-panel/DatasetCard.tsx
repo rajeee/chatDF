@@ -88,7 +88,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
     >
       {/* Loading state */}
       {isLoading && (
-        <>
+        <div className="animate-fade-in">
           <div className="text-sm truncate">{getHostname(dataset.url)}</div>
           <div
             data-testid="dataset-progress-bar"
@@ -100,12 +100,12 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               style={{ backgroundColor: "var(--color-accent)" }}
             />
           </div>
-        </>
+        </div>
       )}
 
       {/* Ready state */}
       {isReady && (
-        <>
+        <div className="animate-fade-in">
           <div className="flex items-baseline gap-2">
             <span className="font-semibold text-sm truncate">
               {dataset.name}
@@ -135,12 +135,12 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
-        </>
+        </div>
       )}
 
       {/* Error state */}
       {isError && (
-        <>
+        <div className="animate-fade-in">
           <div className="text-sm text-red-500 line-clamp-2">
             {dataset.error_message}
           </div>
@@ -189,7 +189,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
-        </>
+        </div>
       )}
     </div>
   );

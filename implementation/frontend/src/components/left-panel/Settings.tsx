@@ -81,14 +81,14 @@ export function Settings() {
       {/* Theme Toggle */}
       <div>
         <div className="text-xs opacity-50 mb-1">Theme</div>
-        <div className="flex rounded overflow-hidden border border-gray-300 dark:border-gray-600">
+        <div className="flex rounded overflow-hidden border border-border">
           <button
             data-testid="theme-light"
             onClick={() => handleThemeChange("light")}
             className={`flex-1 px-2 py-1 text-xs transition-colors ${
               currentTheme === "light"
-                ? "bg-blue-500 text-white"
-                : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
             }`}
           >
             Light
@@ -98,8 +98,8 @@ export function Settings() {
             onClick={() => handleThemeChange("dark")}
             className={`flex-1 px-2 py-1 text-xs transition-colors ${
               currentTheme === "dark"
-                ? "bg-blue-500 text-white"
-                : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
             }`}
           >
             Dark
@@ -109,8 +109,8 @@ export function Settings() {
             onClick={() => handleThemeChange("system")}
             className={`flex-1 px-2 py-1 text-xs transition-colors ${
               currentTheme === "system"
-                ? "bg-blue-500 text-white"
-                : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
             }`}
           >
             System
@@ -121,7 +121,7 @@ export function Settings() {
       {/* Clear All Conversations */}
       <div>
         {showClearConfirm ? (
-          <div className="p-2 border border-red-300 rounded bg-red-50 dark:bg-red-900/20">
+          <div className="p-2 border border-error/30 rounded bg-error/5">
             <p className="text-xs mb-2">
               This will permanently delete all conversations. This action cannot
               be undone.
@@ -129,13 +129,13 @@ export function Settings() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 px-2 py-1 text-xs rounded border hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex-1 px-2 py-1 text-xs rounded border hover:bg-black/5 dark:hover:bg-white/10"
               >
                 Cancel
               </button>
               <button
                 onClick={() => clearAllMutation.mutate()}
-                className="flex-1 px-2 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600"
+                className="flex-1 px-2 py-1 text-xs rounded bg-error text-white hover:opacity-90"
               >
                 Delete All
               </button>
@@ -144,7 +144,7 @@ export function Settings() {
         ) : (
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"
+            className="w-full text-left px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10 text-error"
           >
             Clear all conversations
           </button>
@@ -155,7 +155,7 @@ export function Settings() {
       <div>
         <button
           onClick={() => setShowAbout(true)}
-          className="w-full text-left px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="w-full text-left px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
         >
           About
         </button>
@@ -164,12 +164,12 @@ export function Settings() {
       {/* About Modal */}
       {showAbout && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
           onClick={() => setShowAbout(false)}
         >
           <div
             data-testid="about-modal"
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl"
+            className="bg-surface rounded-lg p-6 max-w-sm mx-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -177,7 +177,7 @@ export function Settings() {
               <button
                 data-testid="close-about-modal"
                 onClick={() => setShowAbout(false)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="opacity-50 hover:opacity-80"
               >
                 X
               </button>

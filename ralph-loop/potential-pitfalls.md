@@ -11,10 +11,8 @@ Risks and traps to watch for during improvement iterations.
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Plotly.js is heavy (~1MB)**: Always lazy-load via `React.lazy()`. Mock with `vi.mock("react-plotly.js", ...)` in tests.
-- **Checkbox + row onClick = double-toggle**: Clicking a checkbox inside a `<tr>` with onClick fires both. Fix with `stopPropagation`.
 
 ## Testing
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.
 - **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
-- **useEffect cleanup kills timers on re-render**: Effects without deps run every render; cleanup clears pending `setTimeout`. Fix: add proper deps array.

@@ -18,3 +18,4 @@ Track each improvement cycle: what was done, what was learned.
 | 12 | 2026-02-08 | Dataset list empty state | C4 | 356/356 frontend | ac6b9e2 |
 | 13 | 2026-02-08 | Streaming re-render optimization | P6 | 356/356 frontend | 549d49c |
 | 14 | 2026-02-08 | Favicon and meta tags | C10 | 356/356 frontend | d3de012 |
+| 15 | 2026-02-08 | Theme token consolidation | U6 | 356/356 frontend | ea51eca |

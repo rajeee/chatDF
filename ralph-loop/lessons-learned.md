@@ -94,6 +94,13 @@ Insights accumulated through improvement iterations.
 - **Zero-code polish wins**: Static HTML/asset improvements like favicons and meta tags provide immediate visual polish without any JavaScript complexity or test burden. High impact for minimal effort.
 - **Validate ideas before implementation**: P5 referenced "debounce search inputs" but no search feature exists in ChatHistory. Always verify the feature exists before planning implementation. Mark aspirational ideas as "blocked" until prerequisite features are built.
 
+### Iteration 15 (2026-02-08)
+- **Theme token consolidation**: Replaced all hardcoded hex colors with Tailwind theme tokens (success, info, white, backdrop). This ensures consistent theming across light/dark modes and makes future color updates trivial.
+- **Remove fallback values from CSS variables**: CSS variable fallbacks like `var(--color-border, #e5e7eb)` are unnecessary once theme tokens are properly defined. Removing fallbacks keeps code cleaner and enforces that all theme colors are defined.
+- **Batch replacements for consistency**: When fixing hardcoded colors, use find-and-replace across multiple files to ensure consistency. Tools like `sed` with global replace can quickly update all instances.
+- **Tailwind utility classes > inline styles**: Prefer `className="bg-accent text-white"` over `style={{ backgroundColor: "var(--color-accent)", color: "#fff" }}`. Tailwind classes are more concise and leverage build-time optimizations.
+- **Theme tokens for semantic colors**: Adding semantic color tokens (success, error, info) makes component code more readable and self-documenting compared to using generic color names or hex values.
+
 ---
 
 ## General Principles

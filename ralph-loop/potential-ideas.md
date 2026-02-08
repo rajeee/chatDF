@@ -60,3 +60,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | U20 | Add loading spinner to DatasetCard retry button during retry | 4 | 1 | 4.0 | done |
 | U21 | Auto-focus chat input when switching conversations | 3 | 1 | 3.0 | done |
 | A1 | Add ARIA dialog/log/navigation attributes for screen readers | 5 | 2 | 2.5 | done |
+| M1 | Mobile-responsive right panel (overlay toggle on small screens) | 5 | 2 | 2.5 | done |
+| M2 | Mobile-responsive left panel close on conversation select | 3 | 1 | 3.0 | pending |
+| M3 | Touch-friendly delete/action buttons (always visible, not hover-only) | 4 | 2 | 2.0 | pending |
+| M4 | Responsive chat input layout for narrow screens | 3 | 2 | 1.5 | pending |

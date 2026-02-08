@@ -296,6 +296,14 @@ Insights accumulated through improvement iterations.
 - **Test ARIA attributes structurally**: Test for attribute presence using `toHaveAttribute("role", "dialog")` and verify `id` linkage between `aria-labelledby` and the title element. Simple, reliable tests.
 - **Test count increased**: Frontend went from 333/392 to 337/398 passing (+4 new tests). Backend unchanged at 64/65 passing. All pre-existing failures remain unchanged.
 
+### Iteration 39 (2026-02-08)
+- **Mobile-responsive right panel**: Made the datasets panel responsive by hiding it on screens below 1024px and rendering it as a fixed overlay when toggled. Added a database icon toggle button to the Header (visible only on mobile) and a close button inside the panel overlay. Uses a single `<aside>` element with conditional CSS classes rather than dual DOM elements.
+- **Single element responsive pattern**: Instead of rendering two separate elements (desktop + mobile) with `hidden lg:flex` / `lg:hidden`, use one element with conditional classes based on state. Mobile classes change dynamically (`hidden` vs `fixed + animate`) while desktop overrides (`lg:flex lg:relative lg:sticky`) always apply. This avoids content duplication and keeps tests working in jsdom (which doesn't support media queries).
+- **jsdom and responsive CSS**: jsdom doesn't apply CSS media queries, so `hidden lg:flex` means the element is always hidden in tests. Responsive-aware components need to account for this in test design — either use a single-element approach or set state so content is visible.
+- **Slide-in animation from right**: Added `slide-in-right` keyframe animation (translateX(100%) → translateX(0)) for mobile panel entrance. Mirroring the existing left panel overlay pattern creates consistent UX.
+- **Backdrop pattern for overlays**: Added `right-panel-backdrop` in AppShell matching the existing `left-panel-backdrop` pattern. Click-to-dismiss backdrop is essential for mobile overlays.
+- **Test count increased**: Frontend went from 337/398 to 346/407 passing (+9 new tests, 0 regressions). Backend unchanged at 64/65 passing. Pre-existing failure count stable at 61.
+
 ---
 
 ## General Principles

@@ -44,9 +44,17 @@ async function fetchWithTimeout(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  // Merge signals if one already exists
+  const { signal: existingSignal, ...restOptions } = options;
+
+  // If there's an existing signal, we need to listen to both
+  if (existingSignal) {
+    existingSignal.addEventListener("abort", () => controller.abort());
+  }
+
   try {
     const response = await fetch(url, {
-      ...options,
+      ...restOptions,
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

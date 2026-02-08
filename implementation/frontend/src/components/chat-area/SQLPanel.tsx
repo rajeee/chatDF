@@ -7,6 +7,7 @@
 // Result modal supports sortable columns and CSV download.
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUiStore } from "@/stores/uiStore";
 import { useCodeMirror } from "@/hooks/useCodeMirror";
 import type { SqlExecution } from "@/stores/chatStore";
@@ -444,6 +445,15 @@ function SQLResultModal({
   const { size, onResizeMouseDown, justResized } = useResizable(400, 200, setPos);
   const { sortKeys, sortedRows, toggleSort, clearSort } = useSortedRows(rows, columns);
 
+  // Virtualization
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: sortedRows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 28, // Estimated row height in pixels
+    overscan: 10, // Render 10 extra rows above/below viewport
+  });
+
   function handleBackdropClick(e: React.MouseEvent) {
     if (e.target === e.currentTarget && !justDragged.current && !justResized.current) {
       onClose();
@@ -504,48 +514,68 @@ function SQLResultModal({
             </div>
           </div>
 
-          {/* Table */}
-          <div className="flex-1 overflow-auto px-4 py-3">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr>
-                  {columns.map((col, i) => {
-                    const keyIdx = sortKeys.findIndex((k) => k.colIdx === i);
-                    return (
-                      <th
-                        key={i}
-                        onClick={() => toggleSort(i)}
-                        className="text-left px-2 py-1 font-medium border-b whitespace-nowrap sticky top-0 cursor-pointer select-none hover:opacity-70"
-                        style={{
-                          borderColor: "var(--color-border)",
-                          backgroundColor: "var(--color-bg)",
-                        }}
-                      >
-                        {col}
-                        {keyIdx >= 0 && (
-                          <SortIndicator dir={sortKeys[keyIdx].dir} rank={keyIdx + 1} />
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((row, rowIdx) => (
-                  <tr key={rowIdx}>
-                    {columns.map((_col, colIdx) => (
-                      <td
-                        key={colIdx}
-                        className="px-2 py-1 border-b whitespace-nowrap"
-                        style={{ borderColor: "var(--color-border)" }}
-                      >
-                        {cellValue(row, colIdx, columns)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Table with virtualization */}
+          <div ref={tableContainerRef} className="flex-1 overflow-auto px-4 py-3">
+            {/* Header - sticky at top */}
+            <div className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-bg)" }}>
+              <div className="flex border-b" style={{ borderColor: "var(--color-border)" }}>
+                {columns.map((col, i) => {
+                  const keyIdx = sortKeys.findIndex((k) => k.colIdx === i);
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => toggleSort(i)}
+                      className="flex-1 text-left px-2 py-1 font-medium whitespace-nowrap cursor-pointer select-none hover:opacity-70 text-xs"
+                      style={{ minWidth: "100px" }}
+                    >
+                      {col}
+                      {keyIdx >= 0 && (
+                        <SortIndicator dir={sortKeys[keyIdx].dir} rank={keyIdx + 1} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Virtualized rows */}
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = sortedRows[virtualRow.index];
+                return (
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div className="flex border-b text-xs" style={{ borderColor: "var(--color-border)" }}>
+                      {columns.map((_col, colIdx) => (
+                        <div
+                          key={colIdx}
+                          className="flex-1 px-2 py-1 whitespace-nowrap"
+                          style={{ minWidth: "100px" }}
+                        >
+                          {cellValue(row, colIdx, columns)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Footer */}

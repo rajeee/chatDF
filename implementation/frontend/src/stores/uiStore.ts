@@ -6,6 +6,7 @@ import type { SqlExecution } from "@/stores/chatStore";
 interface UiState {
   leftPanelOpen: boolean;
   leftPanelWidth: number;
+  rightPanelOpen: boolean;
   rightPanelWidth: number;
   sqlModalOpen: boolean;
   activeSqlExecutions: SqlExecution[];
@@ -19,6 +20,7 @@ interface UiState {
 interface UiActions {
   toggleLeftPanel: () => void;
   setLeftPanelWidth: (w: number) => void;
+  toggleRightPanel: () => void;
   setRightPanelWidth: (w: number) => void;
   openSqlModal: (executions: SqlExecution[]) => void;
   closeSqlModal: () => void;
@@ -37,6 +39,7 @@ export const useUiStore = create<UiState & UiActions>()(
     (set) => ({
       leftPanelOpen: true,
       leftPanelWidth: 260,
+      rightPanelOpen: true,
       rightPanelWidth: 300,
       sqlModalOpen: false,
       activeSqlExecutions: [],
@@ -51,6 +54,9 @@ export const useUiStore = create<UiState & UiActions>()(
 
       setLeftPanelWidth: (w) =>
         set({ leftPanelWidth: Math.max(180, Math.min(400, w)) }),
+
+      toggleRightPanel: () =>
+        set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
 
       setRightPanelWidth: (w) =>
         set({ rightPanelWidth: Math.max(200, Math.min(500, w)) }),
@@ -90,6 +96,7 @@ export const useUiStore = create<UiState & UiActions>()(
       partialize: (state) => ({
         leftPanelOpen: state.leftPanelOpen,
         leftPanelWidth: state.leftPanelWidth,
+        rightPanelOpen: state.rightPanelOpen,
         rightPanelWidth: state.rightPanelWidth,
       }),
     }

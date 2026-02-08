@@ -164,6 +164,27 @@ describe("uiStore", () => {
     });
   });
 
+  describe("toggleRightPanel", () => {
+    it("toggles right panel from open to closed", () => {
+      useUiStore.setState({ rightPanelOpen: true });
+      useUiStore.getState().toggleRightPanel();
+      expect(useUiStore.getState().rightPanelOpen).toBe(false);
+    });
+
+    it("toggles right panel from closed to open", () => {
+      useUiStore.setState({ rightPanelOpen: false });
+      useUiStore.getState().toggleRightPanel();
+      expect(useUiStore.getState().rightPanelOpen).toBe(true);
+    });
+
+    it("toggling right panel does not affect left panel", () => {
+      useUiStore.setState({ leftPanelOpen: true, rightPanelOpen: true });
+      useUiStore.getState().toggleRightPanel();
+      expect(useUiStore.getState().rightPanelOpen).toBe(false);
+      expect(useUiStore.getState().leftPanelOpen).toBe(true);
+    });
+  });
+
   describe("panel width clamping", () => {
     it("setLeftPanelWidth clamps to minimum 180", () => {
       useUiStore.getState().setLeftPanelWidth(100);
@@ -249,6 +270,13 @@ describe("uiStore", () => {
       useUiStore.getState().setLeftPanelWidth(320);
       const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
       expect(stored.state.leftPanelWidth).toBe(320);
+    });
+
+    it("persists rightPanelOpen state to localStorage", () => {
+      useUiStore.setState({ rightPanelOpen: true });
+      useUiStore.getState().toggleRightPanel();
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.rightPanelOpen).toBe(false);
     });
 
     it("persists rightPanelWidth to localStorage", () => {

@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderWithProviders, screen } from "../../helpers/render";
 import { resetAllStores, type Dataset } from "../../helpers/stores";
 import { useDatasetStore } from "@/stores/datasetStore";
+import { useUiStore } from "@/stores/uiStore";
 import { RightPanel } from "@/components/right-panel/RightPanel";
 
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
@@ -44,9 +45,65 @@ describe("RP-EMPTY-1: Shows empty state when no datasets", () => {
 
     const { container } = renderWithProviders(<RightPanel />);
 
-    const svg = container.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass("w-16", "h-16", "opacity-20");
+    const emptyStateSvg = container.querySelector('[data-testid="datasets-empty-state"] svg');
+    expect(emptyStateSvg).toBeInTheDocument();
+    expect(emptyStateSvg).toHaveClass("w-16", "h-16", "opacity-20");
+  });
+});
+
+describe("RP-MOBILE-1: Mobile responsive behavior", () => {
+  it("has lg:flex desktop override class", () => {
+    useDatasetStore.setState({ datasets: [] });
+
+    renderWithProviders(<RightPanel />);
+
+    const panel = screen.getByTestId("right-panel");
+    expect(panel.className).toContain("lg:flex");
+    expect(panel.className).toContain("lg:relative");
+    expect(panel.className).toContain("lg:sticky");
+  });
+
+  it("applies fixed overlay classes when rightPanelOpen is true", () => {
+    useDatasetStore.setState({ datasets: [] });
+    useUiStore.setState({ rightPanelOpen: true });
+
+    renderWithProviders(<RightPanel />);
+
+    const panel = screen.getByTestId("right-panel");
+    expect(panel.className).toContain("fixed");
+    expect(panel.className).toContain("animate-slide-in-right");
+    expect(panel.className).not.toContain("hidden");
+  });
+
+  it("applies hidden class when rightPanelOpen is false", () => {
+    useDatasetStore.setState({ datasets: [] });
+    useUiStore.setState({ rightPanelOpen: false });
+
+    renderWithProviders(<RightPanel />);
+
+    const panel = screen.getByTestId("right-panel");
+    expect(panel.className).toContain("hidden");
+    expect(panel.className).not.toContain("fixed");
+  });
+
+  it("renders close button with proper aria-label", () => {
+    useDatasetStore.setState({ datasets: [] });
+    useUiStore.setState({ rightPanelOpen: true });
+
+    renderWithProviders(<RightPanel />);
+
+    const closeBtn = screen.getByTestId("close-right-panel");
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveAttribute("aria-label", "Close datasets panel");
+  });
+
+  it("shows Datasets title in mobile header", () => {
+    useDatasetStore.setState({ datasets: [] });
+    useUiStore.setState({ rightPanelOpen: true });
+
+    renderWithProviders(<RightPanel />);
+
+    expect(screen.getByText("Datasets")).toBeInTheDocument();
   });
 });
 

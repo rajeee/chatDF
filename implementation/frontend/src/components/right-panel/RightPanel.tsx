@@ -2,6 +2,8 @@
 //
 // Container for DatasetInput + DatasetCard list.
 // Resizable via drag handle on left edge.
+// Below 1024px (lg): renders as fixed overlay from right side, toggled via Header button.
+// On desktop (>=1024px): always visible inline panel with resize handle.
 
 import { useCallback, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
@@ -15,8 +17,10 @@ import { PresetSourcesModal } from "./PresetSourcesModal";
 export function RightPanel() {
   const conversationId = useChatStore((s) => s.activeConversationId);
   const datasets = useDatasetStore((s) => s.datasets);
+  const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const rightPanelWidth = useUiStore((s) => s.rightPanelWidth);
   const setRightPanelWidth = useUiStore((s) => s.setRightPanelWidth);
+  const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const isDragging = useRef(false);
 
   const handleMouseDown = useCallback(
@@ -49,10 +53,18 @@ export function RightPanel() {
     [rightPanelWidth, setRightPanelWidth]
   );
 
+  // On mobile: hidden by default, shown as fixed overlay when rightPanelOpen is true
+  // On desktop (lg+): always visible as inline panel
+  const mobileClasses = rightPanelOpen
+    ? "fixed top-12 right-0 bottom-0 z-40 animate-slide-in-right"
+    : "hidden";
+  // lg: overrides mobile positioning to be inline
+  const desktopClasses = "lg:flex lg:relative lg:sticky lg:top-12 lg:self-start lg:z-auto lg:animate-none";
+
   return (
     <aside
       data-testid="right-panel"
-      className="flex flex-col border-l relative sticky top-12 self-start transition-all duration-300 ease-in-out"
+      className={`flex-col border-l transition-all duration-300 ease-in-out ${mobileClasses} ${desktopClasses}`}
       style={{
         width: rightPanelWidth,
         minWidth: rightPanelWidth,
@@ -62,13 +74,40 @@ export function RightPanel() {
         boxShadow: "-1px 0 3px var(--color-shadow)",
       }}
     >
-      {/* Resize handle */}
+      {/* Resize handle (desktop only) */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-400/50 transition-colors"
+        className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-400/50 transition-colors hidden lg:block"
         style={{ zIndex: 10 }}
       />
       <div className="flex flex-col h-full p-4 overflow-y-auto">
+        {/* Close button and title (mobile only) */}
+        <div className="flex items-center justify-between mb-3 lg:hidden">
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Datasets
+          </span>
+          <button
+            data-testid="close-right-panel"
+            onClick={toggleRightPanel}
+            className="p-1 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+            aria-label="Close datasets panel"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
         <DatasetInput
           conversationId={conversationId ?? ""}
           datasetCount={datasets.length}

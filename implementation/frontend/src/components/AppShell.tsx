@@ -4,7 +4,7 @@
 // CSS Grid three-panel layout: left 260px/0px, center 1fr, right 300px.
 // Transition on grid-template-columns (~200ms).
 // Contains Header + main grid with LeftPanel, ChatArea, RightPanel.
-// Below 1024px: left panel as fixed overlay with backdrop.
+// Below 1024px: left and right panels as fixed overlays with backdrop.
 
 import { useUiStore } from "@/stores/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,8 @@ import { RightPanel } from "@/components/right-panel/RightPanel";
 export function AppShell() {
   const leftPanelOpen = useUiStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+  const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
 
   const { isAuthenticated } = useAuth();
 
@@ -41,6 +43,15 @@ export function AppShell() {
           data-testid="left-panel-backdrop"
           className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden animate-fade-in"
           onClick={toggleLeftPanel}
+        />
+      )}
+
+      {/* Backdrop for mobile overlay when right panel is open */}
+      {rightPanelOpen && (
+        <div
+          data-testid="right-panel-backdrop"
+          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden animate-fade-in"
+          onClick={toggleRightPanel}
         />
       )}
 

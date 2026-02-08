@@ -41,12 +41,17 @@ export default {
           "0%": { opacity: "1", transform: "translateX(0)" },
           "100%": { opacity: "0", transform: "translateX(100px)" },
         },
+        "slide-in-right": {
+          "0%": { opacity: "0", transform: "translateX(100%)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "panel-content-fade-in": "panel-content-fade-in 0.3s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
         "toast-in": "toast-in 0.3s ease-out",
         "toast-out": "toast-out 0.2s ease-in",
+        "slide-in-right": "slide-in-right 0.3s ease-out",
       },
     },
   },

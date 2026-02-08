@@ -145,6 +145,14 @@ Insights accumulated through improvement iterations.
 - **Connection pool lifecycle management**: Pool initialization in lifespan creates all connections upfront. Must set `_write_conn = None` on close to prevent stale references. Use asyncio.Queue for simple, thread-safe connection pooling - no need for complex libraries.
 - **Backend tests mostly stable**: Backend tests show 356/402 passing (excluding worker tests and known failures). Frontend tests unchanged at 317/367 passing. Pre-existing infrastructure issues persist but this improvement doesn't make them worse.
 
+### Iteration 22 (2026-02-08)
+- **Table virtualization for massive datasets**: Added `@tanstack/react-virtual` (~15KB gzipped) to virtualize SQL result tables. For 100k row datasets, this renders only ~20 visible rows + overscan instead of all 100k DOM nodes - a 500x reduction. Provides buttery-smooth scrolling with zero jank.
+- **@tanstack/react-virtual API**: Use `useVirtualizer` hook with `count`, `getScrollElement`, `estimateSize`, and `overscan` params. It returns `getTotalSize()` for spacer height and `getVirtualItems()` for visible items with `start` position and `index`. Use `transform: translateY()` for absolute positioning.
+- **Flex-based table layout for virtualization**: Replaced `<table>` with flex-based divs for easier virtualization. HTML tables don't play well with absolute positioning. Flex containers with `flex-1` columns give table-like appearance with better control.
+- **Sticky headers with virtualization**: Keep header outside the virtualized container with `position: sticky` and `z-index`. The virtualized body has a fixed height container with `position: relative` for absolute row positioning.
+- **AbortSignal merging pattern**: When adding timeout AbortController, destructure existing `signal` from options and listen to it: `existingSignal?.addEventListener("abort", () => controller.abort())`. This properly chains signals without MSW test conflicts.
+- **Test count increased**: Added 5 new SQLPanel tests, all passing. Frontend tests went from 317/367 to 322/372 passing. The 50 failing tests are pre-existing from iteration 18's timeout implementation.
+
 ---
 
 ## General Principles

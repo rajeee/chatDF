@@ -526,7 +526,7 @@ describe("Accessibility: ARIA attributes", () => {
 });
 
 describe("Touch-friendly: action buttons visible on touch devices", () => {
-  it("copy button has touch-action-btn class for touch device visibility", () => {
+  it("copy button is always visible at subtle opacity", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
     ]);
@@ -534,9 +534,8 @@ describe("Touch-friendly: action buttons visible on touch devices", () => {
     renderWithProviders(<MessageList />);
 
     const copyBtn = screen.getByTestId("copy-btn-msg-1");
-    expect(copyBtn.className).toContain("touch-action-btn");
-    expect(copyBtn.className).toContain("opacity-0");
-    expect(copyBtn.className).toContain("group-hover:opacity-100");
+    expect(copyBtn.className).toContain("opacity-40");
+    expect(copyBtn.className).toContain("hover:opacity-100");
   });
 
   it("timestamp has touch-action-btn class for touch device visibility", () => {

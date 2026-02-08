@@ -10,3 +10,5 @@
 - **CSS-only tooltips via group/name**: Tailwind `group/name` variant enables scoped hover tooltips without JS state — use `opacity-0 group-hover/name:opacity-100` with `pointer-events-none` on a positioned child.
 - **Validation with warnings vs errors**: Return `{ error, warning }` from validate functions. Errors block submit; warnings inform but allow submit. Different border colors (red/amber/green) give clear visual feedback.
 - **Module-level dict caching is fine for single-process**: Simple `dict[key, (value, expiry)]` with `time.time()` suffices. No need for Redis. Invalidate on write operations.
+- **Inline styles block Tailwind hover**: Setting `backgroundColor: "transparent"` inline overrides Tailwind's `hover:bg-*` classes. Use `undefined` instead to let CSS take effect.
+- **Exit animations need delayed removal**: For smooth exit animations, set a CSS class immediately but delay the actual DOM removal with `setTimeout` matching animation duration.

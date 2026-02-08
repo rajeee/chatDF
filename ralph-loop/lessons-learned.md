@@ -44,6 +44,12 @@ Insights accumulated through improvement iterations.
 - **Zero-JS performance optimization**: Pure CSS solution - no JavaScript overhead, no bundle size increase, works automatically across all browsers that support it. For browsers that don't support it, it gracefully degrades with no negative impact.
 - **Testing inline styles**: Can verify inline style properties using `toHaveStyle()` matcher in vitest/testing-library, including camelCase CSS properties like `contentVisibility`.
 
+### Iteration 8 (2026-02-08)
+- **CSS transitions for polish**: Adding `transition-all duration-300 ease-in-out` to panels creates smooth width changes during open/close without any JavaScript. Keep duration short (300ms) for responsive feel.
+- **Custom keyframe animations in Tailwind**: Extend Tailwind config with custom `keyframes` and `animation` definitions for reusable animations like panel content fade-in. Define both the keyframe and animation in the `extend` section.
+- **Staggered animation timing**: Combine width transition (transition-all on container) with content fade-in animation (animate-* on content wrapper) for layered polish effect. Content should animate slightly after container starts transitioning.
+- **Testing for CSS classes**: Verify transitions by checking `className.includes()` for Tailwind utility classes. Don't test actual animation behavior (browser-dependent), just test that the right classes are applied.
+
 ---
 
 ## General Principles

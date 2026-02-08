@@ -6,7 +6,7 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
-| U1 | Add CSS transitions/animations for panel open/close, message appear | 4 | 2 | 2.0 | pending |
+| U1 | Add CSS transitions/animations for panel open/close, message appear | 4 | 2 | 2.0 | done |
 | U2 | Skeleton loading states instead of spinners | 3 | 2 | 1.5 | pending |
 | U3 | Save panel widths + sidebar state to localStorage | 3 | 1 | 3.0 | done |
 | U4 | Toast notification system for errors/success | 4 | 2 | 2.0 | pending |

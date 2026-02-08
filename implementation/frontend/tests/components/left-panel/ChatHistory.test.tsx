@@ -473,6 +473,56 @@ describe("CH-6: Empty state", () => {
   });
 });
 
+describe("Accessibility: ARIA attributes", () => {
+  it("active conversation has aria-current='page'", async () => {
+    const conversations = [
+      createConversation({ id: "conv-a", title: "Chat A" }),
+      createConversation({ id: "conv-b", title: "Chat B" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    useChatStore.setState({ activeConversationId: "conv-a" });
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat A")).toBeInTheDocument();
+    });
+
+    const items = screen.getAllByTestId("conversation-item");
+    const activeItem = items.find((el) => el.textContent?.includes("Chat A"));
+    const inactiveItem = items.find((el) => el.textContent?.includes("Chat B"));
+
+    expect(activeItem).toHaveAttribute("aria-current", "page");
+    expect(inactiveItem).not.toHaveAttribute("aria-current");
+  });
+
+  it("conversation list has aria-label", async () => {
+    const conversations = [
+      createConversation({ id: "conv-1", title: "Chat 1" }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat 1")).toBeInTheDocument();
+    });
+
+    const list = screen.getByRole("listbox");
+    expect(list).toHaveAttribute("aria-label", "Conversations");
+  });
+});
+
 describe("CH-7: New Chat button", () => {
   it("renders a New Chat button with icon", async () => {
     server.use(

@@ -187,12 +187,13 @@ export function ChatHistory() {
           No conversations yet
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto space-y-0.5">
+        <ul className="flex-1 overflow-y-auto space-y-0.5" role="listbox" aria-label="Conversations">
           {conversations.map((conv) => (
             <li
               key={conv.id}
               data-testid="conversation-item"
               data-active={activeConversationId === conv.id ? "true" : "false"}
+              aria-current={activeConversationId === conv.id ? "page" : undefined}
               className={`group relative flex items-center px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${
                 activeConversationId === conv.id
                   ? "bg-blue-500/10"

@@ -510,6 +510,21 @@ describe("Performance: MessageBubble memoization", () => {
   });
 });
 
+describe("Accessibility: ARIA attributes", () => {
+  it("message list container has role='log' and aria-live='polite'", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const scrollContainer = screen.getByTestId("message-list-scroll");
+    expect(scrollContainer).toHaveAttribute("role", "log");
+    expect(scrollContainer).toHaveAttribute("aria-live", "polite");
+    expect(scrollContainer).toHaveAttribute("aria-label", "Chat messages");
+  });
+});
+
 describe("Performance: content-visibility optimization", () => {
   it("applies content-visibility: auto to message rows for off-screen rendering optimization", () => {
     setChatIdle("conv-1", [

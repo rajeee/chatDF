@@ -183,6 +183,9 @@ export function PresetSourcesModal() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="preset-sources-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isLoading) closeModal();
       }}
@@ -199,7 +202,7 @@ export function PresetSourcesModal() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--color-border)" }}>
-          <h2 className="text-lg font-semibold">Preset Sources</h2>
+          <h2 id="preset-sources-modal-title" className="text-lg font-semibold">Preset Sources</h2>
           <button
             onClick={closeModal}
             disabled={isLoading}

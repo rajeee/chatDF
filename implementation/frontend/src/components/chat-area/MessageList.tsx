@@ -103,6 +103,9 @@ export function MessageList() {
       <div
         data-testid="message-list-scroll"
         className="px-4 py-4 space-y-4"
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
       >
         {messages.map((message) => {
           const isStreamingMessage =

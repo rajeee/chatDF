@@ -180,7 +180,7 @@ function SQLErrorModal({
   }
 
   return (
-    <div className="fixed inset-0" style={{ zIndex: 70 }}>
+    <div className="fixed inset-0" style={{ zIndex: 70 }} role="dialog" aria-modal="true" aria-labelledby={`sql-error-title-${queryIndex}`}>
       <div
         className="fixed inset-0 bg-black/30 flex items-center justify-center"
         onClick={handleBackdropClick}
@@ -203,7 +203,7 @@ function SQLErrorModal({
             className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
             style={{ borderColor: "var(--color-border)" }}
           >
-            <h3 className="text-sm font-semibold" style={{ color: "var(--color-error)" }}>
+            <h3 id={`sql-error-title-${queryIndex}`} className="text-sm font-semibold" style={{ color: "var(--color-error)" }}>
               Query {queryIndex + 1} Error
             </h3>
             <button
@@ -272,7 +272,7 @@ function SQLResultModal({
   }
 
   return (
-    <div className="fixed inset-0" style={{ zIndex: 60 }}>
+    <div className="fixed inset-0" style={{ zIndex: 60 }} role="dialog" aria-modal="true" aria-labelledby={`sql-result-title-${index}`}>
       <div
         className="fixed inset-0 bg-black/30 flex items-center justify-center"
         onClick={handleBackdropClick}
@@ -295,7 +295,7 @@ function SQLResultModal({
             className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
             style={{ borderColor: "var(--color-border)" }}
           >
-            <h3 className="text-sm font-semibold">
+            <h3 id={`sql-result-title-${index}`} className="text-sm font-semibold">
               Query {index + 1} Results — {totalRows.toLocaleString()} rows
             </h3>
             <div className="flex items-center gap-2">
@@ -483,7 +483,7 @@ export function SQLModal() {
 
   return (
     <>
-      <div data-testid="sql-modal" className="fixed inset-0 z-50">
+      <div data-testid="sql-modal" className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="sql-modal-title">
         <div
           data-testid="sql-modal-backdrop"
           className="fixed inset-0 bg-black/30 flex items-center justify-center"
@@ -507,7 +507,7 @@ export function SQLModal() {
               className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
               style={{ borderColor: "var(--color-border)" }}
             >
-              <h2 className="text-base font-semibold">
+              <h2 id="sql-modal-title" className="text-base font-semibold">
                 SQL Queries ({executions.length})
               </h2>
               <button

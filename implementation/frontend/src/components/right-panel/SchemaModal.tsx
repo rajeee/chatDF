@@ -165,6 +165,9 @@ export function SchemaModal() {
     <div
       data-testid="schema-modal"
       className="fixed inset-0 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="schema-modal-title"
     >
       {/* Backdrop */}
       <div
@@ -181,7 +184,7 @@ export function SchemaModal() {
         >
           {/* Header: close button */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Dataset Schema</h2>
+            <h2 id="schema-modal-title" className="text-lg font-semibold">Dataset Schema</h2>
             <button
               onClick={closeSchemaModal}
               aria-label="Close"

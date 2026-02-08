@@ -140,6 +140,33 @@ describe("SQLModal", () => {
     expect(screen.getByText(/2\.35s/)).toBeInTheDocument();
   });
 
+  it("should have role='dialog' and aria-modal='true'", () => {
+    useUiStore.setState({
+      sqlModalOpen: true,
+      activeSqlExecutions: [
+        {
+          query: "SELECT 1",
+          columns: ["id"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: null,
+        },
+      ],
+    });
+
+    render(<SQLModal />);
+
+    const modal = screen.getByTestId("sql-modal");
+    expect(modal).toHaveAttribute("role", "dialog");
+    expect(modal).toHaveAttribute("aria-modal", "true");
+    expect(modal).toHaveAttribute("aria-labelledby", "sql-modal-title");
+
+    const title = document.getElementById("sql-modal-title");
+    expect(title).toBeInTheDocument();
+    expect(title?.textContent).toBe("SQL Queries (1)");
+  });
+
   it("should not display execution time when null", () => {
     useUiStore.setState({
       sqlModalOpen: true,

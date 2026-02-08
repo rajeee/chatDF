@@ -205,6 +205,35 @@ describe("SM-CLOSE-1: Escape closes modal", () => {
   });
 });
 
+describe("Accessibility: ARIA dialog attributes", () => {
+  it("has role='dialog' and aria-modal='true'", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const modal = screen.getByTestId("schema-modal");
+    expect(modal).toHaveAttribute("role", "dialog");
+    expect(modal).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("has aria-labelledby pointing to modal title", () => {
+    const dataset = makeDataset();
+    setDatasetsLoaded([dataset]);
+    setUiState({ schemaModalDatasetId: "ds-1" });
+
+    renderWithProviders(<SchemaModal />);
+
+    const modal = screen.getByTestId("schema-modal");
+    expect(modal).toHaveAttribute("aria-labelledby", "schema-modal-title");
+
+    const title = document.getElementById("schema-modal-title");
+    expect(title).toBeInTheDocument();
+    expect(title?.textContent).toBe("Dataset Schema");
+  });
+});
+
 describe("SM-CLOSE-2: Backdrop click closes modal", () => {
   it("closes modal when clicking the backdrop", async () => {
     const dataset = makeDataset();

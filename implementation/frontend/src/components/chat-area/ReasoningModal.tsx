@@ -27,6 +27,9 @@ export function ReasoningModal() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reasoning-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeModal();
       }}
@@ -46,7 +49,7 @@ export function ReasoningModal() {
           className="flex items-center justify-between px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--color-border)" }}
         >
-          <h2 className="text-lg font-semibold">Reasoning</h2>
+          <h2 id="reasoning-modal-title" className="text-lg font-semibold">Reasoning</h2>
           <button
             onClick={closeModal}
             className="p-1 rounded hover:bg-gray-500/10 active:scale-90 transition-all duration-150"

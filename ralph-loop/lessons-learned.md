@@ -26,6 +26,12 @@ Insights accumulated through improvement iterations.
 - **CSS animation stagger**: Use nth-child selectors with animation-delay to create staggered wave effect across multiple dots.
 - **Existing tests may cover new implementation**: The streaming-indicator testid was preserved, so existing tests passed. Added specific test for new dot structure.
 
+### Iteration 5 (2026-02-08)
+- **requestAnimationFrame for smooth scrolling**: Using requestAnimationFrame to batch scroll updates during streaming prevents jarring jumps and aligns scrolling with browser repaints for smoother UX.
+- **CSS scroll-behavior: smooth**: Adding native CSS smooth scrolling to the html element provides browser-optimized scroll behavior that works across all scroll operations.
+- **Cancel pending animations**: Track requestAnimationFrame IDs and cancel pending scrolls before scheduling new ones to avoid scroll animation conflicts.
+- **Test RAF usage**: Mock requestAnimationFrame in tests to verify the optimization is applied during streaming.
+
 ---
 
 ## General Principles

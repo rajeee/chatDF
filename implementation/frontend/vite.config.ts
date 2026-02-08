@@ -11,6 +11,23 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          "react-vendor": ["react", "react-dom"],
+          "query-vendor": ["@tanstack/react-query"],
+          "codemirror-vendor": ["@codemirror/lang-sql", "@codemirror/state", "@codemirror/view"],
+          "markdown-vendor": ["react-markdown"],
+        },
+      },
+    },
+    // Enable CSS code splitting for better caching
+    cssCodeSplit: true,
+    // Optimize chunk size warnings (default is 500kb)
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     allowedHosts: ["datachatdata.com"],
     proxy: {

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUiStore } from "@/stores/uiStore";
-import { useDatasetStore, type Dataset } from "@/stores/datasetStore";
+import { useDatasetStore } from "@/stores/datasetStore";
 import { apiPost, apiPatch } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 

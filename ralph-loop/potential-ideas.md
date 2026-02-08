@@ -47,3 +47,4 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 | C9 | Rate limit warning banner with remaining tokens | 2 | 1 | 2.0 | blocked (UsageStats component tests broken - pre-existing issue) |
 | C10 | Favicon and proper meta tags | 2 | 1 | 2.0 | done |
 | C11 | SQL query execution time display | 4 | 1 | 4.0 | done |
+| U11 | Toast fade-out animation on dismiss | 3 | 1 | 3.0 | done |

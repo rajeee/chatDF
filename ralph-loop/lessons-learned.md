@@ -178,6 +178,14 @@ Insights accumulated through improvement iterations.
 - **Minimal implementation, high impact**: Total change was ~30 lines of actual code (excluding tests). Simple addition of timing, passing through dataclass, and formatting in UI. High user-visible impact for minimal complexity.
 - **Test count increased**: Added 3 backend tests (successful query, failed query, reasonable bounds) and 3 frontend tests (display ms, display seconds, hide when null). Frontend now 325/375 passing (+3), backend worker tests 14/14 passing (+3).
 
+### Iteration 26 (2026-02-08)
+- **Toast fade-out animations for polish**: Added smooth slide-right fade-out animation when toasts are dismissed. Toasts no longer disappear instantly - they gracefully animate out over 200ms. This small detail makes the UI feel significantly more polished and professional.
+- **Store-managed dismissing state**: Added `dismissing?: boolean` field to Toast interface. When `dismissToast()` is called, it marks the toast as dismissing (triggers animation), then removes it after animation completes. This centralizes animation timing in the store rather than duplicating it in components.
+- **Consistent animation for all dismissals**: Both manual dismissals (clicking X) and auto-dismissals (after timeout) use the same smooth animation. Changed `addToast` auto-removal to call `dismissToast()` instead of directly removing from store.
+- **Short, snappy animation timing**: Used 200ms for fade-out (vs 300ms for fade-in). Faster exit animation feels more responsive - users don't want to wait for things to disappear, but appreciate gentle entrance.
+- **Animation direction matters**: Fade-in slides up from bottom (feels like rising), fade-out slides right (feels like being swept away). Different directions for enter/exit makes the animation feel more intentional and polished.
+- **Test count stable**: Frontend still 325/375 passing. Added test for fade-out animation class. Pre-existing test failures unchanged.
+
 ---
 
 ## General Principles

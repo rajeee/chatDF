@@ -29,3 +29,4 @@ Track each improvement cycle: what was done, what was learned.
 | 23 | 2026-02-08 | Compress WebSocket messages | P8 | 322/372 frontend, 77/77 WS tests | 5c8e858 |
 | 24 | 2026-02-08 | Refactor SQLPanel into modules | P1 | 322/372 frontend, backend unchanged | 267ff31 |
 | 25 | 2026-02-08 | SQL query execution time display | C11 | 325/375 frontend, 14/14 worker SQL | fbcfac3 |
+| 26 | 2026-02-08 | Toast fade-out animation | U11 | 325/375 frontend, backend unchanged | 58daf51 |

@@ -217,3 +217,48 @@ describe("Performance: DatasetCard memoization", () => {
     expect(DatasetCard.$$typeof.toString()).toContain("react.memo");
   });
 });
+
+describe("DC-RETRY-LOADING: Retry button shows loading spinner", () => {
+  it("shows spinner when retry button is clicked", async () => {
+    const dataset = makeDataset({
+      status: "error",
+      error_message: "Failed to load",
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const retryButton = screen.getByTestId("retry-button");
+
+    // Before clicking, no spinner should be visible
+    expect(retryButton.querySelector(".animate-spin")).toBeNull();
+
+    // Click the retry button
+    await user.click(retryButton);
+
+    // After clicking, spinner should appear immediately
+    expect(retryButton.querySelector(".animate-spin")).toBeTruthy();
+    expect(retryButton).toBeDisabled();
+  });
+
+  it("disables retry button while retrying", async () => {
+    const dataset = makeDataset({
+      status: "error",
+      error_message: "Failed to load",
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<DatasetCard dataset={dataset} />);
+
+    const retryButton = screen.getByTestId("retry-button");
+
+    expect(retryButton).not.toBeDisabled();
+
+    await user.click(retryButton);
+
+    // Button should be disabled during retry
+    expect(retryButton).toBeDisabled();
+    expect(retryButton.className).toContain("disabled:opacity-50");
+    expect(retryButton.className).toContain("disabled:cursor-not-allowed");
+  });
+});

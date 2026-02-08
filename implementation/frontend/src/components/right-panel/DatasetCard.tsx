@@ -3,7 +3,7 @@
 // Card component for a single dataset entry.
 // Three states: loading (progress bar), ready (name + dims), error (retry).
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -27,6 +27,7 @@ function getHostname(url: string): string {
 function DatasetCardComponent({ dataset }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
@@ -48,9 +49,13 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
 
   function handleRetry(e: React.MouseEvent) {
     e.stopPropagation();
+    // Show loading state immediately
+    setIsRetrying(true);
     // retryDataset re-POSTs the URL. For now, call refreshSchema
     // which sets the loading state.
     useDatasetStore.getState().refreshSchema(dataset.id);
+    // Reset retrying state after a brief moment (the status will change to loading)
+    setTimeout(() => setIsRetrying(false), 300);
   }
 
   function handleCardClick() {
@@ -141,8 +146,23 @@ function DatasetCardComponent({ dataset }: DatasetCardProps) {
             <button
               onClick={handleRetry}
               aria-label="Retry"
-              className="text-xs px-2 py-0.5 rounded border hover:bg-accent/10 active:scale-95 transition-all duration-150"
+              disabled={isRetrying}
+              data-testid="retry-button"
+              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded border hover:bg-accent/10 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {isRetrying && (
+                <svg
+                  className="w-3 h-3 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 11-6.219-8.56" strokeOpacity="0.5" />
+                </svg>
+              )}
               Retry
             </button>
           </div>

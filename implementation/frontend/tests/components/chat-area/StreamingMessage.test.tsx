@@ -41,7 +41,7 @@ describe("StreamingMessage", () => {
     expect(screen.getByText("Hello streaming world")).toBeInTheDocument();
   });
 
-  it("shows streaming indicator when streaming without reasoning", () => {
+  it("shows pulsing cursor when streaming without reasoning", () => {
     useChatStore.setState({
       isStreaming: true,
       streamingMessageId: "msg-1",
@@ -50,7 +50,10 @@ describe("StreamingMessage", () => {
     });
 
     render(<StreamingMessage messageId="msg-1" />);
-    expect(screen.getByTestId("streaming-indicator")).toBeInTheDocument();
+    const cursor = screen.getByTestId("streaming-cursor");
+    expect(cursor).toBeInTheDocument();
+    expect(cursor).toHaveClass("streaming-cursor");
+    expect(cursor).toHaveAttribute("aria-hidden", "true");
   });
 
   it("shows reasoning section when reasoning is active", () => {
@@ -67,7 +70,7 @@ describe("StreamingMessage", () => {
     expect(screen.getByText("Let me think about this...")).toBeInTheDocument();
   });
 
-  it("hides streaming indicator when reasoning is active", () => {
+  it("hides streaming cursor when reasoning is active", () => {
     useChatStore.setState({
       isStreaming: true,
       streamingMessageId: "msg-1",
@@ -77,7 +80,7 @@ describe("StreamingMessage", () => {
     });
 
     render(<StreamingMessage messageId="msg-1" />);
-    expect(screen.queryByTestId("streaming-indicator")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("streaming-cursor")).not.toBeInTheDocument();
   });
 
   it("renders markdown in streaming tokens", () => {

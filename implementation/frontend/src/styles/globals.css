@@ -95,6 +95,27 @@
   animation-delay: 0.4s;
 }
 
+/* Streaming cursor — pulsing caret at end of streaming text */
+@keyframes streamingCursorPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+  background-color: var(--color-accent);
+  border-radius: 1px;
+  animation: streamingCursorPulse 1s ease-in-out infinite;
+}
+
 /* Skip-to-content link: visually hidden until focused */
 .skip-to-content {
   position: absolute;

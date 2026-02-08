@@ -367,7 +367,7 @@ describe("ML-COPY-1: Copy button copies message content", () => {
 });
 
 describe("ML-STREAM-1: Streaming indicator shown", () => {
-  it("shows streaming indicator when isStreaming is true", () => {
+  it("shows pulsing cursor when isStreaming is true", () => {
     const msg = makeMessage({
       id: "msg-streaming",
       role: "assistant",
@@ -383,10 +383,12 @@ describe("ML-STREAM-1: Streaming indicator shown", () => {
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.getByTestId("streaming-indicator")).toBeInTheDocument();
+    const cursor = screen.getByTestId("streaming-cursor");
+    expect(cursor).toBeInTheDocument();
+    expect(cursor).toHaveClass("streaming-cursor");
   });
 
-  it("does not show streaming indicator when not streaming", () => {
+  it("does not show streaming cursor when not streaming", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-1",
@@ -397,34 +399,7 @@ describe("ML-STREAM-1: Streaming indicator shown", () => {
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.queryByTestId("streaming-indicator")).not.toBeInTheDocument();
-  });
-
-  it("shows typing animation dots in streaming indicator", () => {
-    const msg = makeMessage({
-      id: "msg-streaming",
-      role: "assistant",
-      content: "",
-    });
-    useChatStore.setState({
-      activeConversationId: "conv-1",
-      messages: [msg],
-      isStreaming: true,
-      streamingMessageId: "msg-streaming",
-      streamingTokens: "Thinking",
-    });
-
-    renderWithProviders(<MessageList />);
-
-    const indicator = screen.getByTestId("streaming-indicator");
-    const dots = indicator.querySelectorAll(".typing-dot");
-
-    // Should have 3 animated dots
-    expect(dots).toHaveLength(3);
-    // Each dot should have the typing-dot class for animation
-    dots.forEach((dot) => {
-      expect(dot).toHaveClass("typing-dot");
-    });
+    expect(screen.queryByTestId("streaming-cursor")).not.toBeInTheDocument();
   });
 
   it("shows streaming tokens content in the streaming message", () => {

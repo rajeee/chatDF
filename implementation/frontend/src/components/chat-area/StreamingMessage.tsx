@@ -65,16 +65,11 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
         >
           {streamingTokens}
         </ReactMarkdown>
+        {/* Pulsing cursor at end of streaming text */}
+        {!isReasoning && (
+          <span data-testid="streaming-cursor" className="streaming-cursor" aria-hidden="true" />
+        )}
       </div>
-
-      {/* Streaming indicator */}
-      {!isReasoning && (
-        <span data-testid="streaming-indicator" className="inline-flex gap-1 ml-2 align-middle" style={{ opacity: 0.6 }}>
-          <span className="typing-dot"></span>
-          <span className="typing-dot"></span>
-          <span className="typing-dot"></span>
-        </span>
-      )}
     </>
   );
 }

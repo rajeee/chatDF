@@ -287,11 +287,10 @@ async def send_message(
     # Get the connection manager for ws_send
     connection_manager = getattr(request.app.state, "connection_manager", None)
 
-    async def ws_send(event_type: str, data: dict) -> None:
+    async def ws_send(message: dict) -> None:
+        """Send a WebSocket message (already formatted)."""
         if connection_manager is not None:
-            await connection_manager.send_to_user(
-                user["id"], {"type": event_type, **data}
-            )
+            await connection_manager.send_to_user(user["id"], message)
 
     # Get the worker pool
     pool = getattr(request.app.state, "worker_pool", None)

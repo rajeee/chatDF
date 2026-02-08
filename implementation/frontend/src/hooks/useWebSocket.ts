@@ -37,6 +37,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
       }
 
       switch (msg.type) {
+        case "rt": // reasoning_token (compressed)
         case "reasoning_token": {
           const chatStore = useChatStore.getState();
           if (!chatStore.isStreaming) {
@@ -54,14 +55,16 @@ export function useWebSocket(isAuthenticated: boolean): void {
             chatStore.setStreaming(true, tempId);
             chatStore.setReasoning(true);
           }
-          chatStore.appendReasoningToken(msg.token as string);
+          chatStore.appendReasoningToken((msg.t || msg.token) as string);
           break;
         }
+        case "rc": // reasoning_complete (compressed)
         case "reasoning_complete": {
           const chatStore = useChatStore.getState();
           chatStore.setReasoning(false);
           break;
         }
+        case "ct": // chat_token (compressed)
         case "chat_token": {
           const chatStore = useChatStore.getState();
           if (!chatStore.isStreaming) {
@@ -79,16 +82,19 @@ export function useWebSocket(isAuthenticated: boolean): void {
             });
             chatStore.setStreaming(true, tempId);
           }
-          chatStore.appendStreamToken(msg.token as string);
+          chatStore.appendStreamToken((msg.t || msg.token) as string);
           break;
         }
+        case "cc": // chat_complete (compressed)
         case "chat_complete": {
           const chatStore = useChatStore.getState();
           // Copy accumulated streaming tokens into the message content
           // before clearing, so the response persists in the message list.
           // Attach sql_query and structured sql_executions from the backend.
-          const sqlExecs = Array.isArray(msg.sql_executions)
-            ? (msg.sql_executions as Array<Record<string, unknown>>).map((ex) => ({
+          // Support both compressed (se) and uncompressed (sql_executions) field names
+          const sqlExecsRaw = msg.se || msg.sql_executions;
+          const sqlExecs = Array.isArray(sqlExecsRaw)
+            ? (sqlExecsRaw as Array<Record<string, unknown>>).map((ex) => ({
                 query: (ex.query as string) || "",
                 columns: (ex.columns as string[] | null) ?? null,
                 rows: (ex.rows as unknown[][] | null) ?? null,
@@ -97,14 +103,15 @@ export function useWebSocket(isAuthenticated: boolean): void {
               }))
             : [];
           chatStore.finalizeStreamingMessage({
-            sql_query: (msg.sql_query as string) ?? null,
+            sql_query: ((msg.sq || msg.sql_query) as string) ?? null,
             sql_executions: sqlExecs,
-            reasoning: (msg.reasoning as string) ?? null,
+            reasoning: ((msg.r || msg.reasoning) as string) ?? null,
           });
           chatStore.setStreaming(false);
           chatStore.setLoadingPhase("idle");
           break;
         }
+        case "ce": // chat_error (compressed)
         case "chat_error": {
           const chatStore = useChatStore.getState();
           // Preserve any partial streaming content before clearing
@@ -150,14 +157,17 @@ export function useWebSocket(isAuthenticated: boolean): void {
           }
           break;
         }
+        case "ctu": // conversation_title_updated (compressed)
         case "conversation_title_updated": {
           void queryClient.invalidateQueries({ queryKey: ["conversations"] });
           break;
         }
+        case "uu": // usage_update (compressed)
         case "usage_update": {
           void queryClient.invalidateQueries({ queryKey: ["usage"] });
           break;
         }
+        case "rlw": // rate_limit_warning (compressed)
         case "rate_limit_warning": {
           void queryClient.invalidateQueries({ queryKey: ["usage"] });
           if (msg.daily_limit_reached) {

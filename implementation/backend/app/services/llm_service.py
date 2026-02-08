@@ -18,6 +18,7 @@ from google.genai import types
 from app.config import get_settings
 from app.services import worker_pool
 from app.services import dataset_service
+from app.services import ws_messages
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -264,7 +265,7 @@ async def stream_chat(
     Args:
         messages: Conversation history as list of ``{"role": str, "content": str}``.
         datasets: Dataset dicts for system prompt construction.
-        ws_send: Async callable ``(event_type, data)`` for WebSocket dispatch.
+        ws_send: Async callable ``(message)`` for WebSocket dispatch (already formatted dict).
         cancel_event: Optional asyncio.Event; when set, streaming stops.
         pool: Optional worker pool for SQL execution.
         db: Optional database connection for dataset loading.
@@ -317,14 +318,14 @@ async def stream_chat(
                                 if getattr(part, "thought", False):
                                     # Reasoning/thinking token
                                     collected_reasoning += part.text
-                                    await ws_send("reasoning_token", {"token": part.text})
+                                    await ws_send(ws_messages.reasoning_token(token=part.text))
                                 else:
                                     # Normal output token
                                     if collected_reasoning and not reasoning_emitted:
-                                        await ws_send("reasoning_complete", {})
+                                        await ws_send(ws_messages.reasoning_complete())
                                         reasoning_emitted = True
                                     collected_text += part.text
-                                    await ws_send("chat_token", {"token": part.text})
+                                    await ws_send(ws_messages.chat_token(token=part.text, message_id="streaming"))
 
                             # Function call part
                             if hasattr(part, "function_call") and part.function_call is not None:
@@ -383,7 +384,7 @@ async def stream_chat(
             continue
 
         # Send tool_call_start event
-        await ws_send("tool_call_start", {"tool": tool_call_name, "args": tool_call_args})
+        await ws_send(ws_messages.tool_call_start(tool=tool_call_name, args=tool_call_args))
 
         # Dispatch tool call
         tool_result_str = ""

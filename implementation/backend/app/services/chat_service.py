@@ -108,10 +108,7 @@ async def process_message(
                 (auto_title, conversation_id),
             )
             await db.commit()
-            await ws_send(
-                "conversation_title_updated",
-                {"conversation_id": conversation_id, "title": auto_title},
-            )
+            await ws_send(ws_messages.conversation_title_updated())
 
         # -------------------------------------------------------------------
         # Step 4: Rate limit check
@@ -119,18 +116,14 @@ async def process_message(
         status = await rate_limit_service.check_limit(db, user_id)
         if status.warning:
             await ws_send(
-                "rate_limit_warning",
                 ws_messages.rate_limit_warning(
                     usage_percent=status.usage_percent,
                     remaining_tokens=status.remaining_tokens,
-                ),
+                )
             )
         if not status.allowed:
             resets = status.resets_in_seconds or 0
-            await ws_send(
-                "rate_limit_exceeded",
-                ws_messages.rate_limit_exceeded(resets_in_seconds=resets),
-            )
+            await ws_send(ws_messages.rate_limit_exceeded(resets_in_seconds=resets))
             raise RateLimitError(
                 "Daily token limit exceeded",
                 resets_in_seconds=resets,
@@ -158,10 +151,7 @@ async def process_message(
         # -------------------------------------------------------------------
         # Step 7: Send query_status("generating")
         # -------------------------------------------------------------------
-        await ws_send(
-            "query_status",
-            ws_messages.query_status(phase="generating"),
-        )
+        await ws_send(ws_messages.query_status(phase="generating"))
 
         # -------------------------------------------------------------------
         # Step 8: Call LLM streaming
@@ -231,14 +221,13 @@ async def process_message(
         # Step 11: Send chat_complete
         # -------------------------------------------------------------------
         await ws_send(
-            "chat_complete",
             ws_messages.chat_complete(
                 message_id=asst_msg_id,
                 sql_query=sql_query,
                 token_count=token_count,
                 sql_executions=sql_executions_dicts,
                 reasoning=result.reasoning or None,
-            ),
+            )
         )
 
         # -------------------------------------------------------------------
@@ -247,11 +236,10 @@ async def process_message(
         post_status = await rate_limit_service.check_limit(db, user_id)
         if post_status.warning:
             await ws_send(
-                "rate_limit_warning",
                 ws_messages.rate_limit_warning(
                     usage_percent=post_status.usage_percent,
                     remaining_tokens=post_status.remaining_tokens,
-                ),
+                )
             )
 
         # -------------------------------------------------------------------
@@ -278,11 +266,10 @@ async def process_message(
         logger.exception("Error processing message for conversation %s", conversation_id)
         try:
             await ws_send(
-                "chat_error",
                 ws_messages.chat_error(
                     error=str(exc),
                     details=type(exc).__name__,
-                ),
+                )
             )
         except Exception:
             logger.exception("Failed to send chat_error via WebSocket")

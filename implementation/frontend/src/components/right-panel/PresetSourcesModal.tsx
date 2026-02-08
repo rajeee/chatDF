@@ -182,11 +182,10 @@ export function PresetSourcesModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isLoading) closeModal();
       }}
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
     >
       <div
         className="rounded-lg shadow-xl flex flex-col"
@@ -320,11 +319,7 @@ export function PresetSourcesModal() {
           <button
             onClick={handleLoad}
             disabled={selected.size === 0 || isLoading}
-            className="rounded px-4 py-1.5 text-sm font-medium disabled:opacity-50"
-            style={{
-              backgroundColor: "var(--color-accent)",
-              color: "#fff",
-            }}
+            className="rounded px-4 py-1.5 text-sm font-medium disabled:opacity-50 bg-accent text-white"
           >
             {isLoading
               ? `Loading ${loadProgress.current}/${loadProgress.total}...`

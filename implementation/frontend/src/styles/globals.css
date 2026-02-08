@@ -16,7 +16,11 @@
     --color-accent-hover: #1d4ed8;
     --color-error: #dc2626;
     --color-warning: #d97706;
+    --color-success: #10b981;
+    --color-info: #3b82f6;
+    --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.08);
+    --color-backdrop: rgba(0, 0, 0, 0.5);
   }
 
   /* Smooth scrolling for better UX */
@@ -34,7 +38,11 @@
     --color-accent-hover: #93bbfd;
     --color-error: #f87171;
     --color-warning: #fbbf24;
+    --color-success: #34d399;
+    --color-info: #60a5fa;
+    --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.3);
+    --color-backdrop: rgba(0, 0, 0, 0.5);
   }
 }
 

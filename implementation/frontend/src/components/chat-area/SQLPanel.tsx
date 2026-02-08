@@ -285,14 +285,14 @@ function SQLQueryBlock({
     <div
       className="rounded-lg border"
       style={{
-        borderColor: "var(--color-border, #e5e7eb)",
+        borderColor: "var(--color-border)",
         backgroundColor: "var(--color-bg)",
       }}
     >
       {/* Query header */}
       <div
         className="flex items-center justify-between px-3 py-2 border-b"
-        style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+        style={{ borderColor: "var(--color-border)" }}
       >
         <span className="text-xs font-medium opacity-70">Query {index + 1}</span>
         <button
@@ -311,7 +311,7 @@ function SQLQueryBlock({
       {(execution.error || hasOutput) && (
         <div
           className="flex items-center gap-2 px-3 py-2 border-t"
-          style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+          style={{ borderColor: "var(--color-border)" }}
         >
           {execution.error && (
             <button
@@ -319,8 +319,8 @@ function SQLQueryBlock({
               onClick={() => onShowError(index)}
               className="text-xs px-2 py-1 rounded border hover:opacity-80 transition-opacity"
               style={{
-                borderColor: "var(--color-error, #ef4444)",
-                color: "var(--color-error, #ef4444)",
+                borderColor: "var(--color-error)",
+                color: "var(--color-error)",
               }}
             >
               Show Error
@@ -389,9 +389,9 @@ function SQLErrorModal({
           <div
             onMouseDown={onMouseDown}
             className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
-            style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+            style={{ borderColor: "var(--color-border)" }}
           >
-            <h3 className="text-sm font-semibold" style={{ color: "var(--color-error, #ef4444)" }}>
+            <h3 className="text-sm font-semibold" style={{ color: "var(--color-error)" }}>
               Query {queryIndex + 1} Error
             </h3>
             <button
@@ -407,7 +407,7 @@ function SQLErrorModal({
           <div className="flex-1 overflow-auto px-4 py-3">
             <pre
               className="text-xs whitespace-pre-wrap break-words"
-              style={{ color: "var(--color-error, #ef4444)" }}
+              style={{ color: "var(--color-error)" }}
             >
               {error}
             </pre>
@@ -472,7 +472,7 @@ function SQLResultModal({
           <div
             onMouseDown={onMouseDown}
             className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
-            style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+            style={{ borderColor: "var(--color-border)" }}
           >
             <h3 className="text-sm font-semibold">
               Query {index + 1} Results — {totalRows.toLocaleString()} rows
@@ -517,7 +517,7 @@ function SQLResultModal({
                         onClick={() => toggleSort(i)}
                         className="text-left px-2 py-1 font-medium border-b whitespace-nowrap sticky top-0 cursor-pointer select-none hover:opacity-70"
                         style={{
-                          borderColor: "var(--color-border, #e5e7eb)",
+                          borderColor: "var(--color-border)",
                           backgroundColor: "var(--color-bg)",
                         }}
                       >
@@ -537,7 +537,7 @@ function SQLResultModal({
                       <td
                         key={colIdx}
                         className="px-2 py-1 border-b whitespace-nowrap"
-                        style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+                        style={{ borderColor: "var(--color-border)" }}
                       >
                         {cellValue(row, colIdx, columns)}
                       </td>
@@ -552,7 +552,7 @@ function SQLResultModal({
           {isTruncated && (
             <div
               className="px-4 py-2 text-xs opacity-60 border-t"
-              style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+              style={{ borderColor: "var(--color-border)" }}
             >
               Showing {rows.length} of {totalRows.toLocaleString()} total rows
             </div>
@@ -664,7 +664,7 @@ export function SQLModal() {
             <div
               onMouseDown={onMouseDown}
               className="flex items-center justify-between px-4 py-3 border-b cursor-move select-none"
-              style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+              style={{ borderColor: "var(--color-border)" }}
             >
               <h2 className="text-base font-semibold">
                 SQL Queries ({executions.length})

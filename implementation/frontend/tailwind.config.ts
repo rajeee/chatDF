@@ -16,6 +16,10 @@ export default {
         "accent-hover": "var(--color-accent-hover)",
         error: "var(--color-error)",
         warning: "var(--color-warning)",
+        success: "var(--color-success)",
+        info: "var(--color-info)",
+        white: "var(--color-white)",
+        backdrop: "var(--color-backdrop)",
       },
       boxShadow: {
         panel: "0 1px 3px var(--color-shadow)",

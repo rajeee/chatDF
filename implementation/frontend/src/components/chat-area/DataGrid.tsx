@@ -105,7 +105,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
     <div data-testid="data-grid" className="border rounded">
       {/* Copy button */}
       <div className="flex items-center justify-end px-3 py-1 border-b"
-        style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+        style={{ borderColor: "var(--color-border)" }}
       >
         <button
           type="button"
@@ -120,7 +120,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
       {/* Table container with sticky header */}
       <div className="max-h-[400px] overflow-auto">
         <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-surface, #f9fafb)" }}>
+          <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-surface)" }}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -135,7 +135,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                       style={{
                         width: header.getSize(),
                         position: "relative",
-                        borderColor: "var(--color-border, #e5e7eb)",
+                        borderColor: "var(--color-border)",
                       }}
                       onClick={header.column.getToggleSortingHandler()}
                     >
@@ -173,7 +173,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} role="row" className="border-b" style={{ borderColor: "var(--color-border, #e5e7eb)" }}>
+                <tr key={row.id} role="row" className="border-b" style={{ borderColor: "var(--color-border)" }}>
                   {row.getVisibleCells().map((cell) => {
                     const isNumeric = numericColumns.has(cell.column.id);
                     return (
@@ -198,7 +198,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
       {/* Pagination controls */}
       {showPagination && (
         <div className="flex items-center justify-between px-3 py-2 border-t text-xs"
-          style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+          style={{ borderColor: "var(--color-border)" }}
         >
           <span>
             Showing {startRow}–{endRow} of {totalRows} rows

@@ -18,21 +18,21 @@ export function ToastContainer() {
         <div
           key={toast.id}
           data-testid={`toast-${toast.type}`}
-          className="pointer-events-auto animate-toast-in bg-white dark:bg-gray-800 rounded-lg shadow-lg border px-4 py-3 min-w-[300px] max-w-[400px] flex items-start gap-3"
+          className="pointer-events-auto animate-toast-in bg-surface rounded-lg shadow-lg border px-4 py-3 min-w-[300px] max-w-[400px] flex items-start gap-3"
           style={{
             borderColor:
               toast.type === "success"
-                ? "#10b981"
+                ? "var(--color-success)"
                 : toast.type === "error"
-                  ? "#ef4444"
-                  : "#3b82f6",
+                  ? "var(--color-error)"
+                  : "var(--color-info)",
           }}
         >
           {/* Icon */}
           <div className="flex-shrink-0 mt-0.5">
             {toast.type === "success" && (
               <svg
-                className="w-5 h-5 text-green-500"
+                className="w-5 h-5 text-success"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -45,7 +45,7 @@ export function ToastContainer() {
             )}
             {toast.type === "error" && (
               <svg
-                className="w-5 h-5 text-red-500"
+                className="w-5 h-5 text-error"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -58,7 +58,7 @@ export function ToastContainer() {
             )}
             {toast.type === "info" && (
               <svg
-                className="w-5 h-5 text-blue-500"
+                className="w-5 h-5 text-info"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -72,14 +72,14 @@ export function ToastContainer() {
           </div>
 
           {/* Message */}
-          <div className="flex-1 text-sm text-gray-900 dark:text-gray-100">
+          <div className="flex-1 text-sm text-text">
             {toast.message}
           </div>
 
           {/* Close button */}
           <button
             onClick={() => removeToast(toast.id)}
-            className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="flex-shrink-0 text-text-secondary hover:text-text"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

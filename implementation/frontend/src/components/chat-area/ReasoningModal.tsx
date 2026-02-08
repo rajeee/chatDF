@@ -26,11 +26,10 @@ export function ReasoningModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeModal();
       }}
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
     >
       <div
         className="rounded-lg shadow-xl flex flex-col"
@@ -45,7 +44,7 @@ export function ReasoningModal() {
         {/* Header */}
         <div
           className="flex items-center justify-between px-4 py-3 border-b shrink-0"
-          style={{ borderColor: "var(--color-border, #e5e7eb)" }}
+          style={{ borderColor: "var(--color-border)" }}
         >
           <h2 className="text-lg font-semibold">Reasoning</h2>
           <button

@@ -245,11 +245,7 @@ export function SchemaModal() {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50"
-              style={{
-                backgroundColor: "var(--color-accent)",
-                color: "#fff",
-              }}
+              className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 bg-accent text-white"
             >
               {isRefreshing ? (
                 <span className="inline-flex items-center gap-2">

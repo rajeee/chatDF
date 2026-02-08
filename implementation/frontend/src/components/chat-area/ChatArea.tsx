@@ -108,7 +108,7 @@ export function ChatArea() {
         <div
           className="p-4 border-t sticky bottom-0"
           style={{
-            borderColor: "var(--color-border, #e5e7eb)",
+            borderColor: "var(--color-border)",
             backgroundColor: "var(--color-bg)",
           }}
         >

@@ -56,7 +56,7 @@ function MessageBubbleComponent({
         className="relative max-w-[80%] rounded-lg px-4 py-2 text-sm"
         style={{
           backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
-          color: isUser ? "#ffffff" : "var(--color-text)",
+          color: isUser ? "var(--color-white)" : "var(--color-text)",
           border: isUser ? "none" : "1px solid var(--color-border)",
           boxShadow: isUser ? "none" : "0 1px 2px var(--color-shadow)",
         }}
@@ -142,7 +142,7 @@ function MessageBubbleComponent({
         <button
           data-testid={`copy-btn-${message.id}`}
           className="absolute top-1 right-1 p-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ color: isUser ? "#ffffff" : "var(--color-text)" }}
+          style={{ color: isUser ? "var(--color-white)" : "var(--color-text)" }}
           onClick={() => onCopy(message.content)}
           aria-label="Copy message"
         >

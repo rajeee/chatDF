@@ -19,3 +19,4 @@ Track each improvement cycle: what was done, what was learned.
 | 13 | 2026-02-08 | Streaming re-render optimization | P6 | 356/356 frontend | 549d49c |
 | 14 | 2026-02-08 | Favicon and meta tags | C10 | 356/356 frontend | d3de012 |
 | 15 | 2026-02-08 | Theme token consolidation | U6 | 356/356 frontend | ea51eca |
+| 16 | 2026-02-08 | Hover/active states | U10 | 356/356 frontend | 7d71492 |

@@ -101,6 +101,13 @@ Insights accumulated through improvement iterations.
 - **Tailwind utility classes > inline styles**: Prefer `className="bg-accent text-white"` over `style={{ backgroundColor: "var(--color-accent)", color: "#fff" }}`. Tailwind classes are more concise and leverage build-time optimizations.
 - **Theme tokens for semantic colors**: Adding semantic color tokens (success, error, info) makes component code more readable and self-documenting compared to using generic color names or hex values.
 
+### Iteration 16 (2026-02-08)
+- **Consistent interactive states across components**: Added uniform hover and active states to ALL interactive elements (buttons, cards, table rows, close icons). Used consistent patterns: `hover:brightness-110` or `hover:bg-accent/10` for buttons, `active:scale-95` for primary actions, `active:scale-90` for icon buttons.
+- **Transition consistency matters**: Using the same duration (`duration-150`) and easing across all interactive elements creates a cohesive, professional feel. Users subconsciously notice when transitions feel inconsistent.
+- **Active states for tactile feel**: The `active:scale-*` utility on button clicks makes the UI feel more responsive and tactile, like pressing a real button. This is a subtle but impactful detail that premium apps have.
+- **Hover states on cards**: Cards (like DatasetCard) benefit from `hover:shadow-md` + `hover:border-accent/50` to make them feel clickable without being heavy-handed. Subtle shadow changes are more elegant than color changes for large surface areas.
+- **Test coverage for interactive states**: Testing for className presence (e.g., `expect(button.className).toContain("active:scale-95")`) is simple and effective. Don't test actual animation behavior, just verify the right classes are applied.
+
 ---
 
 ## General Principles

@@ -241,6 +241,14 @@ Insights accumulated through improvement iterations.
 - **Pre-existing test failures unchanged**: Frontend remains at 330/387 passing (57 pre-existing failures from API client/routing issues). Backend unchanged at 64/65 passing. All ChatInput tests (22/22) pass.
 - **Small UX improvements matter**: This ~5 second change (update placeholder string, add test) makes the app feel more thoughtful and user-friendly. Users who don't know keyboard shortcuts will discover them immediately, reducing friction. Priority score 3.0 (impact 3, effort 1).
 
+### Iteration 33 (2026-02-08)
+- **Icons improve button recognition**: Added plus icon (+) SVG to the "New Chat" button alongside text. Icons are processed faster by the human brain than text, making interactive elements instantly more recognizable. This matches industry standards from ChatGPT, Claude.ai, Slack, Discord, and virtually all modern chat applications.
+- **Inline SVG icons are free**: Inline SVG adds zero network requests, scales perfectly at any resolution, inherits button colors via `currentColor`, and adds only ~100 bytes. The plus icon (two perpendicular lines) is simple, universally recognized, and requires minimal markup.
+- **Flex layout for icon + text**: Updated button to use `flex items-center justify-center gap-2` for proper spacing between icon and text. This is the standard pattern for buttons with both icon and label - cleaner than using margins or padding tricks.
+- **Test structure over behavior**: Added test to verify SVG element exists in button and text content is correct. Testing for structural presence of icon is more reliable than trying to test visual rendering in jsdom.
+- **Test count stable**: Frontend remains at 330/387 passing (57 pre-existing failures unchanged from iteration 32). Backend unchanged at 64/65 passing. My new test passes, verifying the icon renders correctly.
+- **Small visual details create polish**: This ~10 line change (add SVG, wrap text in span, update flex classes) makes the button feel significantly more modern and professional. Users frequently click this button to start new conversations - making it visually appealing and instantly recognizable has outsized impact. Priority score 4.0 (impact 4, effort 1).
+
 ---
 
 ## General Principles

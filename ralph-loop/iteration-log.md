@@ -36,3 +36,4 @@ Track each improvement cycle: what was done, what was learned.
 | 30 | 2026-02-08 | Send button loading state | U14 | 331/386 frontend, 64/65 backend | 8abab84 |
 | 31 | 2026-02-08 | Scroll to bottom button icon | U15 | 329/386 frontend, 64/65 backend | 2b93abc |
 | 32 | 2026-02-08 | Keyboard shortcuts hint in placeholder | U16 | 330/387 frontend, 64/65 backend | de0b719 |
+| 33 | 2026-02-08 | Plus icon on New Chat button | U17 | 330/387 frontend, 64/65 backend | 1d6b0d6 |

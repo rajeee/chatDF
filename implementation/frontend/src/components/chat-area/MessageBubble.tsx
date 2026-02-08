@@ -7,6 +7,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
+import { CodeBlock } from "./CodeBlock";
 
 interface MessageBubbleProps {
   message: Message;
@@ -88,7 +89,26 @@ function MessageBubbleComponent({
           <span>{displayContent}</span>
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{displayContent}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                code: CodeBlock,
+                // Custom p renderer to prevent wrapping code blocks in <p> tags
+                p: ({ children }) => {
+                  // If the only child is a code block (div element), render it without <p> wrapper
+                  if (
+                    children &&
+                    typeof children === "object" &&
+                    "type" in children &&
+                    children.type === "div"
+                  ) {
+                    return <>{children}</>;
+                  }
+                  return <p>{children}</p>;
+                },
+              }}
+            >
+              {displayContent}
+            </ReactMarkdown>
           </div>
         )}
 

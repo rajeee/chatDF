@@ -509,3 +509,25 @@ describe("Performance: MessageBubble memoization", () => {
     expect(MessageBubble.$$typeof.toString()).toContain("react.memo");
   });
 });
+
+describe("Performance: content-visibility optimization", () => {
+  it("applies content-visibility: auto to message rows for off-screen rendering optimization", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
+      makeMessage({ id: "msg-2", role: "assistant", content: "Hi there" }),
+    ]);
+
+    renderWithProviders(<MessageList />);
+
+    const messageRow1 = screen.getByTestId("message-row-msg-1");
+    const messageRow2 = screen.getByTestId("message-row-msg-2");
+
+    // Verify content-visibility is set for performance optimization
+    expect(messageRow1).toHaveStyle({ contentVisibility: "auto" });
+    expect(messageRow2).toHaveStyle({ contentVisibility: "auto" });
+
+    // Verify contain-intrinsic-size is set for accurate scroll position
+    expect(messageRow1).toHaveStyle({ containIntrinsicSize: "auto 100px" });
+    expect(messageRow2).toHaveStyle({ containIntrinsicSize: "auto 100px" });
+  });
+});

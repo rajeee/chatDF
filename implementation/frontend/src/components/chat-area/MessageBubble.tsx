@@ -51,6 +51,10 @@ function MessageBubbleComponent({
     <div
       data-testid={`message-row-${message.id}`}
       className={`flex flex-col ${isUser ? "items-end" : "items-start"} group message-appear`}
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "auto 100px",
+      }}
     >
       <div
         data-testid={`message-bubble-${message.id}`}

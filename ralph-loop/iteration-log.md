@@ -68,3 +68,4 @@ Track each improvement cycle: what was done, what was learned.
 | 62 | 2026-02-08 | Markdown export, date-grouped sidebar, inline SQL preview | U38, U39, U40 | 530/596 frontend (+40 pass), 64/65 backend | 050e113 |
 | 63 | 2026-02-08 | Conversation pinning, auto-scroll, fade animations, focus-visible | U41, U42, U43, U44, U45 | 544/610 frontend (+14 pass), 64/65 backend (schema test fixed) | ddd9b2c, b5416df |
 | 64 | 2026-02-08 | Hover lift, theme tokens, resize handles, DatasetCard transitions | U46, U47, U48, U49, U50 (pre-existing) | 544/610 frontend (0 new failures), 64/65 backend | 606bc39 |
+| 65 | 2026-02-08 | Scroll-to-top, timestamp tooltips, URL clear button, toast stacking, shortcuts modal, paste-submit | U51, U53, U54, U55, U56, U57 | 571/637 frontend (+16 pass, 9 new tests), 64/65 backend | 38d7af2, 31df14f |

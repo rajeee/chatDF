@@ -105,3 +105,5 @@ Track each improvement cycle: what was done, what was learned.
 | 99 | 2026-02-09 | Dataset comparison view, SQL auto-complete | U167, U169 | 1035/1042 frontend (+56 new tests, 7 pre-existing), 198/199 backend (1 pre-existing) | b61c8fb |
 | 99b | 2026-02-09 | Tool call preview, column stats dashboard, saved query bookmarks | U170, U171, U172 | frontend pass, 198/199 backend (1 pre-existing) | 9c8b71f |
 | 100 | 2026-02-09 | Inline saved query result preview with Copy as CSV | U173 | 5 new tests pass, backend 198/199 (1 pre-existing) | 94d622f |
+| 101 | 2026-02-09 | Enhanced shared conversation view (rich formatting, SQL preview, schema) | U175 | 1099/1107 frontend (8 pre-existing), 198/199 backend (1 pre-existing) | bfbdee9 |
+| 102 | 2026-02-09 | Excel (.xlsx) export for query results | U174 | 1099/1107 frontend (+6 new, 8 pre-existing), 202/203 backend (+4 new, 1 pre-existing) | 415b378 |

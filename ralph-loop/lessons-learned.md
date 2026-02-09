@@ -9,3 +9,5 @@
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
 - **Textarea onBlur vs dropdown mouseDown timing**: When a textarea blur dismisses a dropdown, use `mouseDown` (not `click`) on dropdown items, or delay blur dismiss with setTimeout to let the click fire first.
+- **Polars write_excel needs xlsxwriter**: `df.write_excel()` requires the `xlsxwriter` package installed separately — it's not bundled with Polars. Install with `uv pip install xlsxwriter`.
+- **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse` with proper Content-Disposition headers, rather than adding heavy JS libraries to the frontend bundle.

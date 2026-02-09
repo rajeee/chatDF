@@ -11,11 +11,15 @@ import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import {
   useSqlAutocomplete,
+  parseSchema,
   type Suggestion,
 } from "@/hooks/useSqlAutocomplete";
 import { useToastStore } from "@/stores/toastStore";
+import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
+import { useChatStore } from "@/stores/chatStore";
 import { formatSql } from "@/utils/sqlFormatter";
 import { detectChartTypes } from "@/utils/chartDetection";
+import { generateQueryTemplates, type QueryTemplate } from "@/utils/queryTemplates";
 
 const ChartVisualization = lazy(() =>
   import("@/components/chat-area/ChartVisualization").then((m) => ({
@@ -59,12 +63,48 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [showChart, setShowChart] = useState(false);
   const [sortColumn, setSortColumn] = useState<number | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [showTemplates, setShowTemplates] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
+  const templatesRef = useRef<HTMLDivElement>(null);
   const pendingSql = useUiStore((s) => s.pendingSql);
   const setPendingSql = useUiStore((s) => s.setPendingSql);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
   const autocomplete = useSqlAutocomplete();
+
+  // Get datasets for the current conversation to generate templates
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const allDatasets = useDatasetStore((s) => s.datasets);
+  const conversationDatasets = useMemo(
+    () => filterDatasetsByConversation(allDatasets, activeConversationId),
+    [allDatasets, activeConversationId]
+  );
+
+  // Generate templates from datasets
+  const templates = useMemo(() => {
+    const readyDatasets = conversationDatasets.filter((d) => d.status === "ready");
+    if (readyDatasets.length === 0) return [];
+    const schemas = readyDatasets.map((d) => ({
+      tableName: d.name,
+      columns: parseSchema(d.schema_json).map((c) => ({
+        name: c.name,
+        type: c.type,
+      })),
+    }));
+    return generateQueryTemplates(schemas);
+  }, [conversationDatasets]);
+
+  // Click outside to close templates dropdown
+  useEffect(() => {
+    if (!showTemplates) return;
+    function handleClick(e: MouseEvent) {
+      if (templatesRef.current && !templatesRef.current.contains(e.target as Node)) {
+        setShowTemplates(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showTemplates]);
 
   // Theme detection (same approach as SQLPanel.tsx)
   const isDark = document.documentElement.classList.contains("dark");
@@ -769,6 +809,104 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
               </svg>
               Format
             </button>
+            {/* Templates button + dropdown */}
+            {templates.length > 0 && (
+              <div ref={templatesRef} className="relative">
+                <button
+                  data-testid="run-sql-templates"
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors"
+                  style={{
+                    borderColor: showTemplates ? "var(--color-accent)" : "var(--color-border)",
+                    backgroundColor: "transparent",
+                    color: showTemplates ? "var(--color-accent)" : "var(--color-text)",
+                  }}
+                  onClick={() => setShowTemplates((v) => !v)}
+                >
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                  Templates
+                </button>
+                {showTemplates && (
+                  <div
+                    data-testid="templates-dropdown"
+                    className="absolute left-0 z-50 mt-1 w-72 rounded border shadow-lg overflow-hidden"
+                    style={{
+                      backgroundColor: "var(--color-surface, var(--color-bg))",
+                      borderColor: "var(--color-border)",
+                    }}
+                  >
+                    <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
+                      {(["basic", "aggregation", "exploration"] as const).map((category) => {
+                        const catTemplates = templates.filter((t) => t.category === category);
+                        if (catTemplates.length === 0) return null;
+                        const categoryLabel =
+                          category === "basic"
+                            ? "Basic"
+                            : category === "aggregation"
+                              ? "Aggregation"
+                              : "Exploration";
+                        return (
+                          <div key={category}>
+                            <div
+                              className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
+                              style={{
+                                color: "var(--color-text-muted)",
+                                backgroundColor: "var(--color-bg)",
+                              }}
+                            >
+                              {categoryLabel}
+                            </div>
+                            {catTemplates.map((tmpl, i) => (
+                              <button
+                                key={`${category}-${i}`}
+                                data-testid={`template-item-${category}-${i}`}
+                                className="w-full text-left px-2 py-1.5 text-xs transition-colors"
+                                style={{ color: "var(--color-text)" }}
+                                onMouseEnter={(e) => {
+                                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                                    "var(--color-accent-light, rgba(59,130,246,0.08))";
+                                }}
+                                onMouseLeave={(e) => {
+                                  (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                                }}
+                                onClick={() => {
+                                  setSql(tmpl.sql);
+                                  editor.setValue(tmpl.sql);
+                                  setShowTemplates(false);
+                                  requestAnimationFrame(() => {
+                                    editor.focus();
+                                  });
+                                }}
+                              >
+                                <div className="font-medium">{tmpl.label}</div>
+                                <div
+                                  className="text-[10px]"
+                                  style={{ color: "var(--color-text-muted)" }}
+                                >
+                                  {tmpl.description}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <span
               className="text-[10px] opacity-50"
               style={{ color: "var(--color-text-muted)" }}

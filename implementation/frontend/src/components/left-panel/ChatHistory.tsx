@@ -480,6 +480,30 @@ export function ChatHistory() {
     },
   });
 
+  function handleImportConversation() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const response = await apiPost<{ id: string; title: string }>(
+          "/conversations/import",
+          data,
+        );
+        void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        setActiveConversation(response.id);
+        success(`Imported: ${response.title || "Untitled"}`);
+      } catch (err) {
+        showError(err instanceof Error ? err.message : "Import failed");
+      }
+    };
+    input.click();
+  }
+
   function handleDoubleClick(conv: ConversationSummary) {
     setEditingId(conv.id);
     setEditingTitle(conv.title);
@@ -561,26 +585,49 @@ export function ChatHistory() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <button
-        data-testid="new-chat-button"
-        onClick={() => createMutation.mutate()}
-        title="New conversation"
-        className="mb-2 px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150 flex items-center justify-center gap-2"
-      >
-        <svg
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      <div className="flex gap-2 mb-2">
+        <button
+          data-testid="new-chat-button"
+          onClick={() => createMutation.mutate()}
+          title="New conversation"
+          className="flex-1 px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150 flex items-center justify-center gap-2"
         >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        <span>New Chat</span>
-      </button>
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>New Chat</span>
+        </button>
+        <button
+          data-testid="import-conversation-button"
+          onClick={handleImportConversation}
+          title="Import conversation from JSON"
+          className="px-2 py-1.5 text-sm rounded border hover:bg-gray-500/10 active:scale-95 transition-all duration-150 flex items-center justify-center"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+        >
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
+      </div>
 
       {conversations.length >= 2 && (
         <div className="relative mb-2">

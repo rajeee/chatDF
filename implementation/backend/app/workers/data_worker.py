@@ -20,6 +20,20 @@ HEAD_REQUEST_TIMEOUT = 10  # seconds
 DOWNLOAD_TIMEOUT = 300  # seconds for full file downloads
 
 
+def _resolve_url(url: str) -> tuple[str, bool]:
+    """Resolve a URL to a path suitable for Polars.
+
+    For ``file://`` URIs, strips the prefix to return a local path.
+    For http/https URLs, returns the URL unchanged.
+
+    Returns:
+        (resolved_path, is_local) -- the path/URL and whether it's a local file.
+    """
+    if url.startswith("file://"):
+        return url[len("file://"):], True
+    return url, False
+
+
 def _download_to_tempfile(url: str) -> str:
     """Download a URL to a temporary file and return the path.
 
@@ -46,6 +60,9 @@ def fetch_and_validate(url: str) -> dict:
 
     Implements: spec/backend/worker/spec.md#url-fetch--parquet-validation
 
+    For ``file://`` URIs (uploaded files), validates the local file directly.
+
+    For remote URLs:
     1. HEAD request to check URL accessibility (timeout 10s).
     2. Fetch first 4 bytes and verify parquet magic number (PAR1).
 
@@ -53,6 +70,35 @@ def fetch_and_validate(url: str) -> dict:
         {"valid": True} on success.
         {"valid": False, "error": str, "error_type": str} on failure.
     """
+    resolved, is_local = _resolve_url(url)
+
+    # Local file validation (uploaded files)
+    if is_local:
+        try:
+            file_size_bytes = os.path.getsize(resolved)
+            with open(resolved, "rb") as f:
+                magic_bytes = f.read(4)
+            if len(magic_bytes) < 4 or magic_bytes != b"PAR1":
+                return {
+                    "valid": False,
+                    "error": "Not a valid parquet file",
+                    "error_type": "validation",
+                }
+            return {"valid": True, "file_size_bytes": file_size_bytes}
+        except FileNotFoundError:
+            return {
+                "valid": False,
+                "error": "Uploaded file not found",
+                "error_type": "network",
+            }
+        except Exception as exc:
+            return {
+                "valid": False,
+                "error": f"Failed to validate file: {exc}",
+                "error_type": "network",
+            }
+
+    # Remote URL validation
     file_size_bytes = None
     try:
         # Step 1: HEAD request to check accessibility
@@ -113,12 +159,27 @@ def extract_schema(url: str) -> dict:
     to read schema without downloading the full file. Falls back to
     downloading to a temp file if direct URL access fails.
 
+    For ``file://`` URIs (uploaded files), reads the local file directly.
+
     Returns:
         {"columns": [{"name": str, "type": str}, ...], "row_count": int}
         On error: {"error_type": str, "message": str, "details": str | None}
     """
     try:
         import polars as pl
+
+        resolved, is_local = _resolve_url(url)
+
+        # For local files, read directly
+        if is_local:
+            lazy_frame = pl.scan_parquet(resolved)
+            schema = lazy_frame.collect_schema()
+            columns = [
+                {"name": name, "type": str(dtype)}
+                for name, dtype in schema.items()
+            ]
+            row_count = lazy_frame.select(pl.len()).collect().item()
+            return {"columns": columns, "row_count": row_count}
 
         # Try direct URL access first (uses HTTP range requests — fast)
         try:
@@ -185,14 +246,19 @@ def profile_columns(url: str) -> dict:
 
         SAMPLE_THRESHOLD = 100_000
 
-        # Try direct URL access first (uses HTTP range requests)
-        try:
-            lazy_frame = pl.scan_parquet(url)
-            lazy_frame.collect_schema()  # verify access
-        except Exception:
-            # Fallback: download to temp file
-            tmp_path = _download_to_tempfile(url)
-            lazy_frame = pl.scan_parquet(tmp_path)
+        resolved, is_local = _resolve_url(url)
+
+        if is_local:
+            lazy_frame = pl.scan_parquet(resolved)
+        else:
+            # Try direct URL access first (uses HTTP range requests)
+            try:
+                lazy_frame = pl.scan_parquet(url)
+                lazy_frame.collect_schema()  # verify access
+            except Exception:
+                # Fallback: download to temp file
+                tmp_path = _download_to_tempfile(url)
+                lazy_frame = pl.scan_parquet(tmp_path)
 
         # Collect, sampling if needed
         df = lazy_frame.collect()
@@ -287,15 +353,20 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
 
         # Register each dataset as a named table (try URL directly first)
         for dataset in datasets:
-            try:
-                lf = pl.scan_parquet(dataset["url"])
-                lf.collect_schema()  # force metadata read to verify access
+            resolved, is_local = _resolve_url(dataset["url"])
+            if is_local:
+                lf = pl.scan_parquet(resolved)
                 ctx.register(dataset["table_name"], lf)
-            except Exception:
-                tmp_path = _download_to_tempfile(dataset["url"])
-                tmp_paths.append(tmp_path)
-                lf = pl.scan_parquet(tmp_path)
-                ctx.register(dataset["table_name"], lf)
+            else:
+                try:
+                    lf = pl.scan_parquet(dataset["url"])
+                    lf.collect_schema()  # force metadata read to verify access
+                    ctx.register(dataset["table_name"], lf)
+                except Exception:
+                    tmp_path = _download_to_tempfile(dataset["url"])
+                    tmp_paths.append(tmp_path)
+                    lf = pl.scan_parquet(tmp_path)
+                    ctx.register(dataset["table_name"], lf)
 
         # Execute the query
         result_lf = ctx.execute(sql)

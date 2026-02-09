@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     worker_pool_size: int = 4
     session_duration_days: int = 7
     secure_cookies: bool = False
+    upload_dir: str = "uploads"
+    max_upload_size_mb: int = 500
 
     model_config = {
         "env_file": ".env",

@@ -45,6 +45,9 @@ debug_*.js
 # Screenshots (E2E debug artifacts)
 screenshots/
 
+# Uploaded parquet files
+uploads/
+
 # Jupyter
 .ipynb_checkpoints/
 

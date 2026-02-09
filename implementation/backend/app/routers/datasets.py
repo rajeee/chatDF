@@ -4,6 +4,7 @@ Implements: spec/backend/rest_api/plan.md#routersdatasetspy
 
 Endpoints (all under /conversations/{conversation_id}/datasets):
 - POST /                          -> add_dataset
+- POST /upload                    -> upload_dataset (file upload)
 - PATCH /{dataset_id}             -> rename_dataset
 - POST /{dataset_id}/refresh      -> refresh_dataset_schema
 - DELETE /{dataset_id}            -> remove_dataset
@@ -12,10 +13,15 @@ Endpoints (all under /conversations/{conversation_id}/datasets):
 from __future__ import annotations
 
 import json
+import os
+from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
 
 import aiosqlite
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 
+from app.config import get_settings
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
     AddDatasetRequest,
@@ -126,6 +132,119 @@ async def add_dataset(
         )
 
     return DatasetAckResponse(dataset_id=result["id"], status="loading")
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/datasets/upload
+# File upload endpoint for local parquet files
+# ---------------------------------------------------------------------------
+
+
+@router.post("/upload", status_code=201, response_model=DatasetAckResponse)
+async def upload_dataset(
+    request: Request,
+    file: UploadFile = File(...),
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> DatasetAckResponse:
+    """Upload a local parquet file as a dataset."""
+    settings = get_settings()
+    worker_pool = _get_worker_pool(request)
+    conversation_id = conversation["id"]
+
+    # 1. Validate file extension
+    filename = file.filename or ""
+    if not filename.lower().endswith(".parquet"):
+        raise HTTPException(status_code=400, detail="Only .parquet files are supported")
+
+    # 2. Validate file size (read content to check)
+    max_size = settings.max_upload_size_mb * 1024 * 1024
+    content = await file.read()
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large (max {settings.max_upload_size_mb}MB)",
+        )
+
+    # 3. Check dataset limit
+    cursor = await db.execute(
+        "SELECT COUNT(*) AS cnt FROM datasets WHERE conversation_id = ?",
+        (conversation_id,),
+    )
+    row = await cursor.fetchone()
+    if row["cnt"] >= dataset_service.MAX_DATASETS_PER_CONVERSATION:
+        raise HTTPException(status_code=400, detail="Maximum 50 datasets reached")
+
+    # 4. Validate parquet magic bytes
+    if len(content) < 4 or content[:4] != b"PAR1":
+        raise HTTPException(status_code=400, detail="Not a valid parquet file")
+
+    # 5. Save file to uploads directory
+    upload_dir = Path(settings.upload_dir)
+    if not upload_dir.is_absolute():
+        upload_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / upload_dir
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_uuid = str(uuid4())
+    saved_filename = f"{file_uuid}.parquet"
+    saved_path = upload_dir / saved_filename
+    with open(saved_path, "wb") as f:
+        f.write(content)
+
+    # 6. Extract schema using worker pool (local file path)
+    local_path = str(saved_path.resolve())
+    schema_result = await worker_pool.get_schema(local_path)
+    if "error_type" in schema_result:
+        # Clean up the saved file on schema extraction failure
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=400,
+            detail=schema_result.get("message", "Failed to extract schema"),
+        )
+
+    # 7. Persist to DB
+    columns = schema_result.get("columns", [])
+    row_count = schema_result.get("row_count", 0)
+    column_count = len(columns)
+    schema_json = json.dumps(columns)
+    table_name = await dataset_service._next_table_name(db, conversation_id)
+    dataset_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+    file_size_bytes = len(content)
+    stored_url = f"file://{local_path}"
+
+    await db.execute(
+        "INSERT INTO datasets "
+        "(id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (dataset_id, conversation_id, stored_url, table_name, row_count, column_count, schema_json, "ready", None, now, file_size_bytes),
+    )
+    await db.commit()
+
+    # 8. Send dataset_loaded WS event
+    connection_manager = getattr(request.app.state, "connection_manager", None)
+    if connection_manager is not None:
+        await connection_manager.send_to_user(
+            user["id"],
+            {
+                "type": "dataset_loaded",
+                "dataset": {
+                    "id": dataset_id,
+                    "conversation_id": conversation_id,
+                    "url": stored_url,
+                    "name": table_name,
+                    "row_count": row_count,
+                    "column_count": column_count,
+                    "schema_json": schema_json,
+                    "status": "ready",
+                    "error_message": None,
+                    "file_size_bytes": file_size_bytes,
+                },
+            },
+        )
+
+    return DatasetAckResponse(dataset_id=dataset_id, status="loading")
 
 
 # ---------------------------------------------------------------------------

@@ -92,6 +92,135 @@ async def create_conversation(
 
 
 # ---------------------------------------------------------------------------
+# POST /conversations/import
+# Import a previously exported conversation from JSON
+# ---------------------------------------------------------------------------
+
+
+@router.post("/import", status_code=201)
+async def import_conversation(
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Import a previously exported conversation from JSON.
+
+    Accepts the same format produced by the frontend JSON export feature.
+    Creates a new conversation with all messages and datasets preserved.
+    """
+    # --- Validate top-level fields ---
+    title = body.get("title", "")
+    if not isinstance(title, str):
+        raise HTTPException(status_code=400, detail="title must be a string")
+    title = title[:100]
+
+    messages = body.get("messages")
+    if messages is None:
+        messages = []
+    if not isinstance(messages, list):
+        raise HTTPException(status_code=400, detail="messages must be an array")
+    if len(messages) > 1000:
+        raise HTTPException(status_code=400, detail="messages array exceeds maximum of 1000 items")
+
+    datasets = body.get("datasets")
+    if datasets is None:
+        datasets = []
+    if not isinstance(datasets, list):
+        raise HTTPException(status_code=400, detail="datasets must be an array")
+    if len(datasets) > 50:
+        raise HTTPException(status_code=400, detail="datasets array exceeds maximum of 50 items")
+
+    # --- Validate individual messages ---
+    for i, msg in enumerate(messages):
+        if not isinstance(msg, dict):
+            raise HTTPException(status_code=400, detail=f"messages[{i}] must be an object")
+        role = msg.get("role")
+        if role not in ("user", "assistant"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"messages[{i}].role must be 'user' or 'assistant'",
+            )
+        content = msg.get("content")
+        if not isinstance(content, str):
+            raise HTTPException(
+                status_code=400,
+                detail=f"messages[{i}].content must be a string",
+            )
+
+    # --- Validate individual datasets ---
+    for i, ds in enumerate(datasets):
+        if not isinstance(ds, dict):
+            raise HTTPException(status_code=400, detail=f"datasets[{i}] must be an object")
+        url = ds.get("url")
+        if not url or not isinstance(url, str):
+            raise HTTPException(
+                status_code=400,
+                detail=f"datasets[{i}].url is required and must be a string",
+            )
+
+    # --- Create conversation ---
+    conv_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+
+    await db.execute(
+        "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (conv_id, user["id"], title, now, now),
+    )
+
+    # --- Insert messages preserving order ---
+    for i, msg in enumerate(messages):
+        msg_id = str(uuid4())
+        # Use provided timestamp or generate one with offset to preserve order
+        created_at = msg.get("timestamp") or msg.get("created_at") or now
+        if not isinstance(created_at, str):
+            created_at = now
+
+        await db.execute(
+            "INSERT INTO messages (id, conversation_id, role, content, sql_query, reasoning, token_count, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                msg_id,
+                conv_id,
+                msg["role"],
+                msg["content"],
+                msg.get("sql_query"),
+                msg.get("reasoning"),
+                0,
+                created_at,
+            ),
+        )
+
+    # --- Insert datasets ---
+    for ds in datasets:
+        ds_id = str(uuid4())
+        await db.execute(
+            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, loaded_at, file_size_bytes, column_descriptions) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                ds_id,
+                conv_id,
+                ds["url"],
+                ds.get("name", ""),
+                ds.get("row_count", 0),
+                ds.get("column_count", 0),
+                ds.get("schema_json", "[]"),
+                "ready",
+                now,
+                ds.get("file_size_bytes"),
+                ds.get("column_descriptions", "{}"),
+            ),
+        )
+
+    await db.commit()
+
+    return {
+        "id": conv_id,
+        "title": title,
+    }
+
+
+# ---------------------------------------------------------------------------
 # GET /conversations
 # Implements: spec/backend/rest_api/spec.md#get-conversations
 # ---------------------------------------------------------------------------

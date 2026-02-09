@@ -96,3 +96,5 @@ Track each improvement cycle: what was done, what was learned.
 | 90 | 2026-02-09 | Send glow, resize handle feedback, action button stagger | U143, U144, U145 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | d2c2d10 |
 | 91 | 2026-02-09 | Toast retry actions, keyboard focus-visible, mobile touch targets | U146, U147, U148 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | e9e4e7e |
 | 92 | 2026-02-09 | Theme timeout fix, input transitions, copy toast, callback optimization | U149, U150, U151, U152 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | ddb848d |
+| 93a | 2026-02-09 | Conversation fork, global search, chart PNG download | prior session | 948/955 frontend (7 pre-existing), backend pass | 4e79c00 |
+| 93 | 2026-02-09 | Message deletion, drag-and-drop dataset URL loading | new features | 948/955 frontend (7 pre-existing), backend pass | c62dcb4 |

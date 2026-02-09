@@ -27,6 +27,7 @@ import { LiveRegion } from "./LiveRegion";
 import { SkeletonMessages } from "./SkeletonMessages";
 import { FollowupSuggestions } from "./FollowupSuggestions";
 import { ShareDialog } from "./ShareDialog";
+import { SavedQueries } from "./SavedQueries";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -195,6 +196,12 @@ export function ChatArea() {
     [handleSend]
   );
 
+  // Run a saved query by inserting it into the chat input and auto-sending
+  const handleRunQuery = useCallback((query: string) => {
+    chatInputRef.current?.setInputValue(query);
+    setTimeout(() => chatInputRef.current?.sendMessage(), 50);
+  }, []);
+
   // Share dialog state
   const [shareOpen, setShareOpen] = useState(false);
   const shareContainerRef = useRef<HTMLDivElement>(null);
@@ -284,15 +291,22 @@ export function ChatArea() {
         {/* Follow-up suggestion chips */}
         <FollowupSuggestions onSendPrompt={handleSend} />
 
-        {/* Chat input - sticky at bottom */}
+        {/* Saved queries + Chat input - sticky at bottom */}
         <div
-          className="p-2 sm:p-4 border-t sticky bottom-0 safe-area-bottom"
+          className="sticky bottom-0 safe-area-bottom"
           style={{
-            borderColor: "var(--color-border)",
             backgroundColor: "var(--color-bg)",
           }}
         >
-          <ChatInput ref={chatInputRef} onSend={handleSend} onStop={handleStop} />
+          <SavedQueries onRunQuery={handleRunQuery} />
+          <div
+            className="p-2 sm:p-4 border-t"
+            style={{
+              borderColor: "var(--color-border)",
+            }}
+          >
+            <ChatInput ref={chatInputRef} onSend={handleSend} onStop={handleStop} />
+          </div>
         </div>
       </div>
 

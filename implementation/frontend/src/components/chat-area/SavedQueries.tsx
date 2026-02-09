@@ -1,7 +1,11 @@
 import { useEffect, useCallback, useState } from "react";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 
-export function SavedQueries() {
+interface SavedQueriesProps {
+  onRunQuery?: (query: string) => void;
+}
+
+export function SavedQueries({ onRunQuery }: SavedQueriesProps) {
   const { queries, isLoading, fetchQueries, deleteQuery } = useSavedQueryStore();
   const [expanded, setExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -58,6 +62,19 @@ export function SavedQueries() {
               <span className="text-[10px] opacity-40 shrink-0">
                 {copiedId === q.id ? "Copied!" : ""}
               </span>
+              {onRunQuery && (
+                <button
+                  data-testid={`run-saved-query-${q.id}`}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-0.5 rounded transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                  onClick={(e) => { e.stopPropagation(); onRunQuery(q.query); }}
+                  aria-label={`Run saved query ${q.name}`}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </button>
+              )}
               <button
                 data-testid={`delete-saved-query-${q.id}`}
                 className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-0.5 rounded transition-opacity"

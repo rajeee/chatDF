@@ -12,6 +12,7 @@ import {
   flexRender,
   type ColumnDef,
   type SortingState,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import { downloadCsv } from "@/utils/csvExport";
 
@@ -73,6 +74,9 @@ interface DataGridProps {
 
 export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnsDropdownOpen, setColumnsDropdownOpen] = useState(false);
+  const columnsDropdownRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [pageTransitioning, setPageTransitioning] = useState(false);
 
@@ -119,8 +123,9 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   const table = useReactTable({
     data: rows,
     columns: columnDefs,
-    state: { sorting },
+    state: { sorting, columnVisibility },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -157,6 +162,24 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
     }
   }, [currentPage]);
 
+  // Close columns dropdown when clicking outside
+  useEffect(() => {
+    if (!columnsDropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (columnsDropdownRef.current && !columnsDropdownRef.current.contains(e.target as Node)) {
+        setColumnsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [columnsDropdownOpen]);
+
+  // Compute visible columns for copy/export
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => columnVisibility[col] !== false),
+    [columns, columnVisibility]
+  );
+
   const goToPage = useCallback(() => {
     const num = Number(pageInput);
     if (Number.isNaN(num) || pageCount === 0) {
@@ -169,10 +192,10 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   }, [pageInput, pageCount, currentPage, table]);
 
   const handleCopy = useCallback(async () => {
-    const headerRow = columns.join("\t");
-    const visibleRows = table.getRowModel().rows;
-    const dataRows = visibleRows.map((row) =>
-      columns.map((col) => {
+    const headerRow = visibleColumns.join("\t");
+    const tableRows = table.getRowModel().rows;
+    const dataRows = tableRows.map((row) =>
+      visibleColumns.map((col) => {
         const val = row.original[col];
         if (val === null || val === undefined) return "";
         return String(val);
@@ -184,11 +207,11 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
     setTimeout(() => {
       setCopied(false);
     }, 1500);
-  }, [columns, table]);
+  }, [visibleColumns, table]);
 
   const handleDownloadCsv = useCallback(() => {
-    downloadCsv(columns, rows, "query-results.csv");
-  }, [columns, rows]);
+    downloadCsv(visibleColumns, rows, "query-results.csv");
+  }, [visibleColumns, rows]);
 
   return (
     <div data-testid="data-grid" className="border rounded">
@@ -196,6 +219,87 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
       <div className="flex items-center justify-end gap-1 px-3 py-1 border-b"
         style={{ borderColor: "var(--color-border)" }}
       >
+        {/* Column visibility dropdown */}
+        <div className="relative" ref={columnsDropdownRef}>
+          <button
+            type="button"
+            aria-label="Toggle column visibility"
+            onClick={() => setColumnsDropdownOpen((prev) => !prev)}
+            className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 flex items-center gap-1"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden="true"
+              className="inline-block shrink-0"
+            >
+              <rect x="1" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="7" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="1" y="7" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="7" y="7" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+            Columns
+          </button>
+          {columnsDropdownOpen && (
+            <div
+              data-testid="columns-dropdown"
+              className="absolute right-0 top-full mt-1 z-20 min-w-[160px] rounded border shadow-lg py-1"
+              style={{
+                backgroundColor: "var(--color-surface)",
+                borderColor: "var(--color-border)",
+              }}
+            >
+              {/* Show All / Hide All */}
+              <div className="flex items-center gap-2 px-3 py-1 border-b" style={{ borderColor: "var(--color-border)" }}>
+                <button
+                  type="button"
+                  className="text-xs hover:underline"
+                  style={{ color: "var(--color-accent)" }}
+                  onClick={() => {
+                    const all: VisibilityState = {};
+                    for (const col of columns) all[col] = true;
+                    setColumnVisibility(all);
+                  }}
+                >
+                  Show All
+                </button>
+                <button
+                  type="button"
+                  className="text-xs hover:underline"
+                  style={{ color: "var(--color-text-secondary, var(--color-text))" }}
+                  onClick={() => {
+                    const none: VisibilityState = {};
+                    for (const col of columns) none[col] = false;
+                    setColumnVisibility(none);
+                  }}
+                >
+                  Hide All
+                </button>
+              </div>
+              {columns.map((col) => (
+                <label
+                  key={col}
+                  className="flex items-center gap-2 px-3 py-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={columnVisibility[col] !== false}
+                    onChange={() => {
+                      setColumnVisibility((prev) => ({
+                        ...prev,
+                        [col]: prev[col] === false ? true : false,
+                      }));
+                    }}
+                    className="accent-[var(--color-accent)]"
+                  />
+                  <span className="truncate">{col}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           type="button"
           aria-label="Download CSV"

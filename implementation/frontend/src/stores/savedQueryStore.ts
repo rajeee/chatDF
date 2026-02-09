@@ -27,7 +27,7 @@ export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()(
     set({ isLoading: true });
     try {
       const data = await apiGet<{ queries: SavedQuery[] }>("/saved-queries");
-      set({ queries: data.queries, isLoading: false });
+      set({ queries: data.queries ?? [], isLoading: false });
     } catch {
       set({ isLoading: false });
     }

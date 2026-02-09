@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUiStore } from "@/stores/uiStore";
-import { useDatasetStore } from "@/stores/datasetStore";
+import { useDatasetStore, type ColumnProfile } from "@/stores/datasetStore";
 import { apiPost, apiPatch } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -123,6 +123,13 @@ export function SchemaModal() {
   );
   const renameDataset = useDatasetStore((s) => s.renameDataset);
   const updateDataset = useDatasetStore((s) => s.updateDataset);
+  const profileDataset = useDatasetStore((s) => s.profileDataset);
+  const columnProfiles = useDatasetStore((s) =>
+    schemaModalDatasetId ? s.columnProfiles[schemaModalDatasetId] : undefined
+  );
+  const isProfiling = useDatasetStore((s) =>
+    schemaModalDatasetId ? s.isProfiling[schemaModalDatasetId] ?? false : false
+  );
   const conversationId = useChatStore((s) => s.activeConversationId);
 
   const [editedName, setEditedName] = useState("");
@@ -219,6 +226,19 @@ export function SchemaModal() {
     }
   }
 
+  async function handleProfile() {
+    if (!conversationId || !dataset) return;
+    await profileDataset(conversationId, dataset.id);
+  }
+
+  // Build a lookup map from column name to its profile for efficient access
+  const profileMap = new Map<string, ColumnProfile>();
+  if (columnProfiles) {
+    for (const p of columnProfiles) {
+      profileMap.set(p.name, p);
+    }
+  }
+
   function handleBackdropClick(e: React.MouseEvent) {
     // Only close if the click target is the backdrop itself.
     if (e.target === e.currentTarget) {
@@ -304,30 +324,67 @@ export function SchemaModal() {
                   <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
                     <th className="text-left py-1 font-medium">Name</th>
                     <th className="text-left py-1 font-medium">Type</th>
+                    {columnProfiles && (
+                      <>
+                        <th className="text-right py-1 font-medium px-1">Unique</th>
+                        <th className="text-right py-1 font-medium px-1">Null %</th>
+                        <th className="text-right py-1 font-medium px-1">Min/Max</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {columns.map((col, idx) => (
-                    <tr
-                      key={idx}
-                      className={`hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors ${idx % 2 === 0 ? "" : "bg-black/[0.02] dark:bg-white/[0.02]"}`}
-                    >
-                      <td className="py-1">{col.name}</td>
-                      <td className="py-1 opacity-70">
-                        <span className="inline-flex items-center">
-                          <TypeIcon type={col.type} />
-                          {mapType(col.type)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {columns.map((col, idx) => {
+                    const profile = profileMap.get(col.name);
+                    const isNumeric = ["Int32", "Int64", "Float32", "Float64", "UInt32", "UInt64"].includes(col.type) ||
+                      col.type.startsWith("Int") || col.type.startsWith("UInt") || col.type.startsWith("Float");
+                    const isString = col.type === "Utf8" || col.type === "String";
+                    return (
+                      <tr
+                        key={idx}
+                        className={`hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors ${idx % 2 === 0 ? "" : "bg-black/[0.02] dark:bg-white/[0.02]"}`}
+                      >
+                        <td className="py-1">{col.name}</td>
+                        <td className="py-1 opacity-70">
+                          <span className="inline-flex items-center">
+                            <TypeIcon type={col.type} />
+                            {mapType(col.type)}
+                          </span>
+                        </td>
+                        {columnProfiles && profile && (
+                          <>
+                            <td className="text-right py-1 px-1 opacity-70 tabular-nums">
+                              {formatNumber(profile.unique_count)}
+                            </td>
+                            <td className="text-right py-1 px-1 opacity-70 tabular-nums">
+                              {profile.null_percent}%
+                            </td>
+                            <td className="text-right py-1 px-1 opacity-70 tabular-nums text-xs">
+                              {isNumeric && profile.min != null && profile.max != null
+                                ? `${profile.min} .. ${profile.max}`
+                                : isString && profile.min_length != null && profile.max_length != null
+                                  ? `len ${profile.min_length}..${profile.max_length}`
+                                  : "\u2014"}
+                            </td>
+                          </>
+                        )}
+                        {columnProfiles && !profile && (
+                          <>
+                            <td className="py-1 px-1">{"\u2014"}</td>
+                            <td className="py-1 px-1">{"\u2014"}</td>
+                            <td className="py-1 px-1">{"\u2014"}</td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Refresh Schema button */}
-          <div>
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -342,8 +399,23 @@ export function SchemaModal() {
                 "Refresh Schema"
               )}
             </button>
+            <button
+              onClick={handleProfile}
+              disabled={isProfiling}
+              className="rounded px-3 py-1 text-sm font-medium disabled:opacity-50 border hover:brightness-110 active:scale-95 transition-all duration-150"
+              style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+            >
+              {isProfiling ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Profiling...
+                </span>
+              ) : (
+                "Profile Columns"
+              )}
+            </button>
             {refreshError && (
-              <p className="mt-1 text-sm text-red-500">{refreshError}</p>
+              <p className="mt-1 text-sm text-red-500 w-full">{refreshError}</p>
             )}
           </div>
         </div>

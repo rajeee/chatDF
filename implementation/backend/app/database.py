@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title           TEXT NOT NULL DEFAULT '',
     is_pinned       INTEGER NOT NULL DEFAULT 0,
+    share_token     TEXT UNIQUE,
+    shared_at       TEXT,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );
@@ -203,6 +205,22 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     try:
         await conn.execute(
             "ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add share_token and shared_at columns to existing databases
+    try:
+        await conn.execute(
+            "ALTER TABLE conversations ADD COLUMN share_token TEXT UNIQUE"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+    try:
+        await conn.execute(
+            "ALTER TABLE conversations ADD COLUMN shared_at TEXT"
         )
         await conn.commit()
     except Exception:

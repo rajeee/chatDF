@@ -1,5 +1,6 @@
 // Implements: spec/frontend/plan.md#state-management-architecture (datasetStore)
 import { create } from "zustand";
+import { apiPost } from "@/api/client";
 
 export interface Dataset {
   id: string;
@@ -13,10 +14,24 @@ export interface Dataset {
   error_message: string | null;
 }
 
+export interface ColumnProfile {
+  name: string;
+  null_count: number;
+  null_percent: number;
+  unique_count: number;
+  min?: number | null;
+  max?: number | null;
+  mean?: number | null;
+  min_length?: number | null;
+  max_length?: number | null;
+}
+
 interface DatasetState {
   datasets: Dataset[];
   loadingDatasets: Set<string>;
   loadingStartTimes: Record<string, number>;
+  columnProfiles: Record<string, ColumnProfile[]>;
+  isProfiling: Record<string, boolean>;
 }
 
 interface DatasetActions {
@@ -27,6 +42,7 @@ interface DatasetActions {
   refreshSchema: (id: string) => void;
   setConversationDatasets: (conversationId: string, datasets: Dataset[]) => void;
   getLoadingStartTime: (id: string) => number | undefined;
+  profileDataset: (conversationId: string, datasetId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -34,6 +50,8 @@ const initialState: DatasetState = {
   datasets: [],
   loadingDatasets: new Set<string>(),
   loadingStartTimes: {},
+  columnProfiles: {},
+  isProfiling: {},
 };
 
 export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => ({
@@ -98,11 +116,32 @@ export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => 
 
   getLoadingStartTime: (id) => useDatasetStore.getState().loadingStartTimes[id],
 
+  profileDataset: async (conversationId, datasetId) => {
+    set((state) => ({
+      isProfiling: { ...state.isProfiling, [datasetId]: true },
+    }));
+    try {
+      const result = await apiPost<{ profiles: ColumnProfile[] }>(
+        `/conversations/${conversationId}/datasets/${datasetId}/profile`
+      );
+      set((state) => ({
+        columnProfiles: { ...state.columnProfiles, [datasetId]: result.profiles },
+        isProfiling: { ...state.isProfiling, [datasetId]: false },
+      }));
+    } catch {
+      set((state) => ({
+        isProfiling: { ...state.isProfiling, [datasetId]: false },
+      }));
+    }
+  },
+
   reset: () =>
     set({
       datasets: [],
       loadingDatasets: new Set<string>(),
       loadingStartTimes: {},
+      columnProfiles: {},
+      isProfiling: {},
     }),
 }));
 

@@ -26,6 +26,7 @@ import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { LiveRegion } from "./LiveRegion";
 import { SkeletonMessages } from "./SkeletonMessages";
 import { FollowupSuggestions } from "./FollowupSuggestions";
+import { ShareDialog } from "./ShareDialog";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -194,6 +195,10 @@ export function ChatArea() {
     [handleSend]
   );
 
+  // Share dialog state
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareContainerRef = useRef<HTMLDivElement>(null);
+
   return (
     <section
       id="main-content"
@@ -207,6 +212,47 @@ export function ChatArea() {
 
       {/* Constrained-width inner container */}
       <div className="flex flex-col w-full max-w-3xl flex-1">
+        {/* Share button - visible when conversation has messages */}
+        {hasMessages && activeConversationId && (
+          <div className="flex justify-end px-2 sm:px-4 pt-2">
+            <div className="relative" ref={shareContainerRef}>
+              <button
+                data-testid="share-btn"
+                className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
+                style={{ color: "var(--color-text)" }}
+                onClick={() => setShareOpen((o) => !o)}
+                title="Share conversation"
+                aria-label="Share conversation"
+                aria-expanded={shareOpen}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+              </button>
+              {shareOpen && (
+                <ShareDialog
+                  conversationId={activeConversationId}
+                  onClose={() => setShareOpen(false)}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Main content area - conditional rendering */}
         <div className="flex-1 flex flex-col">
           {showOnboarding && (

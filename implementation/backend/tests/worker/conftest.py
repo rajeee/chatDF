@@ -64,6 +64,16 @@ def _generate_fixtures() -> None:
             {"id": list(range(2000)), "val": list(range(2000))}
         ).write_parquet(large_path)
 
+    nulls_path = fixtures_dir / "nulls.parquet"
+    if not nulls_path.exists():
+        pl.DataFrame(
+            {
+                "id": [1, 2, 3, 4, 5],
+                "score": [10.0, None, 30.0, None, 50.0],
+                "label": ["a", "bb", None, "dddd", None],
+            }
+        ).write_parquet(nulls_path)
+
     not_parquet_path = fixtures_dir / "not_parquet.csv"
     if not not_parquet_path.exists():
         not_parquet_path.write_text("a,b,c\n1,2,3\n4,5,6\n")
@@ -119,6 +129,11 @@ def empty_parquet_url(parquet_server):
 @pytest.fixture
 def wide_parquet_url(parquet_server):
     return f"{parquet_server}/wide.parquet"
+
+
+@pytest.fixture
+def nulls_parquet_url(parquet_server):
+    return f"{parquet_server}/nulls.parquet"
 
 
 @pytest.fixture

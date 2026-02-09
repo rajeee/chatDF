@@ -160,3 +160,17 @@ export async function apiDelete<T>(path: string, timeoutMs?: number): Promise<T>
   );
   return handleResponse<T>(response);
 }
+
+/**
+ * Send a GET request without credentials (for public/unauthenticated endpoints).
+ */
+export async function apiGetPublic<T>(path: string, timeoutMs?: number): Promise<T> {
+  const response = await fetchWithTimeout(
+    `${BASE_URL}${path}`,
+    {
+      method: "GET",
+    },
+    timeoutMs
+  );
+  return handleResponse<T>(response);
+}

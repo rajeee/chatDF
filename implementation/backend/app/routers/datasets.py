@@ -200,6 +200,33 @@ async def refresh_dataset_schema(
 
 
 # ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/datasets/{dataset_id}/profile
+# Column profiling endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{dataset_id}/profile")
+async def profile_dataset(
+    request: Request,
+    dataset_id: str,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """Compute per-column profiling statistics for a dataset."""
+    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    worker_pool = _get_worker_pool(request)
+    result = await worker_pool.profile_columns(ds["url"])
+
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    if "error_type" in result:
+        raise HTTPException(status_code=500, detail=result.get("message", "Profiling failed"))
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # DELETE /conversations/{conversation_id}/datasets/{dataset_id}
 # Implements: spec/backend/rest_api/plan.md#routersdatasetspy
 # ---------------------------------------------------------------------------

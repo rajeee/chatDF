@@ -206,6 +206,22 @@ class SavedQueryListResponse(BaseModel):
     queries: list[SavedQueryResponse]
 
 
+class ShareConversationResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/share``."""
+
+    share_token: str
+    share_url: str
+
+
+class PublicConversationResponse(BaseModel):
+    """Response for ``GET /shared/{share_token}``."""
+
+    title: str
+    messages: list[MessageResponse]
+    datasets: list[DatasetResponse]
+    shared_at: str
+
+
 class ErrorResponse(BaseModel):
     """Standardized error response format."""
 

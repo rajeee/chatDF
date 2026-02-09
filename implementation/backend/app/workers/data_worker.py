@@ -164,6 +164,96 @@ def extract_schema(url: str) -> dict:
         }
 
 
+def profile_columns(url: str) -> dict:
+    """Compute per-column profiling statistics for a parquet dataset.
+
+    For each column, computes null count/percent, unique count, and
+    type-specific stats (min/max/mean for numerics, min/max length for strings).
+
+    For large datasets (>100K rows), samples the first 100K rows for speed.
+
+    Returns:
+        {"profiles": [{"name": str, ...}, ...]}
+        On error: {"error": str}
+    """
+    tmp_path = None
+    try:
+        import polars as pl
+
+        SAMPLE_THRESHOLD = 100_000
+
+        # Try direct URL access first (uses HTTP range requests)
+        try:
+            lazy_frame = pl.scan_parquet(url)
+            lazy_frame.collect_schema()  # verify access
+        except Exception:
+            # Fallback: download to temp file
+            tmp_path = _download_to_tempfile(url)
+            lazy_frame = pl.scan_parquet(tmp_path)
+
+        # Collect, sampling if needed
+        df = lazy_frame.collect()
+        if len(df) > SAMPLE_THRESHOLD:
+            df = df.head(SAMPLE_THRESHOLD)
+
+        schema = df.schema
+        profiles = []
+
+        for col_name in df.columns:
+            dtype = schema[col_name]
+            series = df[col_name]
+            total = len(series)
+
+            null_count = series.null_count()
+            null_percent = round((null_count / total) * 100, 1) if total > 0 else 0.0
+            unique_count = series.n_unique()
+
+            profile: dict = {
+                "name": col_name,
+                "null_count": null_count,
+                "null_percent": null_percent,
+                "unique_count": unique_count,
+            }
+
+            # Numeric types: Int*, UInt*, Float*
+            dtype_str = str(dtype)
+            if dtype_str.startswith(("Int", "UInt", "Float")):
+                try:
+                    min_val = series.min()
+                    max_val = series.max()
+                    mean_val = series.mean()
+                    profile["min"] = min_val
+                    profile["max"] = max_val
+                    profile["mean"] = round(mean_val, 2) if mean_val is not None else None
+                except Exception:
+                    profile["min"] = None
+                    profile["max"] = None
+                    profile["mean"] = None
+            elif dtype_str in ("Utf8", "String"):
+                try:
+                    non_null = series.drop_nulls()
+                    if len(non_null) > 0:
+                        lengths = non_null.str.len_chars()
+                        profile["min_length"] = lengths.min()
+                        profile["max_length"] = lengths.max()
+                    else:
+                        profile["min_length"] = None
+                        profile["max_length"] = None
+                except Exception:
+                    profile["min_length"] = None
+                    profile["max_length"] = None
+
+            profiles.append(profile)
+
+        return {"profiles": profiles}
+
+    except Exception as exc:
+        return {"error": str(exc)}
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 def execute_query(sql: str, datasets: list[dict]) -> dict:
     """Execute SQL query against parquet datasets.
 

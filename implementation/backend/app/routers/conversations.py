@@ -17,11 +17,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 from datetime import datetime
 from uuid import uuid4
 
 import aiosqlite
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
@@ -34,13 +35,16 @@ from app.models import (
     MessageAckResponse,
     MessageResponse,
     PinConversationRequest,
+    PublicConversationResponse,
     RenameConversationRequest,
     SendMessageRequest,
+    ShareConversationResponse,
     SuccessResponse,
 )
 from app.services import chat_service
 
 router = APIRouter()
+public_router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
@@ -376,3 +380,157 @@ async def stop_generation(
     """Stop in-progress LLM generation for this conversation."""
     chat_service.stop_generation(conversation["id"])
     return SuccessResponse(success=True)
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/share
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/share", status_code=201, response_model=ShareConversationResponse)
+async def share_conversation(
+    request: Request,
+    conversation_id: str,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> ShareConversationResponse:
+    """Generate a shareable read-only link for a conversation."""
+    # Verify user owns conversation
+    cursor = await db.execute(
+        "SELECT * FROM conversations WHERE id = ?",
+        (conversation_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    conversation = dict(row)
+    if conversation["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # If already shared, return existing token
+    if conversation.get("share_token"):
+        share_url = f"{request.base_url}share/{conversation['share_token']}"
+        return ShareConversationResponse(
+            share_token=conversation["share_token"],
+            share_url=share_url,
+        )
+
+    # Generate new share token
+    token = secrets.token_urlsafe(16)
+    now = datetime.utcnow().isoformat()
+
+    await db.execute(
+        "UPDATE conversations SET share_token = ?, shared_at = ? WHERE id = ?",
+        (token, now, conversation_id),
+    )
+    await db.commit()
+
+    share_url = f"{request.base_url}share/{token}"
+    return ShareConversationResponse(
+        share_token=token,
+        share_url=share_url,
+    )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /conversations/{conversation_id}/share
+# ---------------------------------------------------------------------------
+
+
+@router.delete("/{conversation_id}/share")
+async def unshare_conversation(
+    conversation_id: str,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Revoke the shareable link for a conversation."""
+    # Verify user owns conversation
+    cursor = await db.execute(
+        "SELECT * FROM conversations WHERE id = ?",
+        (conversation_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    conversation = dict(row)
+    if conversation["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    await db.execute(
+        "UPDATE conversations SET share_token = NULL, shared_at = NULL WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+
+    return {"success": True}
+
+
+# ---------------------------------------------------------------------------
+# GET /shared/{share_token} — Public (no auth required)
+# ---------------------------------------------------------------------------
+
+
+@public_router.get("/{share_token}", response_model=PublicConversationResponse)
+async def get_public_conversation(
+    share_token: str,
+    db: aiosqlite.Connection = Depends(get_db),
+) -> PublicConversationResponse:
+    """Get a shared conversation by its share token (no authentication required)."""
+    # Look up conversation by share_token
+    cursor = await db.execute(
+        "SELECT * FROM conversations WHERE share_token = ?",
+        (share_token,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Shared conversation not found")
+
+    conversation = dict(row)
+
+    # Fetch messages
+    cursor = await db.execute(
+        "SELECT id, role, content, sql_query, reasoning, created_at "
+        "FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conversation["id"],),
+    )
+    message_rows = await cursor.fetchall()
+    messages = [
+        MessageResponse(
+            id=r["id"],
+            role=r["role"],
+            content=r["content"],
+            sql_query=r["sql_query"],
+            reasoning=r["reasoning"],
+            created_at=datetime.fromisoformat(r["created_at"]),
+        )
+        for r in message_rows
+    ]
+
+    # Fetch datasets
+    cursor = await db.execute(
+        "SELECT id, name, url, row_count, column_count, status, schema_json "
+        "FROM datasets WHERE conversation_id = ?",
+        (conversation["id"],),
+    )
+    dataset_rows = await cursor.fetchall()
+    datasets = [
+        DatasetResponse(
+            id=r["id"],
+            name=r["name"],
+            url=r["url"],
+            row_count=r["row_count"],
+            column_count=r["column_count"],
+            status=r["status"] or "ready",
+            schema_json=r["schema_json"] or "{}",
+        )
+        for r in dataset_rows
+    ]
+
+    return PublicConversationResponse(
+        title=conversation["title"],
+        messages=messages,
+        datasets=datasets,
+        shared_at=conversation["shared_at"],
+    )

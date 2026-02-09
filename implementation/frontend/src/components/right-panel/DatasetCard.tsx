@@ -117,6 +117,9 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               {formatNumber(dataset.row_count)} rows x {formatNumber(dataset.column_count)} cols
             </span>
           </div>
+          <span className="text-xs opacity-40 truncate block" title={dataset.url}>
+            {getHostname(dataset.url)}
+          </span>
           <button
             onClick={handleRemove}
             aria-label="Remove dataset"

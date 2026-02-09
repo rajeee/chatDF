@@ -340,16 +340,17 @@ describe("ChatInput accessibility and focus", () => {
 });
 
 describe("ChatInput focus-visible (global CSS)", () => {
-  it("textarea relies on global focus-visible styles, not inline overrides", () => {
+  it("textarea has accent-colored focus ring for keyboard visibility", () => {
     const onSend = vi.fn();
     const onStop = vi.fn();
 
     renderWithProviders(<ChatInput onSend={onSend} onStop={onStop} />);
 
     const textarea = screen.getByRole("textbox", { name: /message input/i });
-    // focus:outline-none and focus:ring-* are handled globally via CSS focus-visible
-    expect(textarea.className).not.toContain("focus:outline-none");
-    expect(textarea.className).not.toContain("focus:ring-");
+    // Textarea uses its own accent focus ring for better keyboard visibility
+    expect(textarea.className).toContain("focus:ring-2");
+    expect(textarea.className).toContain("focus:outline-none");
+    expect(textarea.className).toContain("transition-shadow");
   });
 
   it("send button relies on global focus-visible styles", () => {

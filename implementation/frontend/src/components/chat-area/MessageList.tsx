@@ -35,6 +35,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const scrollRafRef = useRef<number | null>(null);
 
   // Track initial load message count for staggered cascade animation.
@@ -82,6 +83,11 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         requestAnimationFrame(() => {
           setUserHasScrolledUp(!isNearBottom());
           setShowScrollToTop(!isNearTop());
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const scrollHeight = document.documentElement.scrollHeight;
+          const clientHeight = document.documentElement.clientHeight;
+          const maxScroll = scrollHeight - clientHeight;
+          setScrollProgress(maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0);
           ticking = false;
         });
       }
@@ -223,6 +229,15 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
 
   return (
     <div className="flex flex-col">
+      <div
+        data-testid="scroll-progress"
+        className="sticky top-0 z-10 h-0.5 transition-all duration-100"
+        style={{
+          width: `${scrollProgress}%`,
+          backgroundColor: "var(--color-accent)",
+          opacity: scrollProgress > 0 && scrollProgress < 100 ? 0.6 : 0,
+        }}
+      />
       {messages.length > 0 && (
         <div className="flex justify-end px-2 sm:px-4 pt-2">
           <div className="relative" ref={exportDropdownRef}>

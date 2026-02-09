@@ -388,20 +388,45 @@ export function ChatHistory() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiDelete(`/conversations/${id}`),
-    onSuccess: (_data, id) => {
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData<ConversationsResponse>(["conversations"]);
+
+      // Optimistically remove the conversation from cache
+      queryClient.setQueryData<ConversationsResponse>(["conversations"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          conversations: old.conversations.filter((c) => c.id !== id),
+        };
+      });
+
+      // Clear delete confirmation and active conversation immediately
+      setConfirmingDeleteId(null);
       if (activeConversationId === id) {
         setActiveConversation(null);
       }
+
+      return { previousData };
+    },
+    onSuccess: () => {
       success("Conversation deleted");
     },
-    onError: (err: unknown) => {
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["conversations"], context.previousData);
+      }
       const message =
-        err instanceof Error ? err.message : "Failed to delete conversation";
+        _err instanceof Error ? _err.message : "Failed to delete conversation";
       showError(message);
     },
     onSettled: () => {
-      setConfirmingDeleteId(null);
+      // Refetch to ensure consistency
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 

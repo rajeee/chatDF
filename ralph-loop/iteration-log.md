@@ -103,3 +103,5 @@ Track each improvement cycle: what was done, what was learned.
 | 96 | 2026-02-09 | Run SQL panel, conversation templates, SQL result persistence | U165, U166, U168 | 979/986 frontend (7 pre-existing), backend pass | e679d03 |
 | 97 | 2026-02-09 | Fix broken LLM tool call tests, update onboarding tests | test fixes | 979/986 frontend (7 pre-existing), 539/545 backend (6 pre-existing) | 3570013 |
 | 99 | 2026-02-09 | Dataset comparison view, SQL auto-complete | U167, U169 | 1035/1042 frontend (+56 new tests, 7 pre-existing), 198/199 backend (1 pre-existing) | b61c8fb |
+| 99b | 2026-02-09 | Tool call preview, column stats dashboard, saved query bookmarks | U170, U171, U172 | frontend pass, 198/199 backend (1 pre-existing) | 9c8b71f |
+| 100 | 2026-02-09 | Inline saved query result preview with Copy as CSV | U173 | 5 new tests pass, backend 198/199 (1 pre-existing) | 94d622f |

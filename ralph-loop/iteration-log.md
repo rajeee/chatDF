@@ -80,3 +80,4 @@ Track each improvement cycle: what was done, what was learned.
 | 74 | 2026-02-08 | Auto-focus after send, word wrapping, skeleton messages, connection banner | U91, U92, U94, U95 | 803/811 frontend (+23 new tests, 8 pre-existing failures), 64/65 backend | 32bc75c |
 | 75 | 2026-02-08 | LLM-driven chart visualization Phase 1 MVP | work.md Phase 1 | 803/811 frontend (8 pre-existing failures), 64/65 backend | 95534f3 |
 | 76 | 2026-02-09 | Heatmap & choropleth charts + user chart controls (Phase 2 & 3) | work.md Phase 2 & 3 | 807/815 frontend (+4 new detection tests, 8 pre-existing failures), 64/65 backend | f8abc25 |
+| 77 | 2026-02-09 | Thinking indicator, DataGrid sort polish, message cascade | U96, U97, U98 | 824/832 frontend (+17 new tests, 8 pre-existing failures), 64/65 backend | e54cb90 |

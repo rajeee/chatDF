@@ -24,6 +24,8 @@ import os
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test-google-client-id")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+# Ensure CORS allows the test origin (overrides .env which may set production origins).
+os.environ["CORS_ORIGINS"] = "http://localhost:5173"
 
 from app.config import get_settings  # noqa: E402
 
@@ -155,14 +157,16 @@ class TestAppLifecycleStartup:
 
     @pytest.mark.asyncio
     async def test_lifespan_initializes_db(self):
-        """On startup, lifespan opens DB and stores it on app.state."""
-        mock_conn = AsyncMock(spec=aiosqlite.Connection)
-        mock_conn.row_factory = None
+        """On startup, lifespan creates DatabasePool and stores write conn on app.state.db."""
+        mock_write_conn = AsyncMock(spec=aiosqlite.Connection)
+        mock_db_pool = AsyncMock()
+        mock_db_pool.initialize = AsyncMock()
+        mock_db_pool.get_write_connection = MagicMock(return_value=mock_write_conn)
+        mock_db_pool.close = AsyncMock()
 
-        mock_connect = AsyncMock(return_value=mock_conn)
+        MockPoolClass = MagicMock(return_value=mock_db_pool)
         with (
-            patch("app.main.aiosqlite.connect", mock_connect),
-            patch("app.main.init_db", new_callable=AsyncMock) as mock_init_db,
+            patch("app.main.DatabasePool", MockPoolClass),
             patch("app.main.worker_pool") as mock_wp,
         ):
             mock_wp.start = MagicMock(return_value=MagicMock())
@@ -171,23 +175,25 @@ class TestAppLifecycleStartup:
             from app.main import lifespan
 
             async with lifespan(app) as _:
-                mock_connect.assert_called_once()
-                mock_init_db.assert_awaited_once_with(mock_conn)
-                assert app.state.db is mock_conn
+                MockPoolClass.assert_called_once()
+                mock_db_pool.initialize.assert_awaited_once()
+                assert app.state.db_pool is mock_db_pool
+                assert app.state.db is mock_write_conn
 
-            mock_conn.close.assert_awaited_once()
+            mock_db_pool.close.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_lifespan_starts_worker_pool(self):
         """On startup, lifespan starts the worker pool."""
-        mock_conn = AsyncMock(spec=aiosqlite.Connection)
-        mock_conn.row_factory = None
+        mock_db_pool = AsyncMock()
+        mock_db_pool.initialize = AsyncMock()
+        mock_db_pool.get_write_connection = MagicMock(return_value=AsyncMock())
+        mock_db_pool.close = AsyncMock()
         mock_pool = MagicMock()
 
-        mock_connect = AsyncMock(return_value=mock_conn)
+        MockPoolClass = MagicMock(return_value=mock_db_pool)
         with (
-            patch("app.main.aiosqlite.connect", mock_connect),
-            patch("app.main.init_db", new_callable=AsyncMock),
+            patch("app.main.DatabasePool", MockPoolClass),
             patch("app.main.worker_pool") as mock_wp,
         ):
             mock_wp.start = MagicMock(return_value=mock_pool)
@@ -202,13 +208,14 @@ class TestAppLifecycleStartup:
     @pytest.mark.asyncio
     async def test_lifespan_creates_connection_manager(self):
         """On startup, lifespan creates a ConnectionManager on app.state."""
-        mock_conn = AsyncMock(spec=aiosqlite.Connection)
-        mock_conn.row_factory = None
+        mock_db_pool = AsyncMock()
+        mock_db_pool.initialize = AsyncMock()
+        mock_db_pool.get_write_connection = MagicMock(return_value=AsyncMock())
+        mock_db_pool.close = AsyncMock()
 
-        mock_connect = AsyncMock(return_value=mock_conn)
+        MockPoolClass = MagicMock(return_value=mock_db_pool)
         with (
-            patch("app.main.aiosqlite.connect", mock_connect),
-            patch("app.main.init_db", new_callable=AsyncMock),
+            patch("app.main.DatabasePool", MockPoolClass),
             patch("app.main.worker_pool") as mock_wp,
         ):
             mock_wp.start = MagicMock(return_value=MagicMock())
@@ -227,14 +234,15 @@ class TestAppLifecycleShutdown:
     @pytest.mark.asyncio
     async def test_lifespan_shuts_down_worker_pool(self):
         """On shutdown, lifespan drains and terminates the worker pool."""
-        mock_conn = AsyncMock(spec=aiosqlite.Connection)
-        mock_conn.row_factory = None
+        mock_db_pool = AsyncMock()
+        mock_db_pool.initialize = AsyncMock()
+        mock_db_pool.get_write_connection = MagicMock(return_value=AsyncMock())
+        mock_db_pool.close = AsyncMock()
         mock_pool = MagicMock()
 
-        mock_connect = AsyncMock(return_value=mock_conn)
+        MockPoolClass = MagicMock(return_value=mock_db_pool)
         with (
-            patch("app.main.aiosqlite.connect", mock_connect),
-            patch("app.main.init_db", new_callable=AsyncMock),
+            patch("app.main.DatabasePool", MockPoolClass),
             patch("app.main.worker_pool") as mock_wp,
         ):
             mock_wp.start = MagicMock(return_value=mock_pool)
@@ -249,14 +257,15 @@ class TestAppLifecycleShutdown:
 
     @pytest.mark.asyncio
     async def test_lifespan_closes_db_on_shutdown(self):
-        """On shutdown, lifespan closes the database connection."""
-        mock_conn = AsyncMock(spec=aiosqlite.Connection)
-        mock_conn.row_factory = None
+        """On shutdown, lifespan closes the database pool."""
+        mock_db_pool = AsyncMock()
+        mock_db_pool.initialize = AsyncMock()
+        mock_db_pool.get_write_connection = MagicMock(return_value=AsyncMock())
+        mock_db_pool.close = AsyncMock()
 
-        mock_connect = AsyncMock(return_value=mock_conn)
+        MockPoolClass = MagicMock(return_value=mock_db_pool)
         with (
-            patch("app.main.aiosqlite.connect", mock_connect),
-            patch("app.main.init_db", new_callable=AsyncMock),
+            patch("app.main.DatabasePool", MockPoolClass),
             patch("app.main.worker_pool") as mock_wp,
         ):
             mock_wp.start = MagicMock(return_value=MagicMock())
@@ -267,7 +276,7 @@ class TestAppLifecycleShutdown:
             async with lifespan(app) as _:
                 pass
 
-            mock_conn.close.assert_awaited_once()
+            mock_db_pool.close.assert_awaited_once()
 
 
 class TestAppLifecycleDb:
@@ -313,8 +322,8 @@ class TestAppLifecycleDb:
         assert tables == expected_tables
 
     @pytest.mark.asyncio
-    async def test_all_seven_indexes_exist(self, fresh_db):
-        """init_db creates all 7 indexes."""
+    async def test_all_indexes_exist(self, fresh_db):
+        """init_db creates all 8 indexes."""
         cursor = await fresh_db.execute(
             "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name"
         )
@@ -324,6 +333,7 @@ class TestAppLifecycleDb:
             "idx_datasets_conversation_id",
             "idx_messages_conversation_id",
             "idx_referral_keys_used_by",
+            "idx_saved_queries_user_id",
             "idx_sessions_user_id",
             "idx_token_usage_user_timestamp",
             "idx_users_google_id",

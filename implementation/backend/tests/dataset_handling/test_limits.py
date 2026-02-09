@@ -7,25 +7,36 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.dataset_service import add_dataset, remove_dataset
+from app.services.dataset_service import (
+    MAX_DATASETS_PER_CONVERSATION,
+    add_dataset,
+    remove_dataset,
+)
 
 
 # ---------------------------------------------------------------------------
-# LIMIT-1: Maximum 5 datasets per conversation
+# LIMIT-1: Maximum N datasets per conversation
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 @pytest.mark.unit
-@pytest.mark.parametrize("conversation_with_datasets", [5], indirect=True)
-async def test_sixth_dataset_rejected(
+@pytest.mark.parametrize(
+    "conversation_with_datasets",
+    [MAX_DATASETS_PER_CONVERSATION],
+    indirect=True,
+)
+async def test_over_limit_dataset_rejected(
     fresh_db, conversation_with_datasets, mock_worker_pool
 ):
-    """Adding a 6th dataset to a conversation with 5 is rejected."""
+    """Adding one more dataset beyond the limit is rejected."""
     conv, datasets = conversation_with_datasets
-    assert len(datasets) == 5
+    assert len(datasets) == MAX_DATASETS_PER_CONVERSATION
 
-    with pytest.raises(ValueError, match="Maximum 5 datasets reached"):
+    with pytest.raises(
+        ValueError,
+        match=f"Maximum {MAX_DATASETS_PER_CONVERSATION} datasets reached",
+    ):
         await add_dataset(
             fresh_db,
             conv["id"],
@@ -41,11 +52,15 @@ async def test_sixth_dataset_rejected(
 
 @pytest.mark.asyncio
 @pytest.mark.unit
-@pytest.mark.parametrize("conversation_with_datasets", [5], indirect=True)
+@pytest.mark.parametrize(
+    "conversation_with_datasets",
+    [MAX_DATASETS_PER_CONVERSATION],
+    indirect=True,
+)
 async def test_removing_one_then_adding_succeeds(
     fresh_db, conversation_with_datasets, mock_worker_pool
 ):
-    """Remove one dataset from 5, then adding a new one succeeds."""
+    """Remove one dataset from the limit, then adding a new one succeeds."""
     conv, datasets = conversation_with_datasets
 
     # Remove one
@@ -62,17 +77,17 @@ async def test_removing_one_then_adding_succeeds(
 
 
 # ---------------------------------------------------------------------------
-# LIMIT-3: Exactly 5 allowed
+# LIMIT-3: Exactly at the limit is allowed
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 @pytest.mark.unit
-async def test_fifth_dataset_allowed(
+async def test_max_datasets_allowed(
     fresh_db, test_conversation, mock_worker_pool
 ):
-    """Adding exactly 5 datasets succeeds."""
-    for i in range(5):
+    """Adding exactly MAX_DATASETS_PER_CONVERSATION datasets succeeds."""
+    for i in range(MAX_DATASETS_PER_CONVERSATION):
         result = await add_dataset(
             fresh_db,
             test_conversation["id"],
@@ -87,4 +102,4 @@ async def test_fifth_dataset_allowed(
         (test_conversation["id"],),
     )
     row = await cursor.fetchone()
-    assert row["cnt"] == 5
+    assert row["cnt"] == MAX_DATASETS_PER_CONVERSATION

@@ -1,7 +1,7 @@
 """Shared fixtures for LLM service tests.
 
 Provides:
-- ``mock_gemini_client``: Mocked Google GenAI client
+- ``mock_gemini_client``: Mocked Google GenAI client (async path)
 - ``mock_ws_send``: Captures WebSocket events
 - ``sample_datasets``: Datasets for system prompt tests
 - ``MockChunk``: Helper to simulate Gemini stream chunks
@@ -26,6 +26,7 @@ class MockPart:
     """Simulates a Gemini response Part with either text or function_call."""
     text: str | None = None
     function_call: object | None = None
+    thought: bool = False
 
 
 @dataclass
@@ -81,20 +82,41 @@ class MockChunk:
             return self.candidates[0].content.parts
         return []
 
+    # usage_metadata defaults to None for intermediate chunks
+    usage_metadata: MockUsageMetadata | None = None
+
 
 class MockStreamResponse:
-    """Simulates an iterable Gemini streaming response.
+    """Simulates an async-iterable Gemini streaming response.
 
-    Iterating yields MockChunk objects. After iteration completes,
-    ``usage_metadata`` is available.
+    Async-iterating yields MockChunk objects. The last chunk carries
+    ``usage_metadata``.
     """
 
     def __init__(self, chunks: list[MockChunk], usage: MockUsageMetadata | None = None):
         self._chunks = chunks
-        self.usage_metadata = usage or MockUsageMetadata()
+        self._usage = usage or MockUsageMetadata()
+        # Set usage_metadata on the LAST chunk (like real Gemini SDK)
+        if self._chunks:
+            self._chunks[-1].usage_metadata = self._usage
 
-    def __iter__(self):
-        return iter(self._chunks)
+    def __aiter__(self):
+        return _AsyncChunkIter(self._chunks)
+
+
+class _AsyncChunkIter:
+    """Async iterator over a list of MockChunk."""
+
+    def __init__(self, chunks: list[MockChunk]):
+        self._chunks = chunks
+        self._index = 0
+
+    async def __anext__(self):
+        if self._index >= len(self._chunks):
+            raise StopAsyncIteration
+        chunk = self._chunks[self._index]
+        self._index += 1
+        return chunk
 
 
 # ---------------------------------------------------------------------------
@@ -108,11 +130,13 @@ def sample_datasets():
     return [
         {
             "name": "table1",
+            "url": "https://example.com/table1.parquet",
             "schema_json": '[{"name": "id", "type": "Int64"}, {"name": "city", "type": "Utf8"}]',
             "row_count": 100,
         },
         {
             "name": "table2",
+            "url": "https://example.com/table2.parquet",
             "schema_json": '[{"name": "id", "type": "Int64"}, {"name": "sales", "type": "Float64"}]',
             "row_count": 500,
         },
@@ -121,11 +145,15 @@ def sample_datasets():
 
 @pytest.fixture
 def mock_ws_send():
-    """Async callable that captures WebSocket events sent during streaming."""
+    """Async callable that captures WebSocket events sent during streaming.
+
+    stream_chat calls ``await ws_send(message_dict)`` where message_dict has
+    a ``type`` field plus data.  We record every dict sent.
+    """
     sent: list[dict] = []
 
-    async def send(event_type: str, data: dict) -> None:
-        sent.append({"type": event_type, **data})
+    async def send(msg: dict) -> None:
+        sent.append(msg)
 
     send.messages = sent  # type: ignore[attr-defined]
     return send
@@ -133,10 +161,10 @@ def mock_ws_send():
 
 @pytest.fixture
 def mock_gemini_client(monkeypatch):
-    """Mocked Google GenAI client.
+    """Mocked Google GenAI client (async path: client.aio.models).
 
     By default returns a simple two-chunk text stream.
-    Tests can override ``mock_client.models.generate_content_stream.return_value``
+    Tests can override ``mock_client.aio.models.generate_content_stream``
     to customize behavior.
     """
     mock_client = MagicMock()
@@ -148,10 +176,22 @@ def mock_gemini_client(monkeypatch):
         ],
         usage=MockUsageMetadata(prompt_token_count=50, candidates_token_count=10),
     )
-    mock_client.models.generate_content_stream = MagicMock(return_value=default_stream)
+    mock_client.aio.models.generate_content_stream = AsyncMock(return_value=default_stream)
 
     monkeypatch.setattr("app.services.llm_service.client", mock_client)
     return mock_client
+
+
+@pytest.fixture
+def mock_pool():
+    """Mock worker pool passed as the ``pool`` parameter to stream_chat."""
+    pool = MagicMock()
+    pool.run_query = AsyncMock(return_value={
+        "rows": [{"id": 1}],
+        "columns": ["id"],
+        "total_rows": 1,
+    })
+    return pool
 
 
 def make_text_stream(

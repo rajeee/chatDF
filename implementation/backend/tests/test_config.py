@@ -20,11 +20,29 @@ REQUIRED_ENV = {
     "GOOGLE_CLIENT_SECRET": "test-client-secret",
 }
 
+# Optional env vars that may be present in the real environment / .env file.
+# Tests that verify defaults must ensure these are absent.
+OPTIONAL_ENV_KEYS = [
+    "DATABASE_URL",
+    "CORS_ORIGINS",
+    "TOKEN_LIMIT",
+    "WORKER_MEMORY_LIMIT",
+    "WORKER_POOL_SIZE",
+    "SESSION_DURATION_DAYS",
+    "SECURE_COOKIES",
+]
+
 
 def _set_required_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set only the required env vars so Settings can be constructed."""
+    """Set only the required env vars so Settings can be constructed.
+
+    Also removes any optional env vars that might leak from the host
+    environment so that class-level defaults are exercised.
+    """
     for key, value in REQUIRED_ENV.items():
         monkeypatch.setenv(key, value)
+    for key in OPTIONAL_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
 
 
 # ---------------------------------------------------------------------------
@@ -34,55 +52,59 @@ def _set_required_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 class TestSettingsDefaults:
     """When only the three required env vars are set, all optional fields
-    should fall back to their documented defaults."""
+    should fall back to their documented defaults.
+
+    We pass ``_env_file=None`` to prevent pydantic-settings from reading the
+    real ``.env`` file that may be present in the working directory.
+    """
 
     def test_database_url_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.database_url == "sqlite:///chatdf.db"
 
     def test_cors_origins_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.cors_origins == "http://localhost:5173"
 
     def test_token_limit_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.token_limit == 5_000_000
 
     def test_worker_memory_limit_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.worker_memory_limit == 512
 
     def test_worker_pool_size_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.worker_pool_size == 4
 
     def test_session_duration_days_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.session_duration_days == 7
 
     def test_required_fields_populated(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.gemini_api_key == "test-gemini-key"
         assert settings.google_client_id == "test-client-id"
         assert settings.google_client_secret == "test-client-secret"
@@ -94,14 +116,18 @@ class TestSettingsDefaults:
 
 
 class TestSettingsOverride:
-    """Setting optional env vars should override defaults."""
+    """Setting optional env vars should override defaults.
+
+    We pass ``_env_file=None`` so only the explicit monkeypatched env vars
+    are considered, not values from a ``.env`` file on disk.
+    """
 
     def test_override_database_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _set_required_env(monkeypatch)
         monkeypatch.setenv("DATABASE_URL", "sqlite:///custom.db")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.database_url == "sqlite:///custom.db"
 
     def test_override_cors_origins(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -109,7 +135,7 @@ class TestSettingsOverride:
         monkeypatch.setenv("CORS_ORIGINS", "http://example.com,http://other.com")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.cors_origins == "http://example.com,http://other.com"
 
     def test_override_token_limit(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -117,7 +143,7 @@ class TestSettingsOverride:
         monkeypatch.setenv("TOKEN_LIMIT", "1000000")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.token_limit == 1_000_000
 
     def test_override_worker_memory_limit(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,7 +151,7 @@ class TestSettingsOverride:
         monkeypatch.setenv("WORKER_MEMORY_LIMIT", "1024")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.worker_memory_limit == 1024
 
     def test_override_worker_pool_size(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -133,7 +159,7 @@ class TestSettingsOverride:
         monkeypatch.setenv("WORKER_POOL_SIZE", "8")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.worker_pool_size == 8
 
     def test_override_session_duration_days(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -141,7 +167,7 @@ class TestSettingsOverride:
         monkeypatch.setenv("SESSION_DURATION_DAYS", "30")
         from app.config import Settings
 
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.session_duration_days == 30
 
 

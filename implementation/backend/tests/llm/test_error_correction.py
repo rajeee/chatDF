@@ -20,39 +20,39 @@ from .conftest import (
 
 
 @pytest.fixture
-def mock_run_query_error():
-    """Mock worker_pool.run_query that always returns a SQL error."""
-    with patch("app.services.llm_service.worker_pool") as mock_wp:
-        mock_wp.run_query = AsyncMock(return_value={
-            "error_type": "sql_error",
-            "message": "SQL syntax error near 'SELCT'",
-            "details": "column 'foo' not found",
-        })
-        yield mock_wp
+def mock_pool_error():
+    """Mock pool whose run_query always returns a SQL error."""
+    pool = MagicMock()
+    pool.run_query = AsyncMock(return_value={
+        "error_type": "sql_error",
+        "message": "SQL syntax error near 'SELCT'",
+        "details": "column 'foo' not found",
+    })
+    return pool
 
 
 @pytest.fixture
-def mock_run_query_success_after_retries():
-    """Mock worker_pool.run_query that fails twice then succeeds."""
-    with patch("app.services.llm_service.worker_pool") as mock_wp:
-        call_count = {"n": 0}
+def mock_pool_success_after_retries():
+    """Mock pool whose run_query fails twice then succeeds."""
+    pool = MagicMock()
+    call_count = {"n": 0}
 
-        async def side_effect(*args, **kwargs):
-            call_count["n"] += 1
-            if call_count["n"] <= 2:
-                return {
-                    "error_type": "sql_error",
-                    "message": f"Error on attempt {call_count['n']}",
-                    "details": "syntax error",
-                }
+    async def side_effect(*args, **kwargs):
+        call_count["n"] += 1
+        if call_count["n"] <= 2:
             return {
-                "rows": [{"id": 1}],
-                "columns": ["id"],
-                "total_rows": 1,
+                "error_type": "sql_error",
+                "message": f"Error on attempt {call_count['n']}",
+                "details": "syntax error",
             }
+        return {
+            "rows": [{"id": 1}],
+            "columns": ["id"],
+            "total_rows": 1,
+        }
 
-        mock_wp.run_query = AsyncMock(side_effect=side_effect)
-        yield mock_wp
+    pool.run_query = AsyncMock(side_effect=side_effect)
+    return pool
 
 
 class TestSqlErrorSentBackToLlm:
@@ -64,7 +64,7 @@ class TestSqlErrorSentBackToLlm:
         mock_gemini_client,
         mock_ws_send,
         sample_datasets,
-        mock_run_query_error,
+        mock_pool_error,
     ):
         """When execute_sql fails, error is sent back to Gemini for retry."""
         # First call: tool call
@@ -76,17 +76,17 @@ class TestSqlErrorSentBackToLlm:
         tool_stream3 = make_tool_call_stream("execute_sql", {"query": "SELECT * FROM table1 LIMIT 10"})
         final_text = make_text_stream(["I encountered errors with the SQL."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream1, tool_stream2, tool_stream3, final_text]
         )
 
         messages = [{"role": "user", "content": "Query data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_pool_error)
 
         # Gemini was called multiple times (initial + retries + final)
-        assert mock_gemini_client.models.generate_content_stream.call_count >= 2
+        assert mock_gemini_client.aio.models.generate_content_stream.await_count >= 2
         # Error was passed back to Gemini (verify by checking run_query was called)
-        assert mock_run_query_error.run_query.await_count >= 1
+        assert mock_pool_error.run_query.await_count >= 1
 
 
 class TestRetryUpToThreeTimes:
@@ -98,7 +98,7 @@ class TestRetryUpToThreeTimes:
         mock_gemini_client,
         mock_ws_send,
         sample_datasets,
-        mock_run_query_error,
+        mock_pool_error,
     ):
         """After 3 SQL failures, no more retries are attempted."""
         # Create enough tool call streams for potential 4+ retries
@@ -108,15 +108,15 @@ class TestRetryUpToThreeTimes:
         ]
         final_text = make_text_stream(["I could not execute the query."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=tool_streams + [final_text]
         )
 
         messages = [{"role": "user", "content": "Query data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_pool_error)
 
         # run_query should be called at most 3 times (initial + 2 retries = 3)
-        assert mock_run_query_error.run_query.await_count <= 3
+        assert mock_pool_error.run_query.await_count <= 3
 
 
 class TestDifferentErrorTypes:
@@ -139,25 +139,25 @@ class TestDifferentErrorTypes:
         error_message,
     ):
         """Each error type is sent to Gemini as a descriptive tool response."""
-        with patch("app.services.llm_service.worker_pool") as mock_wp:
-            mock_wp.run_query = AsyncMock(return_value={
-                "error_type": "sql_error",
-                "message": error_message,
-                "details": error_message,
-            })
+        mock_pool = MagicMock()
+        mock_pool.run_query = AsyncMock(return_value={
+            "error_type": "sql_error",
+            "message": error_message,
+            "details": error_message,
+        })
 
-            tool_stream = make_tool_call_stream("execute_sql", {"query": "SELECT x"})
-            final_text = make_text_stream(["Error encountered."])
+        tool_stream = make_tool_call_stream("execute_sql", {"query": "SELECT x"})
+        final_text = make_text_stream(["Error encountered."])
 
-            mock_gemini_client.models.generate_content_stream = MagicMock(
-                side_effect=[tool_stream, final_text]
-            )
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
+            side_effect=[tool_stream, final_text]
+        )
 
-            messages = [{"role": "user", "content": "Query"}]
-            result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        messages = [{"role": "user", "content": "Query"}]
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_pool)
 
-            # Gemini should have been called at least twice
-            assert mock_gemini_client.models.generate_content_stream.call_count >= 2
+        # Gemini should have been called at least twice
+        assert mock_gemini_client.aio.models.generate_content_stream.await_count >= 2
 
 
 class TestAfterThreeFailuresLlmExplains:
@@ -169,7 +169,7 @@ class TestAfterThreeFailuresLlmExplains:
         mock_gemini_client,
         mock_ws_send,
         sample_datasets,
-        mock_run_query_error,
+        mock_pool_error,
     ):
         """After 3 SQL retries exhausted, LLM produces an explanation."""
         tool_streams = [
@@ -178,12 +178,12 @@ class TestAfterThreeFailuresLlmExplains:
         ]
         final_text = make_text_stream(["I was unable to run the query successfully."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=tool_streams + [final_text]
         )
 
         messages = [{"role": "user", "content": "Query data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_pool_error)
 
         # The final response should be text (not another tool call)
         assert result.assistant_message is not None

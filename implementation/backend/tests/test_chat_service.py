@@ -51,8 +51,8 @@ async def _insert_conversation(db: aiosqlite.Connection, conv: dict) -> None:
 
 async def _insert_message(db: aiosqlite.Connection, msg: dict) -> None:
     await db.execute(
-        "INSERT INTO messages (id, conversation_id, role, content, sql_query, token_count, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO messages (id, conversation_id, role, content, sql_query, token_count, created_at, reasoning) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             msg["id"],
             msg["conversation_id"],
@@ -61,6 +61,7 @@ async def _insert_message(db: aiosqlite.Connection, msg: dict) -> None:
             msg["sql_query"],
             msg["token_count"],
             msg["created_at"],
+            msg.get("reasoning"),
         ),
     )
     await db.commit()
@@ -68,7 +69,7 @@ async def _insert_message(db: aiosqlite.Connection, msg: dict) -> None:
 
 async def _get_messages(db: aiosqlite.Connection, conversation_id: str) -> list[dict]:
     cursor = await db.execute(
-        "SELECT id, conversation_id, role, content, sql_query, token_count, created_at "
+        "SELECT id, conversation_id, role, content, sql_query, token_count, created_at, reasoning "
         "FROM messages WHERE conversation_id = ? ORDER BY created_at",
         (conversation_id,),
     )
@@ -100,6 +101,8 @@ def _make_stream_result(
     input_tokens: int = 100,
     output_tokens: int = 50,
     tool_calls_made: int = 0,
+    reasoning: str | None = None,
+    sql_executions: list | None = None,
 ) -> MagicMock:
     """Create a mock StreamResult."""
     result = MagicMock()
@@ -107,6 +110,8 @@ def _make_stream_result(
     result.input_tokens = input_tokens
     result.output_tokens = output_tokens
     result.tool_calls_made = tool_calls_made
+    result.reasoning = reasoning
+    result.sql_executions = sql_executions if sql_executions is not None else []
     return result
 
 

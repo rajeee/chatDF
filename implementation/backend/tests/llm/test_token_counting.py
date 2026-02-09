@@ -31,7 +31,7 @@ class TestTokenCountingPerRequest:
             prompt_tokens=100,
             candidates_tokens=25,
         )
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             return_value=stream
         )
 
@@ -43,38 +43,31 @@ class TestTokenCountingPerRequest:
 
     @pytest.mark.asyncio
     async def test_tokens_summed_across_tool_calls(
-        self, mock_gemini_client, mock_ws_send, sample_datasets
+        self, mock_gemini_client, mock_ws_send, sample_datasets, mock_pool
     ):
         """When tool calls cause multiple Gemini API calls, tokens are summed."""
-        with patch("app.services.llm_service.worker_pool") as mock_wp:
-            mock_wp.run_query = AsyncMock(return_value={
-                "rows": [{"id": 1}],
-                "columns": ["id"],
-                "total_rows": 1,
-            })
+        tool_stream = make_tool_call_stream(
+            "execute_sql",
+            {"query": "SELECT 1"},
+            prompt_tokens=50,
+            candidates_tokens=10,
+        )
+        text_stream = make_text_stream(
+            ["Done"],
+            prompt_tokens=80,
+            candidates_tokens=20,
+        )
 
-            tool_stream = make_tool_call_stream(
-                "execute_sql",
-                {"query": "SELECT 1"},
-                prompt_tokens=50,
-                candidates_tokens=10,
-            )
-            text_stream = make_text_stream(
-                ["Done"],
-                prompt_tokens=80,
-                candidates_tokens=20,
-            )
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
+            side_effect=[tool_stream, text_stream]
+        )
 
-            mock_gemini_client.models.generate_content_stream = MagicMock(
-                side_effect=[tool_stream, text_stream]
-            )
+        messages = [{"role": "user", "content": "Query"}]
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_pool)
 
-            messages = [{"role": "user", "content": "Query"}]
-            result = await stream_chat(messages, sample_datasets, mock_ws_send)
-
-            # Tokens should be summed: 50+80=130 input, 10+20=30 output
-            assert result.input_tokens == 130
-            assert result.output_tokens == 30
+        # Tokens should be summed: 50+80=130 input, 10+20=30 output
+        assert result.input_tokens == 130
+        assert result.output_tokens == 30
 
 
 class TestTokenCountInChatComplete:
@@ -90,7 +83,7 @@ class TestTokenCountInChatComplete:
             prompt_tokens=200,
             candidates_tokens=50,
         )
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             return_value=stream
         )
 

@@ -8,3 +8,5 @@
 - **WS events during streaming need pending queues**: Chart specs arrive via WS before `chat_complete` finalizes the message. Store them as pending and merge when `chat_complete` arrives.
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
+- **Commit uncommitted work at start of each iteration**: Check `git status` first — prior iterations may have implemented features but not committed them. Validate with tests, then commit before starting new work.
+- **Tailwind arbitrary shadow syntax**: Use `shadow-[inset_0_0_0_1px_rgba(r,g,b,a)]` for custom inset shadows — underscores replace spaces in arbitrary values.

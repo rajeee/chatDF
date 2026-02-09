@@ -273,3 +273,25 @@ export async function forkConversation(
     { message_id: messageId }
   );
 }
+
+// ---------------------------------------------------------------------------
+// SQL explanation
+// ---------------------------------------------------------------------------
+
+export interface ExplainSqlResponse {
+  explanation: string;
+}
+
+/**
+ * Ask the LLM to explain a SQL query in plain English.
+ */
+export async function explainSql(
+  conversationId: string,
+  query: string,
+  schemaJson: string = "{}"
+): Promise<ExplainSqlResponse> {
+  return apiPost<ExplainSqlResponse>(
+    `/conversations/${conversationId}/explain-sql`,
+    { query, schema_json: schemaJson }
+  );
+}

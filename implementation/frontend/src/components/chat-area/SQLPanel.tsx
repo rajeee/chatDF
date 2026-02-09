@@ -15,10 +15,14 @@ import { useDraggable } from "@/hooks/useDraggable";
 import { useResizable } from "@/hooks/useResizable";
 import { useSortedRows } from "@/hooks/useSortedRows";
 import { cellValue } from "@/utils/tableUtils";
-import { downloadCsv } from "@/utils/csvExport";
+import { downloadCsv, exportCsv } from "@/utils/csvExport";
+import { downloadExcel } from "@/utils/excelExport";
 import { downloadJson } from "@/utils/jsonExport";
 import { detectChartTypes } from "@/utils/chartDetection";
 import { ChartVisualization } from "./ChartVisualization";
+import { explainSql } from "@/api/client";
+import { useChatStore } from "@/stores/chatStore";
+import { useDatasetStore } from "@/stores/datasetStore";
 import type { SqlExecution } from "@/stores/chatStore";
 
 // ---------------------------------------------------------------------------
@@ -422,6 +426,26 @@ function SQLResultModal({
                   style={{ color: "var(--color-accent)" }}
                 >
                   Download CSV
+                </button>
+              )}
+              {viewMode === "table" && (
+                <button
+                  onClick={() => exportCsv(columns, sortedRows, `query_${index + 1}`)}
+                  className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                  data-testid="export-csv-btn"
+                >
+                  Export CSV
+                </button>
+              )}
+              {viewMode === "table" && (
+                <button
+                  onClick={() => downloadExcel(columns, sortedRows, `query_${index + 1}`)}
+                  className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                  data-testid="export-xlsx-btn"
+                >
+                  Export XLSX
                 </button>
               )}
               {viewMode === "table" && (

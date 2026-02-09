@@ -34,6 +34,8 @@ from app.models import (
     ConversationResponse,
     ConversationSummary,
     DatasetResponse,
+    ExplainSqlRequest,
+    ExplainSqlResponse,
     ForkConversationRequest,
     MessageAckResponse,
     MessageResponse,
@@ -781,6 +783,43 @@ async def run_query(
         total_rows=total_rows,
         execution_time_ms=round(elapsed_ms, 2),
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/explain-sql
+# Explain a SQL query in plain English using the LLM
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{conversation_id}/explain-sql",
+    response_model=ExplainSqlResponse,
+)
+async def explain_sql(
+    body: ExplainSqlRequest,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+) -> ExplainSqlResponse:
+    """Use the LLM to explain a SQL query in plain English."""
+    from app.services.llm_service import client, MODEL_ID
+
+    prompt = (
+        "Explain this SQL query in plain English. Be concise (2-4 sentences). "
+        f"Schema: {body.schema_json}\n"
+        f"Query: {body.query}"
+    )
+
+    try:
+        response = await client.aio.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt,
+        )
+        explanation = response.text or "Unable to generate explanation."
+    except Exception as exc:
+        _logger.exception("Failed to explain SQL for conversation %s", conversation["id"])
+        raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
+
+    return ExplainSqlResponse(explanation=explanation)
 
 
 # ---------------------------------------------------------------------------

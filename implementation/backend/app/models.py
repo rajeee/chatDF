@@ -274,8 +274,29 @@ class SearchResponse(BaseModel):
     total: int
 
 
+class ExplainSqlRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/explain-sql``."""
+
+    query: str = Field(..., min_length=1, max_length=50000)
+    schema_json: str = "{}"
+
+
+class ExplainSqlResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/explain-sql``."""
+
+    explanation: str
+
+
 class ExportXlsxRequest(BaseModel):
     """Request body for XLSX export."""
+
+    columns: list[str]
+    rows: list[list[Any]]
+    filename: str = "query-results"  # optional filename without extension
+
+
+class ExportCsvRequest(BaseModel):
+    """Request body for CSV export."""
 
     columns: list[str]
     rows: list[list[Any]]

@@ -3,6 +3,12 @@ import { renderHook } from "@testing-library/react";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
 import { useUiStore } from "@/stores/uiStore";
 import { createRef } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
 
 describe("useKeyboardShortcuts", () => {
   let mockChatInputRef: React.RefObject<ChatInputHandle>;
@@ -23,7 +29,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("focuses chat input when / is pressed (not in an input)", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     const event = new KeyboardEvent("keydown", { key: "/" });
     document.dispatchEvent(event);
@@ -32,7 +38,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("does not focus chat input when / is pressed while in an input", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     // Create a fake textarea and dispatch from it
     const textarea = document.createElement("textarea");
@@ -48,7 +54,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("focuses chat input when Ctrl+K is pressed", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     const event = new KeyboardEvent("keydown", { key: "k", ctrlKey: true });
     document.dispatchEvent(event);
@@ -57,7 +63,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("focuses chat input when Cmd+K is pressed (Mac)", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     const event = new KeyboardEvent("keydown", { key: "k", metaKey: true });
     document.dispatchEvent(event);
@@ -66,7 +72,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("focuses chat input with Ctrl+K even when already in an input", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     // Create a fake input and dispatch from it
     const input = document.createElement("input");
@@ -82,7 +88,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("toggles left panel when Ctrl+B is pressed", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     const initialState = useUiStore.getState().leftPanelOpen;
 
@@ -93,7 +99,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("toggles left panel when Cmd+B is pressed (Mac)", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     const initialState = useUiStore.getState().leftPanelOpen;
 
@@ -104,7 +110,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("sends message when Ctrl+Enter is pressed in chat input", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     // Create a fake textarea with correct aria-label
     const textarea = document.createElement("textarea");
@@ -125,7 +131,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("does not send message when Ctrl+Enter is pressed in other inputs", () => {
-    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }));
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
 
     // Create a fake input without correct aria-label
     const input = document.createElement("input");
@@ -145,7 +151,7 @@ describe("useKeyboardShortcuts", () => {
   });
 
   it("does nothing when ref is not provided", () => {
-    renderHook(() => useKeyboardShortcuts({}));
+    renderHook(() => useKeyboardShortcuts({}), { wrapper });
 
     const event = new KeyboardEvent("keydown", { key: "/" });
     document.dispatchEvent(event);

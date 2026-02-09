@@ -347,17 +347,42 @@ export function ChatHistory() {
   const renameMutation = useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) =>
       apiPatch(`/conversations/${id}`, { title }),
+    onMutate: async ({ id, title }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData<ConversationsResponse>(["conversations"]);
+
+      // Optimistically update title in cache
+      queryClient.setQueryData<ConversationsResponse>(["conversations"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          conversations: old.conversations.map((c) =>
+            c.id === id ? { ...c, title } : c
+          ),
+        };
+      });
+
+      // Close the edit input immediately for snappy feel
+      setEditingId(null);
+
+      return { previousData };
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       success("Conversation renamed");
     },
-    onError: (err: unknown) => {
-      const message =
-        err instanceof Error ? err.message : "Failed to rename conversation";
-      showError(message);
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["conversations"], context.previousData);
+      }
+      showError("Failed to rename conversation");
     },
     onSettled: () => {
-      setEditingId(null);
+      // Refetch to ensure consistency
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 
@@ -571,7 +596,7 @@ export function ChatHistory() {
       ) : (
         <ul ref={listRef} className={`flex-1 overflow-y-auto outline-none transition-opacity duration-150${isSearchStale ? " opacity-70" : ""}`} role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={handleListKeyDown} onFocus={handleListFocus}>
           {topPadding > 0 && <li aria-hidden="true" style={{ height: topPadding }} />}
-          {flatItems.slice(startIndex, endIndex).map((item) => {
+          {flatItems.slice(startIndex, endIndex).map((item, visibleIdx) => {
             if (item.type === "header") {
               return (
                 <li key={`hdr-${item.label}`} role="group" aria-label={item.label}>
@@ -595,13 +620,14 @@ export function ChatHistory() {
                 data-active={activeConversationId === conv.id ? "true" : "false"}
                 data-keyboard-focus={isKeyboardFocused ? "true" : undefined}
                 aria-current={activeConversationId === conv.id ? "page" : undefined}
-                className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 border-l-2 ${
+                className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 border-l-2 ${deferredSearchQuery ? "list-item-enter" : ""} ${
                   activeConversationId === conv.id
                     ? "border-[var(--color-accent)] bg-blue-500/10"
                     : conv.is_pinned
                       ? "border-blue-400/50 hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
                       : "border-transparent hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
                 }${isKeyboardFocused ? " ring-1 ring-[var(--color-accent)]/40" : ""}`}
+                style={deferredSearchQuery ? { animationDelay: `${visibleIdx * 20}ms` } : undefined}
                 onClick={() => handleSelect(conv.id)}
               >
                 {editingId === conv.id ? (

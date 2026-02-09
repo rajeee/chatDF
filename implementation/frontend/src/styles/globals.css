@@ -482,6 +482,22 @@ select:focus-visible {
   transform-origin: top right;
 }
 
+/* List item enter animation — subtle fade+slide for search filtering */
+@keyframes listItemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.list-item-enter {
+  animation: listItemEnter 0.15s ease-out both;
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
@@ -499,7 +515,8 @@ select:focus-visible {
   .dataset-card-enter,
   .dataset-card-exit,
   .animate-fade-in,
-  .dropdown-enter {
+  .dropdown-enter,
+  .list-item-enter {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }

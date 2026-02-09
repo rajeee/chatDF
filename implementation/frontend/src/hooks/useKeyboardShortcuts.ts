@@ -2,10 +2,14 @@
 // - "/" - Focus chat input (like Discord/Slack)
 // - "Ctrl/Cmd+K" - Focus chat input (industry standard like Linear, Notion, GitHub)
 // - "Ctrl/Cmd+B" - Toggle left sidebar
+// - "Ctrl/Cmd+P" - Toggle pin on active conversation
 // - "Ctrl/Cmd+Enter" - Send message (when chat input is focused)
 
 import { useEffect } from "react";
 import { useUiStore } from "@/stores/uiStore";
+import { useChatStore } from "@/stores/chatStore";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiPatch } from "@/api/client";
 
 export interface ChatInputHandle {
   focus: () => void;
@@ -20,6 +24,7 @@ interface UseKeyboardShortcutsOptions {
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
   const { chatInputRef } = options;
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -50,6 +55,32 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
         return;
       }
 
+      // Ctrl/Cmd+P - Toggle pin on active conversation
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        const activeId = useChatStore.getState().activeConversationId;
+        if (activeId) {
+          const data = queryClient.getQueryData<{ conversations: Array<{ id: string; is_pinned?: boolean }> }>(["conversations"]);
+          const conv = data?.conversations.find((c) => c.id === activeId);
+          if (conv) {
+            const newPinned = !conv.is_pinned;
+            // Optimistic update
+            queryClient.setQueryData(["conversations"], (old: typeof data) => {
+              if (!old) return old;
+              return { ...old, conversations: old.conversations.map((c) => c.id === activeId ? { ...c, is_pinned: newPinned } : c) };
+            });
+            // Fire API call
+            apiPatch(`/conversations/${activeId}/pin`, { is_pinned: newPinned }).catch(() => {
+              // Rollback on error
+              queryClient.setQueryData(["conversations"], data);
+            }).finally(() => {
+              void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            });
+          }
+        }
+        return;
+      }
+
       // Ctrl/Cmd+Enter - Send message (from chat input)
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && isInputFocused) {
         const isChatInput = target.getAttribute("aria-label") === "Message input";
@@ -63,5 +94,5 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [chatInputRef, toggleLeftPanel]);
+  }, [chatInputRef, toggleLeftPanel, queryClient]);
 }

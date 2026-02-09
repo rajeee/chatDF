@@ -172,6 +172,16 @@ function MessageBubbleComponent({
               {message.sql_executions.length > 1 && (
                 <span className="opacity-40">({message.sql_executions.length} queries)</span>
               )}
+              {(() => {
+                const totalMs = message.sql_executions.reduce((sum, e) => sum + (e.execution_time_ms ?? 0), 0);
+                if (totalMs <= 0) return null;
+                const formatted = totalMs < 1 ? `${totalMs.toFixed(2)}ms` : totalMs < 1000 ? `${totalMs.toFixed(0)}ms` : `${(totalMs / 1000).toFixed(2)}s`;
+                return (
+                  <span data-testid={`sql-time-badge-${message.id}`} className="opacity-40 ml-auto font-mono tabular-nums">
+                    {formatted}
+                  </span>
+                );
+              })()}
             </button>
             {/* SQL preview content with smooth expand/collapse */}
             <div

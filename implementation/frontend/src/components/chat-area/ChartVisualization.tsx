@@ -8,7 +8,7 @@
  * - Lazy-loaded plotly.js for bundle efficiency
  */
 
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense, useRef } from "react";
 import { cellValueRaw } from "@/utils/tableUtils";
 import { analyzeColumns } from "@/utils/chartDetection";
 import type { ChartSpec } from "@/stores/chatStore";
@@ -770,6 +770,7 @@ export function ChartVisualization({
   const [selectedType, setSelectedType] = useState<ChartType | null>(null);
   const [overrides, setOverrides] = useState<ChartOverrides>({});
   const [showControls, setShowControls] = useState(false);
+  const plotDivId = useRef(`chart-plot-${Math.random().toString(36).slice(2)}`).current;
 
   // Reset overrides when chart type changes
   const handleTypeChange = useCallback((type: ChartType) => {
@@ -815,6 +816,27 @@ export function ChartVisualization({
   const showBarControls = activeType === "bar";
   const showColorScaleControls = activeType === "heatmap" || activeType === "choropleth";
   const showAxisControls = activeType != null && activeType !== "pie" && activeType !== "choropleth";
+
+  // Download chart as PNG using the Plotly instance from the rendered chart element
+  const handleDownload = useCallback(() => {
+    try {
+      const el = document.getElementById(plotDivId) as (HTMLElement & { _fullLayout?: unknown }) | null;
+      // Access the Plotly instance attached to the gd element by react-plotly.js
+      if (el && typeof (window as Record<string, unknown>).Plotly === "object") {
+        const Plotly = (window as Record<string, unknown>).Plotly as {
+          downloadImage: (gd: HTMLElement, opts: Record<string, unknown>) => Promise<void>;
+        };
+        Plotly.downloadImage(el, {
+          format: "png",
+          width: 1200,
+          height: 800,
+          filename: "chatdf-chart",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to download chart:", error);
+    }
+  }, [plotDivId]);
 
   if (!llmSpec && !recommendations.length) {
     return (
@@ -894,6 +916,22 @@ export function ChartVisualization({
             </svg>
           </button>
         )}
+
+        {/* Download PNG button */}
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+          style={{ color: "var(--color-text-secondary)" }}
+          aria-label="Download chart as PNG"
+          title="Download chart as PNG"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" className="shrink-0">
+            <path d="M6 1.5 L6 7.5" strokeLinecap="round" />
+            <polyline points="3.5,5.5 6,8 8.5,5.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1.5 8.5 L1.5 10 C1.5 10.5 2 11 2.5 11 L9.5 11 C10 11 10.5 10.5 10.5 10 L10.5 8.5" strokeLinecap="round" />
+          </svg>
+        </button>
 
         {/* Expand button */}
         {onExpand && (
@@ -1003,6 +1041,7 @@ export function ChartVisualization({
           }
         >
           <Plot
+            divId={plotDivId}
             data={plotConfig.data}
             layout={plotConfig.layout}
             config={{

@@ -196,3 +196,47 @@ export async function apiGetPublic<T>(path: string, timeoutMs?: number): Promise
   );
   return handleResponse<T>(response);
 }
+
+// ---------------------------------------------------------------------------
+// Conversation search
+// ---------------------------------------------------------------------------
+
+export interface SearchResult {
+  conversation_id: string;
+  conversation_title: string;
+  message_id: string;
+  message_role: string;
+  snippet: string;
+  created_at: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+}
+
+export async function searchConversations(query: string, limit = 20): Promise<SearchResponse> {
+  return apiGet<SearchResponse>(`/conversations/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+}
+
+// ---------------------------------------------------------------------------
+// Conversation fork
+// ---------------------------------------------------------------------------
+
+export interface ForkResponse {
+  id: string;
+  title: string;
+}
+
+/**
+ * Create a new conversation branch from any message in the chat.
+ */
+export async function forkConversation(
+  conversationId: string,
+  messageId: string
+): Promise<ForkResponse> {
+  return apiPost<ForkResponse>(
+    `/conversations/${conversationId}/fork`,
+    { message_id: messageId }
+  );
+}

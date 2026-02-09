@@ -11,7 +11,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { apiGet, apiPatch, apiDelete, apiPost } from "@/api/client";
+import { apiGet, apiPatch, apiDelete, apiPost, searchConversations, SearchResult } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -163,6 +163,10 @@ export function ChatHistory() {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const isSearchStale = searchQuery !== deferredSearchQuery;
+
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState<SearchResult[]>([]);
+  const [isGlobalSearchLoading, setIsGlobalSearchLoading] = useState(false);
 
   const filteredConversations = deferredSearchQuery.trim()
     ? conversations.filter((conv) => {
@@ -519,6 +523,42 @@ export function ChatHistory() {
     pinMutation.mutate({ id: conv.id, is_pinned: !conv.is_pinned });
   }
 
+  // Global search handler
+  async function handleGlobalSearch() {
+    if (!deferredSearchQuery.trim() || deferredSearchQuery.trim().length < 3) {
+      return;
+    }
+
+    setIsGlobalSearchLoading(true);
+    setShowGlobalSearch(true);
+
+    try {
+      const response = await searchConversations(deferredSearchQuery.trim());
+      setGlobalSearchResults(response.results);
+    } catch (error) {
+      showError("Failed to search conversations");
+      setGlobalSearchResults([]);
+    } finally {
+      setIsGlobalSearchLoading(false);
+    }
+  }
+
+  // Handle search input changes - reset global search when query changes
+  function handleSearchQueryChange(value: string) {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setShowGlobalSearch(false);
+      setGlobalSearchResults([]);
+    }
+  }
+
+  // Navigate to conversation from global search result
+  function handleGlobalSearchResultClick(result: SearchResult) {
+    handleSelect(result.conversation_id);
+    setShowGlobalSearch(false);
+    setSearchQuery("");
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <button
@@ -561,11 +601,14 @@ export function ChatHistory() {
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchQueryChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 setSearchQuery("");
+                setShowGlobalSearch(false);
                 e.currentTarget.blur();
+              } else if (e.key === "Enter" && deferredSearchQuery.trim().length >= 3) {
+                handleGlobalSearch();
               }
             }}
             className="w-full pl-7 pr-7 py-1 text-xs rounded border"
@@ -578,7 +621,10 @@ export function ChatHistory() {
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery("")}
+              onClick={() => {
+                setSearchQuery("");
+                setShowGlobalSearch(false);
+              }}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-500/20 transition-colors"
               aria-label="Clear search"
               data-testid="conversation-search-clear"
@@ -592,8 +638,58 @@ export function ChatHistory() {
         </div>
       )}
 
-      {deferredSearchQuery.trim() && filteredConversations.length > 0 && (
+      {deferredSearchQuery.trim() && filteredConversations.length > 0 && !showGlobalSearch && (
         <span data-testid="search-result-count" className="text-[10px] opacity-40 px-2 py-0.5 animate-fade-in">{filteredConversations.length} result{filteredConversations.length !== 1 ? 's' : ''}</span>
+      )}
+
+      {deferredSearchQuery.trim().length >= 3 && !showGlobalSearch && (
+        <button
+          data-testid="global-search-button"
+          onClick={handleGlobalSearch}
+          className="text-xs text-blue-500 hover:text-blue-600 px-2 py-1 hover:underline"
+        >
+          Search all conversations
+        </button>
+      )}
+
+      {showGlobalSearch && (
+        <div data-testid="global-search-results" className="mb-2 border rounded" style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg)" }}>
+          <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: "var(--color-border)" }}>
+            <span className="text-xs font-medium">Global Search Results</span>
+            <button
+              onClick={() => setShowGlobalSearch(false)}
+              className="text-xs opacity-50 hover:opacity-100"
+              aria-label="Close global search"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {isGlobalSearchLoading ? (
+              <div className="px-2 py-3 text-xs opacity-50 text-center">Searching...</div>
+            ) : globalSearchResults.length === 0 ? (
+              <div className="px-2 py-3 text-xs opacity-50 text-center">No results found</div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+                {globalSearchResults.map((result) => (
+                  <button
+                    key={result.message_id}
+                    data-testid="global-search-result"
+                    onClick={() => handleGlobalSearchResultClick(result)}
+                    className="w-full px-2 py-2 text-left hover:bg-gray-500/10 transition-colors"
+                  >
+                    <div className="text-xs font-medium truncate">{result.conversation_title || "Untitled"}</div>
+                    <div className="text-xs opacity-60 mt-0.5" dangerouslySetInnerHTML={{ __html: result.snippet.replace(new RegExp(`(${deferredSearchQuery})`, 'gi'), '<mark style="background-color: yellow; color: black; padding: 0 2px;">$1</mark>') }} />
+                    <div className="text-[10px] opacity-40 mt-1">{formatRelativeTime(result.created_at)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {isPending ? (

@@ -47,6 +47,12 @@ class PinConversationRequest(BaseModel):
     is_pinned: bool
 
 
+class ForkConversationRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/fork``."""
+
+    message_id: str
+
+
 class RenameDatasetRequest(BaseModel):
     """Body for ``PATCH /conversations/{id}/datasets/{dataset_id}``."""
 
@@ -228,6 +234,24 @@ class PublicConversationResponse(BaseModel):
     messages: list[MessageResponse]
     datasets: list[DatasetResponse]
     shared_at: str
+
+
+class SearchResult(BaseModel):
+    """A single search result for global conversation search."""
+
+    conversation_id: str
+    conversation_title: str
+    message_id: str
+    message_role: str
+    snippet: str
+    created_at: datetime
+
+
+class SearchResponse(BaseModel):
+    """Response for ``GET /conversations/search``."""
+
+    results: list[SearchResult]
+    total: int
 
 
 class ErrorResponse(BaseModel):

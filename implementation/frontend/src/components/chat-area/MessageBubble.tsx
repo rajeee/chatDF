@@ -36,6 +36,7 @@ interface MessageBubbleProps {
   onCopy: (content: string) => void;
   onVisualize: (executions: SqlExecution[], index: number) => void;
   onRetry?: (messageId: string, content: string) => void;
+  onFork?: (messageId: string) => void;
   searchQuery?: string;
 }
 
@@ -60,6 +61,7 @@ function MessageBubbleComponent({
   onCopy,
   onVisualize,
   onRetry,
+  onFork,
   searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -79,12 +81,21 @@ function MessageBubbleComponent({
 
   const [sqlExpanded, setSqlExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [forked, setForked] = useState(false);
 
   const handleCopyClick = useCallback(() => {
     onCopy(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [onCopy, message.content]);
+
+  const handleForkClick = useCallback(() => {
+    if (onFork) {
+      onFork(message.id);
+      setForked(true);
+      setTimeout(() => setForked(false), 1500);
+    }
+  }, [onFork, message.id]);
 
   return (
     <div
@@ -365,38 +376,74 @@ function MessageBubbleComponent({
           </div>
         )}
 
-        {/* Copy button - shows checkmark + "Copied!" for 1.5s after click */}
-        <button
-          data-testid={`copy-btn-${message.id}`}
-          className={`touch-action-btn absolute top-1 right-1 p-1 rounded text-xs transition-all duration-150 ${
-            copied
-              ? "opacity-100"
-              : "opacity-40 hover:opacity-100 hover:bg-white/10"
-          } active:scale-90`}
-          style={{
-            color: copied
-              ? "var(--color-success)"
-              : isUser
-                ? "var(--color-white)"
-                : "var(--color-text)",
-          }}
-          onClick={handleCopyClick}
-          aria-label={copied ? "Copied" : "Copy message"}
-        >
-          {copied ? (
-            <span className="flex items-center gap-0.5 copy-check-enter">
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <span className="text-[10px] font-medium">Copied!</span>
-            </span>
-          ) : (
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" />
-              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-            </svg>
+        {/* Action buttons row - top right */}
+        <div className="absolute top-1 right-1 flex items-center gap-1">
+          {/* Fork button - only shown on assistant messages */}
+          {!isUser && onFork && !isCurrentlyStreaming && (
+            <button
+              data-testid={`fork-btn-${message.id}`}
+              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
+                forked
+                  ? "opacity-100"
+                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
+              } active:scale-90`}
+              style={{
+                color: forked ? "var(--color-success)" : "var(--color-text)",
+              }}
+              onClick={handleForkClick}
+              aria-label={forked ? "Forked" : "Fork conversation"}
+              title="Fork conversation from here"
+            >
+              {forked ? (
+                <span className="flex items-center gap-0.5 copy-check-enter">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+              ) : (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="6" y1="3" x2="6" y2="15" />
+                  <circle cx="18" cy="6" r="3" />
+                  <circle cx="6" cy="18" r="3" />
+                  <path d="M18 9a9 9 0 0 1-9 9" />
+                </svg>
+              )}
+            </button>
           )}
-        </button>
+
+          {/* Copy button - shows checkmark + "Copied!" for 1.5s after click */}
+          <button
+            data-testid={`copy-btn-${message.id}`}
+            className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
+              copied
+                ? "opacity-100"
+                : "opacity-40 hover:opacity-100 hover:bg-white/10"
+            } active:scale-90`}
+            style={{
+              color: copied
+                ? "var(--color-success)"
+                : isUser
+                  ? "var(--color-white)"
+                  : "var(--color-text)",
+            }}
+            onClick={handleCopyClick}
+            aria-label={copied ? "Copied" : "Copy message"}
+          >
+            {copied ? (
+              <span className="flex items-center gap-0.5 copy-check-enter">
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span className="text-[10px] font-medium">Copied!</span>
+              </span>
+            ) : (
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Timestamp with custom tooltip */}

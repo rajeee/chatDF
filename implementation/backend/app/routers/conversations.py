@@ -32,11 +32,14 @@ from app.models import (
     ConversationResponse,
     ConversationSummary,
     DatasetResponse,
+    ForkConversationRequest,
     MessageAckResponse,
     MessageResponse,
     PinConversationRequest,
     PublicConversationResponse,
     RenameConversationRequest,
+    SearchResponse,
+    SearchResult,
     SendMessageRequest,
     ShareConversationResponse,
     SuccessResponse,
@@ -126,6 +129,81 @@ async def list_conversations(
     ]
 
     return ConversationListResponse(conversations=conversations)
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/search
+# Global search across all conversations by message content
+# ---------------------------------------------------------------------------
+
+
+@router.get("/search", response_model=SearchResponse)
+async def search_conversations(
+    q: str,
+    limit: int = 20,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SearchResponse:
+    """Search across all conversations owned by the authenticated user.
+
+    Searches message content (case-insensitive) and returns matching messages
+    with a snippet of context around the match.
+    """
+    # Validate query parameter
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
+
+    # Validate and cap limit
+    if limit < 1:
+        limit = 20
+    elif limit > 50:
+        limit = 50
+
+    # Search messages across all user's conversations
+    search_pattern = f"%{q}%"
+    cursor = await db.execute(
+        "SELECT m.id AS message_id, m.role, m.content, m.created_at, "
+        "       c.id AS conversation_id, c.title "
+        "FROM messages m "
+        "JOIN conversations c ON m.conversation_id = c.id "
+        "WHERE c.user_id = ? AND m.content LIKE ? "
+        "ORDER BY m.created_at DESC "
+        "LIMIT ?",
+        (user["id"], search_pattern, limit),
+    )
+    rows = await cursor.fetchall()
+
+    results = []
+    for row in rows:
+        content = row["content"]
+        # Find the first match position (case-insensitive)
+        lower_content = content.lower()
+        lower_query = q.lower()
+        match_pos = lower_content.find(lower_query)
+
+        # Extract ~100 chars around the match
+        snippet_start = max(0, match_pos - 50)
+        snippet_end = min(len(content), match_pos + len(q) + 50)
+        snippet = content[snippet_start:snippet_end]
+
+        # Add ellipsis if we truncated
+        if snippet_start > 0:
+            snippet = "..." + snippet
+        if snippet_end < len(content):
+            snippet = snippet + "..."
+
+        results.append(
+            SearchResult(
+                conversation_id=row["conversation_id"],
+                conversation_title=row["title"],
+                message_id=row["message_id"],
+                message_role=row["role"],
+                snippet=snippet,
+                created_at=datetime.fromisoformat(row["created_at"]),
+            )
+        )
+
+    return SearchResponse(results=results, total=len(results))
 
 
 # ---------------------------------------------------------------------------
@@ -380,6 +458,111 @@ async def stop_generation(
     """Stop in-progress LLM generation for this conversation."""
     chat_service.stop_generation(conversation["id"])
     return SuccessResponse(success=True)
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/fork
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/fork", status_code=201)
+async def fork_conversation(
+    body: ForkConversationRequest,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Create a new conversation branch from any message in the chat.
+
+    Copies all messages up to and including message_id from the source conversation,
+    and copies all datasets from the source conversation.
+    """
+    conv_id = conversation["id"]
+
+    # Verify message_id belongs to this conversation
+    cursor = await db.execute(
+        "SELECT id, created_at FROM messages WHERE id = ? AND conversation_id = ?",
+        (body.message_id, conv_id),
+    )
+    message_row = await cursor.fetchone()
+    if message_row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found in this conversation"
+        )
+
+    fork_until_timestamp = message_row["created_at"]
+
+    # Create new conversation
+    fork_id = str(uuid4())
+    now = datetime.utcnow().isoformat()
+    fork_title = f"Fork of {conversation['title']}" if conversation["title"] else "Forked conversation"
+
+    await db.execute(
+        "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (fork_id, user["id"], fork_title, now, now),
+    )
+
+    # Copy messages up to and including message_id (ordered by created_at)
+    cursor = await db.execute(
+        "SELECT id, role, content, sql_query, reasoning, token_count, created_at "
+        "FROM messages WHERE conversation_id = ? AND created_at <= ? "
+        "ORDER BY created_at",
+        (conv_id, fork_until_timestamp),
+    )
+    messages_to_copy = await cursor.fetchall()
+
+    for msg in messages_to_copy:
+        new_msg_id = str(uuid4())
+        await db.execute(
+            "INSERT INTO messages (id, conversation_id, role, content, sql_query, reasoning, token_count, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                new_msg_id,
+                fork_id,
+                msg["role"],
+                msg["content"],
+                msg["sql_query"],
+                msg["reasoning"],
+                msg["token_count"],
+                msg["created_at"],
+            ),
+        )
+
+    # Copy all datasets from source conversation
+    cursor = await db.execute(
+        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at "
+        "FROM datasets WHERE conversation_id = ?",
+        (conv_id,),
+    )
+    datasets_to_copy = await cursor.fetchall()
+
+    for ds in datasets_to_copy:
+        new_ds_id = str(uuid4())
+        await db.execute(
+            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                new_ds_id,
+                fork_id,
+                ds["url"],
+                ds["name"],
+                ds["row_count"],
+                ds["column_count"],
+                ds["schema_json"],
+                ds["status"],
+                ds["error_message"],
+                ds["loaded_at"],
+            ),
+        )
+
+    await db.commit()
+
+    return {
+        "id": fork_id,
+        "title": fork_title,
+    }
 
 
 # ---------------------------------------------------------------------------

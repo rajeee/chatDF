@@ -8,10 +8,12 @@ import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useToastStore } from "@/stores/toastStore";
 import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
+import { forkConversation } from "@/api/client";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
@@ -25,6 +27,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   // Only subscribe to isStreaming for scroll behavior - not streamingTokens
   // This prevents MessageList from re-rendering on every token during streaming
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -35,6 +38,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const openSqlModal = useUiStore((s) => s.openSqlModal);
   const openChartModal = useUiStore((s) => s.openChartModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
+  const showToast = useToastStore((s) => s.showToast);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
@@ -165,6 +169,26 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       }
     },
     [openChartModal]
+  );
+
+  const handleFork = useCallback(
+    async (messageId: string) => {
+      if (!activeConversationId) return;
+
+      try {
+        const result = await forkConversation(activeConversationId, messageId);
+        // Invalidate conversations list to refresh sidebar
+        await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        // Switch to the new conversation
+        setActiveConversation(result.id);
+        // Show success toast
+        showToast("Forked to new conversation", "success");
+      } catch (error) {
+        console.error("Failed to fork conversation:", error);
+        showToast("Failed to fork conversation", "error");
+      }
+    },
+    [activeConversationId, queryClient, setActiveConversation, showToast]
   );
 
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -386,6 +410,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onCopy={handleCopy}
               onVisualize={handleVisualize}
               onRetry={onRetry}
+              onFork={handleFork}
               searchQuery={searchQuery}
             />
           );

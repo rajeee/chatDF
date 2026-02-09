@@ -184,7 +184,7 @@ describe("PREVIEW-5: Preview modal shows data grid on success", () => {
     await waitFor(() => {
       expect(previewDatasetMock).toHaveBeenCalledWith("conv-1", "ds-1", {
         sampleSize: 10,
-        random: false,
+        sampleMethod: "head",
       });
     });
   });

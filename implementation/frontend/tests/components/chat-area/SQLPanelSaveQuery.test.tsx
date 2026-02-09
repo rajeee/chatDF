@@ -73,6 +73,8 @@ describe("SQLPanel save query button", () => {
       expect(saveQueryMock).toHaveBeenCalledWith(
         "SELECT * FROM test_table LIMIT 10",
         "SELECT * FROM test_table LIMIT 10",
+        { columns: ["id", "name"], rows: [[1, "Alice"]], total_rows: 1 },
+        42,
       );
     });
   });

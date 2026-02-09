@@ -1,19 +1,27 @@
 // PreviewModal: shows configurable sample rows from a dataset in a data grid.
 // Triggered via the Preview button on DatasetCard.
 // Uses the existing DataGrid component for rendering the table.
-// Supports configurable sample size (10/25/50/100), random sampling, and refresh.
+// Supports configurable sample size, multiple sampling methods, and refresh.
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
-import { previewDataset, type PreviewResponse } from "@/api/client";
+import { previewDataset, type PreviewResponse, type SampleMethod } from "@/api/client";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { DataGrid } from "@/components/chat-area/DataGrid";
 
 function formatNumber(n: number): string {
   return new Intl.NumberFormat().format(n);
 }
+
+const SAMPLE_METHOD_LABELS: Record<SampleMethod, string> = {
+  head: "Head",
+  tail: "Tail",
+  random: "Random",
+  stratified: "Stratified",
+  percentage: "Percentage",
+};
 
 export function PreviewModal() {
   const previewModalDatasetId = useUiStore((s) => s.previewModalDatasetId);
@@ -27,10 +35,48 @@ export function PreviewModal() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PreviewResponse | null>(null);
   const [sampleSize, setSampleSize] = useState(10);
-  const [randomSample, setRandomSample] = useState(false);
+  const [sampleMethod, setSampleMethod] = useState<SampleMethod>("head");
+  const [stratifyColumn, setStratifyColumn] = useState<string>("");
+  const [samplePercentage, setSamplePercentage] = useState(1.0);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useFocusTrap(modalRef, !!previewModalDatasetId);
+
+  // Parse column names from dataset schema for the stratify column selector
+  const schemaColumns = useMemo(() => {
+    if (!dataset?.schema_json) return [];
+    try {
+      const parsed = JSON.parse(dataset.schema_json);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((c: unknown) => typeof c === "object" && c !== null && "name" in (c as Record<string, unknown>))
+          .map((c: { name: string }) => c.name);
+      }
+      if (parsed && typeof parsed === "object" && "columns" in parsed && Array.isArray(parsed.columns)) {
+        return parsed.columns
+          .filter((c: unknown) => typeof c === "object" && c !== null && "name" in (c as Record<string, unknown>))
+          .map((c: { name: string }) => c.name);
+      }
+    } catch {
+      // Invalid JSON
+    }
+    return [];
+  }, [dataset?.schema_json]);
+
+  // Build the options for the API call
+  const buildOptions = useCallback(() => {
+    const opts: Parameters<typeof previewDataset>[2] = {
+      sampleSize,
+      sampleMethod,
+    };
+    if (sampleMethod === "stratified" && stratifyColumn) {
+      opts.sampleColumn = stratifyColumn;
+    }
+    if (sampleMethod === "percentage") {
+      opts.samplePercentage = samplePercentage;
+    }
+    return opts;
+  }, [sampleSize, sampleMethod, stratifyColumn, samplePercentage]);
 
   // Fetch preview data when modal opens (initial load only)
   useEffect(() => {
@@ -45,10 +91,7 @@ export function PreviewModal() {
     setError(null);
     setData(null);
 
-    previewDataset(conversationId, previewModalDatasetId, {
-      sampleSize,
-      random: randomSample,
-    })
+    previewDataset(conversationId, previewModalDatasetId, buildOptions())
       .then((result) => {
         if (!cancelled) {
           setData(result);
@@ -71,21 +114,18 @@ export function PreviewModal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewModalDatasetId, conversationId]);
 
-  // Refresh handler: re-fetches with current sample size and random settings
+  // Refresh handler: re-fetches with current settings
   const handleRefresh = useCallback(() => {
     if (!previewModalDatasetId || !conversationId) return;
     setLoading(true);
     setError(null);
-    previewDataset(conversationId, previewModalDatasetId, {
-      sampleSize,
-      random: randomSample,
-    })
+    previewDataset(conversationId, previewModalDatasetId, buildOptions())
       .then(setData)
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load preview")
       )
       .finally(() => setLoading(false));
-  }, [previewModalDatasetId, conversationId, sampleSize, randomSample]);
+  }, [previewModalDatasetId, conversationId, buildOptions]);
 
   // Close on Escape key
   const handleKeyDown = useCallback(
@@ -124,6 +164,16 @@ export function PreviewModal() {
     }
   }
 
+  const selectStyle = {
+    borderColor: "var(--color-border)",
+    backgroundColor: "var(--color-bg)",
+    color: "var(--color-text)",
+  };
+
+  const showSampleSize = sampleMethod !== "percentage";
+  const showStratifyColumn = sampleMethod === "stratified";
+  const showPercentage = sampleMethod === "percentage";
+
   return (
     <div
       data-testid="preview-modal"
@@ -157,45 +207,108 @@ export function PreviewModal() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Sample size selector */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Sample method selector */}
               <div className="flex items-center gap-1.5">
-                <label className="text-xs opacity-60" htmlFor="sample-size">
-                  Rows:
+                <label className="text-xs opacity-60" htmlFor="sample-method">
+                  Method:
                 </label>
                 <select
-                  id="sample-size"
-                  data-testid="preview-sample-size"
+                  id="sample-method"
+                  data-testid="preview-sample-method"
                   className="text-xs rounded border px-1.5 py-0.5"
-                  style={{
-                    borderColor: "var(--color-border)",
-                    backgroundColor: "var(--color-bg)",
-                    color: "var(--color-text)",
-                  }}
-                  value={sampleSize}
-                  onChange={(e) => setSampleSize(Number(e.target.value))}
+                  style={selectStyle}
+                  value={sampleMethod}
+                  onChange={(e) => setSampleMethod(e.target.value as SampleMethod)}
                 >
-                  {[10, 25, 50, 100].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                  {(Object.keys(SAMPLE_METHOD_LABELS) as SampleMethod[]).map(
+                    (method) => (
+                      <option key={method} value={method}>
+                        {SAMPLE_METHOD_LABELS[method]}
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
 
-              {/* Random sample toggle */}
-              <label
-                className="flex items-center gap-1 text-xs cursor-pointer"
-                data-testid="preview-random-toggle"
-              >
-                <input
-                  type="checkbox"
-                  checked={randomSample}
-                  onChange={(e) => setRandomSample(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="opacity-60">Random</span>
-              </label>
+              {/* Sample size selector (hidden for percentage) */}
+              {showSampleSize && (
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs opacity-60" htmlFor="sample-size">
+                    Rows:
+                  </label>
+                  <select
+                    id="sample-size"
+                    data-testid="preview-sample-size"
+                    className="text-xs rounded border px-1.5 py-0.5"
+                    style={selectStyle}
+                    value={sampleSize}
+                    onChange={(e) => setSampleSize(Number(e.target.value))}
+                  >
+                    {[10, 25, 50, 100].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Column selector for stratified sampling */}
+              {showStratifyColumn && (
+                <div className="flex items-center gap-1.5">
+                  <label
+                    className="text-xs opacity-60"
+                    htmlFor="stratify-column"
+                  >
+                    Column:
+                  </label>
+                  <select
+                    id="stratify-column"
+                    data-testid="preview-stratify-column"
+                    className="text-xs rounded border px-1.5 py-0.5"
+                    style={selectStyle}
+                    value={stratifyColumn}
+                    onChange={(e) => setStratifyColumn(e.target.value)}
+                  >
+                    <option value="">Select column...</option>
+                    {schemaColumns.map((col: string) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Percentage input for percentage sampling */}
+              {showPercentage && (
+                <div className="flex items-center gap-1.5">
+                  <label
+                    className="text-xs opacity-60"
+                    htmlFor="sample-percentage"
+                  >
+                    %:
+                  </label>
+                  <input
+                    id="sample-percentage"
+                    data-testid="preview-sample-percentage"
+                    type="number"
+                    className="text-xs rounded border px-1.5 py-0.5 w-16"
+                    style={selectStyle}
+                    value={samplePercentage}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val) && val >= 0.01 && val <= 100) {
+                        setSamplePercentage(val);
+                      }
+                    }}
+                    min={0.01}
+                    max={100}
+                    step={0.1}
+                  />
+                </div>
+              )}
 
               {/* Refresh button */}
               <button

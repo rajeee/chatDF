@@ -1,9 +1,11 @@
 """Saved queries router -- CRUD for user-saved SQL queries.
 
 Endpoints:
-- POST /saved-queries          -> save a query
-- GET /saved-queries           -> list saved queries
-- DELETE /saved-queries/{id}   -> delete a saved query
+- POST /saved-queries              -> save a query
+- GET /saved-queries               -> list saved queries
+- GET /saved-queries/folders       -> list unique folder names
+- PATCH /saved-queries/{id}/folder -> move a query to a different folder
+- DELETE /saved-queries/{id}       -> delete a saved query
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from app.models import (
     SavedQueryListResponse,
     SavedQueryResponse,
     SuccessResponse,
+    UpdateFolderRequest,
 )
 
 router = APIRouter()
@@ -34,15 +37,31 @@ async def save_query(
     query_id = str(uuid4())
     now = datetime.utcnow().isoformat()
     await db.execute(
-        "INSERT INTO saved_queries (id, user_id, name, query, result_json, execution_time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (query_id, user["id"], body.name, body.query, body.result_json, body.execution_time_ms, now),
+        "INSERT INTO saved_queries (id, user_id, name, query, result_json, execution_time_ms, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (query_id, user["id"], body.name, body.query, body.result_json, body.execution_time_ms, body.folder, now),
     )
     await db.commit()
     return SavedQueryResponse(
         id=query_id, name=body.name, query=body.query, result_json=body.result_json,
         execution_time_ms=body.execution_time_ms,
+        folder=body.folder,
         created_at=datetime.fromisoformat(now),
     )
+
+
+@router.get("/folders")
+async def list_folders(
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Return unique non-empty folder names for the current user's saved queries."""
+    cursor = await db.execute(
+        "SELECT DISTINCT folder FROM saved_queries WHERE user_id = ? AND folder != '' ORDER BY folder",
+        (user["id"],),
+    )
+    rows = await cursor.fetchall()
+    folders = [row["folder"] for row in rows]
+    return {"folders": folders}
 
 
 @router.get("", response_model=SavedQueryListResponse)
@@ -51,7 +70,7 @@ async def list_saved_queries(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> SavedQueryListResponse:
     cursor = await db.execute(
-        "SELECT id, name, query, result_json, execution_time_ms, created_at FROM saved_queries WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT id, name, query, result_json, execution_time_ms, folder, created_at FROM saved_queries WHERE user_id = ? ORDER BY created_at DESC",
         (user["id"],),
     )
     rows = await cursor.fetchall()
@@ -62,11 +81,37 @@ async def list_saved_queries(
             query=row["query"],
             result_json=row["result_json"],
             execution_time_ms=row["execution_time_ms"],
+            folder=row["folder"],
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in rows
     ]
     return SavedQueryListResponse(queries=queries)
+
+
+@router.patch("/{query_id}/folder", response_model=SuccessResponse)
+async def update_query_folder(
+    query_id: str,
+    body: UpdateFolderRequest,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SuccessResponse:
+    """Move a saved query to a different folder."""
+    cursor = await db.execute(
+        "SELECT id FROM saved_queries WHERE id = ? AND user_id = ?",
+        (query_id, user["id"]),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        from app.exceptions import NotFoundError
+
+        raise NotFoundError("Saved query not found")
+    await db.execute(
+        "UPDATE saved_queries SET folder = ? WHERE id = ?",
+        (body.folder, query_id),
+    )
+    await db.commit()
+    return SuccessResponse(success=True)
 
 
 @router.delete("/{query_id}", response_model=SuccessResponse)

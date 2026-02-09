@@ -193,6 +193,7 @@ class DatasetPreviewResponse(BaseModel):
     columns: list[str]
     rows: list[list[Any]]
     total_rows: int
+    sample_method: str = "head"
 
 
 class UsageResponse(BaseModel):
@@ -239,6 +240,7 @@ class SaveQueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000)
     result_json: str | None = None
     execution_time_ms: float | None = None
+    folder: str = Field(default="", max_length=50)
 
 
 class SavedQueryResponse(BaseModel):
@@ -250,6 +252,13 @@ class SavedQueryResponse(BaseModel):
     created_at: datetime
     result_json: str | None = None
     execution_time_ms: float | None = None
+    folder: str = ""
+
+
+class UpdateFolderRequest(BaseModel):
+    """Body for ``PATCH /saved-queries/{id}/folder``."""
+
+    folder: str = Field(default="", max_length=50)
 
 
 class SavedQueryListResponse(BaseModel):

@@ -54,6 +54,11 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [result, setResult] = useState<RunQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [showSavePopover, setShowSavePopover] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saveFolder, setSaveFolder] = useState("");
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const savePopoverRef = useRef<HTMLDivElement>(null);
   const [resultCopied, setResultCopied] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExplaining, setIsExplaining] = useState(false);
@@ -363,20 +368,42 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     [autocomplete, acceptSuggestion]
   );
 
-  const handleSaveQuery = useCallback(async () => {
+  const handleOpenSavePopover = useCallback(() => {
     const trimmed = sql.trim();
     if (!trimmed) return;
     const defaultName = trimmed.replace(/\s+/g, " ").slice(0, 50);
+    setSaveName(defaultName);
+    setSaveFolder("");
+    setShowNewFolder(false);
+    setShowSavePopover(true);
+  }, [sql]);
+
+  const handleSaveQuery = useCallback(async () => {
+    const trimmed = sql.trim();
+    if (!trimmed || !saveName.trim()) return;
     try {
       await useSavedQueryStore
         .getState()
-        .saveQuery(defaultName, trimmed, undefined, result?.execution_time_ms);
+        .saveQuery(saveName.trim(), trimmed, undefined, result?.execution_time_ms, saveFolder);
       setSaved(true);
+      setShowSavePopover(false);
       setTimeout(() => setSaved(false), 2000);
     } catch {
       // silently fail
     }
-  }, [sql, result]);
+  }, [sql, result, saveName, saveFolder]);
+
+  // Close save popover on click outside
+  useEffect(() => {
+    if (!showSavePopover) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (savePopoverRef.current && !savePopoverRef.current.contains(e.target as Node)) {
+        setShowSavePopover(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSavePopover]);
 
   const handleExplain = useCallback(async () => {
     const trimmed = sql.trim();
@@ -1124,15 +1151,161 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     )}
                     XLSX
                   </button>
-                  {/* Save query button */}
-                  <button
-                    data-testid="run-sql-save"
-                    className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--color-accent)" }}
-                    onClick={handleSaveQuery}
-                  >
-                    {saved ? "Saved!" : "Save Query"}
-                  </button>
+                  {/* Save query button + popover */}
+                  <div className="relative">
+                    <button
+                      data-testid="run-sql-save"
+                      className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
+                      style={{ color: "var(--color-accent)" }}
+                      onClick={saved ? undefined : handleOpenSavePopover}
+                    >
+                      {saved ? "Saved!" : "Save Query"}
+                    </button>
+                    {showSavePopover && (
+                      <div
+                        ref={savePopoverRef}
+                        data-testid="save-query-popover"
+                        className="absolute right-0 top-full mt-1 z-50 w-64 rounded border shadow-lg p-2.5 space-y-2"
+                        style={{
+                          backgroundColor: "var(--color-surface, var(--color-bg))",
+                          borderColor: "var(--color-border)",
+                        }}
+                      >
+                        {/* Query name */}
+                        <div>
+                          <label
+                            className="block text-[10px] font-medium mb-0.5"
+                            style={{ color: "var(--color-text-muted)" }}
+                          >
+                            Name
+                          </label>
+                          <input
+                            data-testid="save-query-name"
+                            type="text"
+                            className="w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
+                            style={{
+                              borderColor: "var(--color-border)",
+                              backgroundColor: "var(--color-bg)",
+                              color: "var(--color-text)",
+                            }}
+                            value={saveName}
+                            onChange={(e) => setSaveName(e.target.value)}
+                            maxLength={100}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveQuery();
+                              if (e.key === "Escape") setShowSavePopover(false);
+                            }}
+                          />
+                        </div>
+                        {/* Folder selector */}
+                        <div>
+                          <label
+                            className="block text-[10px] font-medium mb-0.5"
+                            style={{ color: "var(--color-text-muted)" }}
+                          >
+                            Folder
+                          </label>
+                          {showNewFolder ? (
+                            <div className="flex gap-1">
+                              <input
+                                data-testid="save-query-new-folder"
+                                type="text"
+                                className="flex-1 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
+                                style={{
+                                  borderColor: "var(--color-border)",
+                                  backgroundColor: "var(--color-bg)",
+                                  color: "var(--color-text)",
+                                }}
+                                placeholder="New folder name..."
+                                value={saveFolder}
+                                onChange={(e) => setSaveFolder(e.target.value)}
+                                maxLength={50}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveQuery();
+                                  if (e.key === "Escape") {
+                                    setShowNewFolder(false);
+                                    setSaveFolder("");
+                                  }
+                                }}
+                              />
+                              <button
+                                className="text-[10px] px-1.5 rounded border hover:opacity-70"
+                                style={{
+                                  borderColor: "var(--color-border)",
+                                  color: "var(--color-text-muted)",
+                                }}
+                                onClick={() => {
+                                  setShowNewFolder(false);
+                                  setSaveFolder("");
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <select
+                                data-testid="save-query-folder-select"
+                                className="flex-1 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
+                                style={{
+                                  borderColor: "var(--color-border)",
+                                  backgroundColor: "var(--color-bg)",
+                                  color: "var(--color-text)",
+                                }}
+                                value={saveFolder}
+                                onChange={(e) => setSaveFolder(e.target.value)}
+                              >
+                                <option value="">Uncategorized</option>
+                                {useSavedQueryStore.getState().getFolders().map((f) => (
+                                  <option key={f} value={f}>{f}</option>
+                                ))}
+                              </select>
+                              <button
+                                data-testid="save-query-new-folder-btn"
+                                className="text-[10px] px-1.5 rounded border hover:opacity-70 whitespace-nowrap"
+                                style={{
+                                  borderColor: "var(--color-border)",
+                                  color: "var(--color-accent)",
+                                }}
+                                onClick={() => setShowNewFolder(true)}
+                              >
+                                + New
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {/* Save / Cancel */}
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            data-testid="save-query-cancel"
+                            className="px-2 py-1 text-[10px] rounded border hover:opacity-70"
+                            style={{
+                              borderColor: "var(--color-border)",
+                              color: "var(--color-text)",
+                              backgroundColor: "transparent",
+                            }}
+                            onClick={() => setShowSavePopover(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            data-testid="save-query-confirm"
+                            className="px-2 py-1 text-[10px] rounded font-medium"
+                            style={{
+                              backgroundColor: "var(--color-accent)",
+                              color: "#fff",
+                            }}
+                            disabled={!saveName.trim()}
+                            onClick={handleSaveQuery}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {/* Visualize toggle button */}
                   {detectChartTypes(result.columns, result.rows).length > 0 && (
                     <button

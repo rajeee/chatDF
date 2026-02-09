@@ -13,6 +13,7 @@ Endpoints (all under /conversations/{conversation_id}/datasets):
 from __future__ import annotations
 
 import json
+import math
 import os
 from datetime import datetime
 from pathlib import Path
@@ -388,6 +389,9 @@ async def preview_dataset(
     dataset_id: str,
     sample_size: int = Query(default=10, ge=1, le=100),
     random_sample: bool = Query(default=False),
+    sample_method: str = Query(default="head", pattern="^(head|tail|random|stratified|percentage)$"),
+    sample_column: str | None = Query(default=None),
+    sample_percentage: float = Query(default=1.0, ge=0.01, le=100.0),
     conversation: dict = Depends(get_conversation),
     user: dict = Depends(get_current_user),
     db: aiosqlite.Connection = Depends(get_db),
@@ -396,16 +400,85 @@ async def preview_dataset(
 
     Query params:
       - sample_size: number of rows to return (1-100, default 10)
-      - random_sample: if true, return randomly sampled rows
+      - random_sample: if true, treat as sample_method="random" (backward compat)
+      - sample_method: sampling strategy — head, tail, random, stratified, percentage
+      - sample_column: column name for stratified sampling (required when method=stratified)
+      - sample_percentage: percentage of rows for percentage sampling (0.01-100.0)
     """
     ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
 
+    # Backward compatibility: random_sample=True overrides sample_method
+    if random_sample and sample_method == "head":
+        sample_method = "random"
+
+    # Validate stratified requires sample_column
+    if sample_method == "stratified" and not sample_column:
+        raise HTTPException(
+            status_code=400,
+            detail="sample_column is required for stratified sampling",
+        )
+
     worker_pool = _get_worker_pool(request)
     table_name = ds["name"]
-    if random_sample:
-        sql = f'SELECT * FROM "{table_name}" ORDER BY RANDOM() LIMIT {sample_size}'
-    else:
+
+    # Build SQL based on sample_method
+    if sample_method == "head":
         sql = f'SELECT * FROM "{table_name}" LIMIT {sample_size}'
+
+    elif sample_method == "tail":
+        sql = (
+            f'SELECT * FROM ('
+            f'SELECT *, ROW_NUMBER() OVER () as _rn FROM "{table_name}"'
+            f') sub ORDER BY _rn DESC LIMIT {sample_size}'
+        )
+
+    elif sample_method == "random":
+        sql = f'SELECT * FROM "{table_name}" ORDER BY RANDOM() LIMIT {sample_size}'
+
+    elif sample_method == "stratified":
+        # Validate sample_column exists in schema
+        schema_json = ds.get("schema_json", "[]")
+        try:
+            columns_schema = json.loads(schema_json) if schema_json else []
+        except (json.JSONDecodeError, TypeError):
+            columns_schema = []
+        column_names = [c.get("name", "") for c in columns_schema if isinstance(c, dict)]
+        if sample_column not in column_names:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Column '{sample_column}' not found in dataset schema",
+            )
+
+        # Get distinct count to compute per-group limit
+        count_sql = f'SELECT COUNT(DISTINCT "{sample_column}") as cnt FROM "{table_name}"'
+        datasets_arg = [{"url": ds["url"], "table_name": table_name}]
+        count_result = await worker_pool.run_query(count_sql, datasets_arg)
+        if "error_type" in count_result:
+            raise HTTPException(
+                status_code=500,
+                detail=count_result.get("message", "Failed to count distinct values"),
+            )
+        count_rows = count_result.get("rows", [])
+        num_distinct = count_rows[0].get("cnt", 1) if count_rows else 1
+        num_distinct = max(num_distinct, 1)
+        per_group = math.ceil(sample_size / num_distinct)
+
+        sql = (
+            f'SELECT * FROM ('
+            f'SELECT *, ROW_NUMBER() OVER (PARTITION BY "{sample_column}" ORDER BY RANDOM()) as _rn '
+            f'FROM "{table_name}"'
+            f') sub WHERE _rn <= {per_group} LIMIT {sample_size}'
+        )
+
+    elif sample_method == "percentage":
+        total_rows = ds["row_count"] or 0
+        computed_count = max(1, min(100, round(total_rows * sample_percentage / 100)))
+        sql = f'SELECT * FROM "{table_name}" ORDER BY RANDOM() LIMIT {computed_count}'
+
+    else:
+        # Should not reach here due to regex validation, but just in case
+        sql = f'SELECT * FROM "{table_name}" LIMIT {sample_size}'
+
     datasets = [{"url": ds["url"], "table_name": table_name}]
 
     result = await worker_pool.run_query(sql, datasets)
@@ -419,12 +492,15 @@ async def preview_dataset(
     # Convert row dicts to list-of-lists for the response
     columns = result.get("columns", [])
     row_dicts = result.get("rows", [])
-    rows = [[row.get(col) for col in columns] for row in row_dicts]
+    # Filter out internal columns added by window functions
+    display_columns = [c for c in columns if c != "_rn"]
+    rows = [[row.get(col) for col in display_columns] for row in row_dicts]
 
     return DatasetPreviewResponse(
-        columns=columns,
+        columns=display_columns,
         rows=rows,
         total_rows=ds["row_count"],
+        sample_method=sample_method,
     )
 
 

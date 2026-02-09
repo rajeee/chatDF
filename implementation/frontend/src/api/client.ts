@@ -180,26 +180,45 @@ export async function apiDelete<T>(path: string, timeoutMs?: number): Promise<T>
 // Domain-specific API helpers
 // ---------------------------------------------------------------------------
 
+export type SampleMethod = "head" | "tail" | "random" | "stratified" | "percentage";
+
 export interface PreviewResponse {
   columns: string[];
   rows: unknown[][];
   total_rows: number;
+  sample_method: SampleMethod;
+}
+
+export interface PreviewOptions {
+  sampleSize?: number;
+  random?: boolean;
+  sampleMethod?: SampleMethod;
+  sampleColumn?: string;
+  samplePercentage?: number;
 }
 
 /**
  * Fetch sample rows from a dataset for quick preview.
  *
- * @param options.sampleSize  Number of rows to return (1-100, default 10)
- * @param options.random      If true, return randomly sampled rows
+ * @param options.sampleSize       Number of rows to return (1-100, default 10)
+ * @param options.random           If true, return randomly sampled rows (backward compat)
+ * @param options.sampleMethod     Sampling strategy: head, tail, random, stratified, percentage
+ * @param options.sampleColumn     Column name for stratified sampling
+ * @param options.samplePercentage Percentage of rows for percentage sampling (0.01-100.0)
  */
 export async function previewDataset(
   conversationId: string,
   datasetId: string,
-  options?: { sampleSize?: number; random?: boolean }
+  options?: PreviewOptions
 ): Promise<PreviewResponse> {
   const params = new URLSearchParams();
   if (options?.sampleSize) params.set("sample_size", String(options.sampleSize));
   if (options?.random) params.set("random_sample", "true");
+  if (options?.sampleMethod) params.set("sample_method", options.sampleMethod);
+  if (options?.sampleColumn) params.set("sample_column", options.sampleColumn);
+  if (options?.samplePercentage !== undefined) {
+    params.set("sample_percentage", String(options.samplePercentage));
+  }
   const qs = params.toString();
   return apiPost<PreviewResponse>(
     `/conversations/${conversationId}/datasets/${datasetId}/preview${qs ? `?${qs}` : ""}`

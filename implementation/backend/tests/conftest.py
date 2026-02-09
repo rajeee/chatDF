@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     query           TEXT NOT NULL,
     result_json     TEXT,
     execution_time_ms REAL,
+    folder          TEXT NOT NULL DEFAULT '',
     created_at      TEXT NOT NULL
 );
 

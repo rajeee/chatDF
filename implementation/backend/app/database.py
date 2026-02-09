@@ -322,6 +322,15 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     except Exception:
         pass  # Column already exists
 
+    # Migration: add folder column to saved_queries
+    try:
+        await conn.execute(
+            "ALTER TABLE saved_queries ADD COLUMN folder TEXT NOT NULL DEFAULT ''"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
 
 # Backward compatibility alias
 init_db = init_db_schema

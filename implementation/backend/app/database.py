@@ -313,6 +313,15 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     except Exception:
         pass  # Column already exists
 
+    # Migration: add is_starred column to query_history
+    try:
+        await conn.execute(
+            "ALTER TABLE query_history ADD COLUMN is_starred INTEGER NOT NULL DEFAULT 0"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
 
 # Backward compatibility alias
 init_db = init_db_schema

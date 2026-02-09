@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS query_history (
     status          TEXT NOT NULL DEFAULT 'success' CHECK(status IN ('success', 'error')),
     error_message   TEXT,
     source          TEXT NOT NULL DEFAULT 'sql_panel' CHECK(source IN ('sql_panel', 'llm', 'api')),
-    created_at      TEXT NOT NULL
+    created_at      TEXT NOT NULL,
+    is_starred      INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);

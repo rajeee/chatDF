@@ -254,6 +254,30 @@ describe("uiStore", () => {
     });
   });
 
+  describe("pendingSql", () => {
+    it("has null pendingSql by default", () => {
+      useUiStore.setState({ pendingSql: null });
+      expect(useUiStore.getState().pendingSql).toBeNull();
+    });
+
+    it("setPendingSql sets the pending SQL string", () => {
+      useUiStore.getState().setPendingSql("SELECT * FROM users");
+      expect(useUiStore.getState().pendingSql).toBe("SELECT * FROM users");
+    });
+
+    it("setPendingSql(null) clears the pending SQL", () => {
+      useUiStore.getState().setPendingSql("SELECT 1");
+      useUiStore.getState().setPendingSql(null);
+      expect(useUiStore.getState().pendingSql).toBeNull();
+    });
+
+    it("setPendingSql replaces previous value", () => {
+      useUiStore.getState().setPendingSql("SELECT 1");
+      useUiStore.getState().setPendingSql("SELECT 2");
+      expect(useUiStore.getState().pendingSql).toBe("SELECT 2");
+    });
+  });
+
   describe("localStorage persistence", () => {
     beforeEach(() => {
       // Clear localStorage before each test
@@ -292,6 +316,12 @@ describe("uiStore", () => {
 
       expect(stored.state.sqlModalOpen).toBeUndefined();
       expect(stored.state.schemaModalDatasetId).toBeUndefined();
+    });
+
+    it("does not persist pendingSql to localStorage", () => {
+      useUiStore.getState().setPendingSql("SELECT 1");
+      const stored = JSON.parse(localStorage.getItem("chatdf-ui-preferences") || "{}");
+      expect(stored.state.pendingSql).toBeUndefined();
     });
 
     it("persists multiple width changes correctly", () => {

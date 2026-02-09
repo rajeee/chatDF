@@ -3,7 +3,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { apiGet, apiDelete } from "../api/client";
+import { apiGet, apiDelete, apiPatch } from "../api/client";
 
 export interface QueryHistoryEntry {
   id?: string;
@@ -15,6 +15,7 @@ export interface QueryHistoryEntry {
   status?: "success" | "error";
   error_message?: string | null;
   source?: string;
+  is_starred?: boolean;
 }
 
 interface QueryHistoryState {
@@ -26,6 +27,7 @@ interface QueryHistoryActions {
   addQuery: (query: string) => void;
   clearHistory: () => void;
   fetchHistory: () => Promise<void>;
+  toggleStar: (id: string) => Promise<void>;
 }
 
 const MAX_HISTORY_SIZE = 50;
@@ -81,12 +83,28 @@ export const useQueryHistoryStore = create<QueryHistoryState & QueryHistoryActio
             status: h.status as "success" | "error" | undefined,
             error_message: h.error_message as string | null | undefined,
             source: h.source as string | undefined,
+            is_starred: Boolean(h.is_starred),
           }));
           set({ queries });
         } catch {
           // Fall back to localStorage data (already in state)
         } finally {
           set({ isFetching: false });
+        }
+      },
+
+      toggleStar: async (id: string) => {
+        try {
+          const response = await apiPatch<{ id: string; is_starred: boolean }>(
+            `/query-history/${id}/star`
+          );
+          set((state) => ({
+            queries: state.queries.map((q) =>
+              q.id === id ? { ...q, is_starred: response.is_starred } : q
+            ),
+          }));
+        } catch {
+          // Silently fail
         }
       },
     }),

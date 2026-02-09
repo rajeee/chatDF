@@ -5,6 +5,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { apiPost, explainSql, generateSql } from "@/api/client";
+import { useUiStore } from "@/stores/uiStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
@@ -43,6 +44,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [exportingXlsx, setExportingXlsx] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
+  const pendingSql = useUiStore((s) => s.pendingSql);
+  const setPendingSql = useUiStore((s) => s.setPendingSql);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
   const autocomplete = useSqlAutocomplete();
 
@@ -121,6 +124,19 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     const selected = dropdownRef.current.children[autocomplete.selectedIndex] as HTMLElement | undefined;
     selected?.scrollIntoView({ block: "nearest" });
   }, [autocomplete.selectedIndex, autocomplete.isOpen]);
+
+  // Consume pendingSql from uiStore (set by "Run Again" in QueryHistoryPanel)
+  useEffect(() => {
+    if (pendingSql != null) {
+      setSql(pendingSql);
+      setIsExpanded(true);
+      setPendingSql(null);
+      // Focus the textarea after React re-renders with new value
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    }
+  }, [pendingSql, setPendingSql]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

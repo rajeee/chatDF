@@ -24,6 +24,7 @@ interface UiState {
   reasoningModalOpen: boolean;
   activeReasoning: string;
   shortcutsModalOpen: boolean;
+  pendingSql: string | null;
 }
 
 interface UiActions {
@@ -52,6 +53,7 @@ interface UiActions {
   closeReasoningModal: () => void;
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
+  setPendingSql: (sql: string | null) => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()(
@@ -75,6 +77,7 @@ export const useUiStore = create<UiState & UiActions>()(
       reasoningModalOpen: false,
       activeReasoning: "",
       shortcutsModalOpen: false,
+      pendingSql: null,
 
       toggleLeftPanel: () =>
         set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -148,6 +151,8 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeShortcutsModal: () =>
         set({ shortcutsModalOpen: false }),
+
+      setPendingSql: (sql) => set({ pendingSql: sql }),
     }),
     {
       name: "chatdf-ui-preferences",

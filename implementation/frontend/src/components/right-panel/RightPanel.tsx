@@ -33,6 +33,7 @@ export function RightPanel() {
   const setRightPanelTab = useUiStore((s) => s.setRightPanelTab);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const openComparisonModal = useUiStore((s) => s.openComparisonModal);
+  const setPendingSql = useUiStore((s) => s.setPendingSql);
   const readyDatasets = useMemo(
     () => datasets.filter((d) => d.status === "ready"),
     [datasets]
@@ -44,6 +45,14 @@ export function RightPanel() {
     onDismiss: toggleRightPanel,
     enabled: rightPanelOpen,
   });
+
+  const handleRunAgain = useCallback(
+    (sql: string) => {
+      setPendingSql(sql);
+      setRightPanelTab("datasets");
+    },
+    [setPendingSql, setRightPanelTab]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -248,7 +257,7 @@ export function RightPanel() {
           )}
 
           {rightPanelTab === "history" && (
-            <QueryHistoryPanel />
+            <QueryHistoryPanel onRunAgain={handleRunAgain} />
           )}
         </div>
       </div>

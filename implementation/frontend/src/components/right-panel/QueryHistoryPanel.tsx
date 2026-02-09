@@ -40,9 +40,11 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
   const isFetching = useQueryHistoryStore((s) => s.isFetching);
   const fetchHistory = useQueryHistoryStore((s) => s.fetchHistory);
   const clearHistory = useQueryHistoryStore((s) => s.clearHistory);
+  const toggleStar = useQueryHistoryStore((s) => s.toggleStar);
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "success" | "error">("all");
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -65,8 +67,12 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
       result = result.filter((q) => q.status === statusFilter);
     }
 
+    if (showStarredOnly) {
+      result = result.filter((q) => q.is_starred === true);
+    }
+
     return result;
-  }, [queries, searchText, statusFilter]);
+  }, [queries, searchText, statusFilter, showStarredOnly]);
 
   // Group filtered queries by date
   const grouped = useMemo(() => {
@@ -167,23 +173,50 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
               className="px-2 py-0.5 text-[10px] rounded border font-medium transition-colors"
               style={{
                 borderColor:
-                  statusFilter === status
+                  statusFilter === status && !showStarredOnly
                     ? "var(--color-accent)"
                     : "var(--color-border)",
                 backgroundColor:
-                  statusFilter === status
+                  statusFilter === status && !showStarredOnly
                     ? "var(--color-accent)"
                     : "transparent",
                 color:
-                  statusFilter === status
+                  statusFilter === status && !showStarredOnly
                     ? "#fff"
                     : "var(--color-text)",
               }}
-              onClick={() => setStatusFilter(status)}
+              onClick={() => {
+                setStatusFilter(status);
+                setShowStarredOnly(false);
+              }}
             >
               {status === "all" ? "All" : status === "success" ? "Success" : "Error"}
             </button>
           ))}
+          <button
+            data-testid="query-history-filter-starred"
+            className="flex items-center gap-0.5 px-2 py-0.5 text-[10px] rounded border font-medium transition-colors"
+            style={{
+              borderColor: showStarredOnly
+                ? "var(--color-accent)"
+                : "var(--color-border)",
+              backgroundColor: showStarredOnly
+                ? "var(--color-accent)"
+                : "transparent",
+              color: showStarredOnly
+                ? "#fff"
+                : "var(--color-text)",
+            }}
+            onClick={() => {
+              setShowStarredOnly((prev) => !prev);
+              if (!showStarredOnly) setStatusFilter("all");
+            }}
+          >
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill={showStarredOnly ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Starred
+          </button>
           <div className="flex-1" />
           {queries.length > 0 && (
             <button
@@ -329,6 +362,23 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
                         )}
                       </div>
                     </div>
+
+                    {/* Star toggle */}
+                    {entry.id && (
+                      <button
+                        data-testid="query-history-star"
+                        className="mt-0.5 shrink-0 hover:scale-110 transition-transform"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStar(entry.id!);
+                        }}
+                        aria-label={entry.is_starred ? "Unstar query" : "Star query"}
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill={entry.is_starred ? "var(--color-accent)" : "none"} stroke={entry.is_starred ? "var(--color-accent)" : "var(--color-text-muted)"} strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                    )}
 
                     {/* Expand chevron */}
                     <svg

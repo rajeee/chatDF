@@ -146,19 +146,18 @@ export async function apiPut<T>(path: string, body?: unknown, timeoutMs?: number
  */
 export async function apiPatch<T>(
   path: string,
-  body: unknown,
+  body?: unknown,
   timeoutMs?: number
 ): Promise<T> {
-  const response = await fetchWithTimeout(
-    `${BASE_URL}${path}`,
-    {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-    timeoutMs
-  );
+  const options: RequestInit = {
+    method: "PATCH",
+    credentials: "include",
+  };
+  if (body !== undefined) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetchWithTimeout(`${BASE_URL}${path}`, options, timeoutMs);
   return handleResponse<T>(response);
 }
 

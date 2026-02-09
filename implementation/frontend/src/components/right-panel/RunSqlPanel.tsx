@@ -1,11 +1,13 @@
 // RunSqlPanel — collapsible SQL editor in the right panel.
 // Users can type SQL queries and execute them against loaded datasets
 // using Cmd/Ctrl+Enter or the Run button.
+// Includes SQL autocomplete for keywords, table names, and column names.
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { apiPost } from "@/api/client";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
+import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
 
 interface RunQueryResponse {
   columns: string[];
@@ -26,7 +28,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
+  const autocomplete = useSqlAutocomplete();
 
   const executeQuery = useCallback(async () => {
     const trimmed = sql.trim();
@@ -53,15 +57,82 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [sql, isExecuting, conversationId, addQuery]);
 
+  // Accept an autocomplete suggestion: update sql + cursor position
+  const acceptSuggestion = useCallback(
+    (suggestion: Suggestion) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const cursorPos = textarea.selectionStart ?? sql.length;
+      const { newValue, newCursorPos } = autocomplete.accept(sql, cursorPos, suggestion);
+      setSql(newValue);
+      autocomplete.close();
+      // Restore cursor position after React re-renders
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      });
+    },
+    [sql, autocomplete]
+  );
+
+  // Scroll selected item into view in the dropdown
+  useEffect(() => {
+    if (!autocomplete.isOpen || !dropdownRef.current) return;
+    const selected = dropdownRef.current.children[autocomplete.selectedIndex] as HTMLElement | undefined;
+    selected?.scrollIntoView({ block: "nearest" });
+  }, [autocomplete.selectedIndex, autocomplete.isOpen]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // When autocomplete is open, intercept navigation keys
+      if (autocomplete.isOpen) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          autocomplete.moveSelection(1);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          autocomplete.moveSelection(-1);
+          return;
+        }
+        if (e.key === "Tab" || e.key === "Enter") {
+          // Tab or Enter accepts the current suggestion (unless Cmd/Ctrl+Enter)
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            // Let Cmd/Ctrl+Enter fall through to execute
+            autocomplete.close();
+          } else {
+            e.preventDefault();
+            const suggestion = autocomplete.suggestions[autocomplete.selectedIndex];
+            if (suggestion) acceptSuggestion(suggestion);
+            return;
+          }
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          autocomplete.close();
+          return;
+        }
+      }
+
       // Cmd/Ctrl+Enter to execute
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         executeQuery();
       }
     },
-    [executeQuery]
+    [executeQuery, autocomplete, acceptSuggestion]
+  );
+
+  // Handle textarea input changes — update sql and trigger autocomplete
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      setSql(newValue);
+      const cursorPos = e.target.selectionStart ?? newValue.length;
+      autocomplete.handleInput(newValue, cursorPos, e.target);
+    },
+    [autocomplete]
   );
 
   const handleSaveQuery = useCallback(async () => {
@@ -111,25 +182,120 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
 
       {isExpanded && (
         <div className="px-1 pb-2 space-y-2">
-          {/* SQL textarea */}
-          <textarea
-            ref={textareaRef}
-            data-testid="run-sql-textarea"
-            className="w-full rounded border px-2 py-1.5 text-xs font-mono resize-y focus:outline-none focus:ring-1"
-            style={{
-              borderColor: "var(--color-border)",
-              backgroundColor: "var(--color-bg)",
-              color: "var(--color-text)",
-              minHeight: "4rem",
-              maxHeight: "12rem",
-            }}
-            placeholder="SELECT * FROM table_name LIMIT 10"
-            value={sql}
-            onChange={(e) => setSql(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={3}
-            aria-label="SQL query input"
-          />
+          {/* SQL textarea with autocomplete */}
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              data-testid="run-sql-textarea"
+              className="w-full rounded border px-2 py-1.5 text-xs font-mono resize-y focus:outline-none focus:ring-1"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-bg)",
+                color: "var(--color-text)",
+                minHeight: "4rem",
+                maxHeight: "12rem",
+              }}
+              placeholder="SELECT * FROM table_name LIMIT 10"
+              value={sql}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onBlur={() => {
+                // Delay close so click on suggestion can fire first
+                setTimeout(() => autocomplete.close(), 150);
+              }}
+              rows={3}
+              aria-label="SQL query input"
+              role="combobox"
+              aria-expanded={autocomplete.isOpen}
+              aria-autocomplete="list"
+              aria-controls={autocomplete.isOpen ? "sql-autocomplete-list" : undefined}
+              aria-activedescendant={
+                autocomplete.isOpen
+                  ? `sql-autocomplete-item-${autocomplete.selectedIndex}`
+                  : undefined
+              }
+            />
+
+            {/* Autocomplete dropdown */}
+            {autocomplete.isOpen && (
+              <ul
+                ref={dropdownRef}
+                id="sql-autocomplete-list"
+                data-testid="sql-autocomplete-dropdown"
+                role="listbox"
+                className="absolute left-0 right-0 z-50 mt-0.5 max-h-48 overflow-y-auto rounded border shadow-lg"
+                style={{
+                  backgroundColor: "var(--color-bg)",
+                  borderColor: "var(--color-border)",
+                }}
+              >
+                {autocomplete.suggestions.map((suggestion, i) => (
+                  <li
+                    key={`${suggestion.kind}-${suggestion.text}-${i}`}
+                    id={`sql-autocomplete-item-${i}`}
+                    role="option"
+                    aria-selected={i === autocomplete.selectedIndex}
+                    data-testid={`sql-autocomplete-item-${i}`}
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer transition-colors"
+                    style={{
+                      backgroundColor:
+                        i === autocomplete.selectedIndex
+                          ? "var(--color-accent-light, rgba(59,130,246,0.12))"
+                          : "transparent",
+                      color: "var(--color-text)",
+                    }}
+                    onMouseDown={(e) => {
+                      // Use mousedown (not click) so it fires before textarea blur
+                      e.preventDefault();
+                      acceptSuggestion(suggestion);
+                    }}
+                    onMouseEnter={() => {
+                      // Not calling moveSelection here to avoid stale closure;
+                      // just visual hover via CSS is sufficient alongside keyboard nav
+                    }}
+                  >
+                    {/* Kind indicator */}
+                    <span
+                      className="inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold shrink-0"
+                      style={{
+                        backgroundColor:
+                          suggestion.kind === "keyword"
+                            ? "rgba(147,51,234,0.15)"
+                            : suggestion.kind === "table"
+                              ? "rgba(59,130,246,0.15)"
+                              : "rgba(34,197,94,0.15)",
+                        color:
+                          suggestion.kind === "keyword"
+                            ? "rgb(147,51,234)"
+                            : suggestion.kind === "table"
+                              ? "rgb(59,130,246)"
+                              : "rgb(34,197,94)",
+                      }}
+                    >
+                      {suggestion.kind === "keyword"
+                        ? "K"
+                        : suggestion.kind === "table"
+                          ? "T"
+                          : "C"}
+                    </span>
+
+                    {/* Label */}
+                    <span className="font-mono truncate">{suggestion.label}</span>
+
+                    {/* Detail (right-aligned, muted) */}
+                    {suggestion.detail && (
+                      <span
+                        className="ml-auto text-[10px] opacity-50 truncate"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        {suggestion.detail}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {/* Action buttons */}
           <div className="flex items-center gap-2">

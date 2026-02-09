@@ -16,6 +16,7 @@ interface UiState {
   chartModalExecution: SqlExecution | null;
   schemaModalDatasetId: string | null;
   previewModalDatasetId: string | null;
+  comparisonDatasetIds: string[] | null;
   presetModalOpen: boolean;
   reasoningModalOpen: boolean;
   activeReasoning: string;
@@ -39,6 +40,8 @@ interface UiActions {
   closeSchemaModal: () => void;
   openPreviewModal: (datasetId: string) => void;
   closePreviewModal: () => void;
+  openComparisonModal: (datasetIds: string[]) => void;
+  closeComparisonModal: () => void;
   openPresetModal: () => void;
   closePresetModal: () => void;
   openReasoningModal: (reasoning: string) => void;
@@ -62,6 +65,7 @@ export const useUiStore = create<UiState & UiActions>()(
       chartModalExecution: null,
       schemaModalDatasetId: null,
       previewModalDatasetId: null,
+      comparisonDatasetIds: null,
       presetModalOpen: false,
       reasoningModalOpen: false,
       activeReasoning: "",
@@ -113,6 +117,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closePreviewModal: () =>
         set({ previewModalDatasetId: null }),
+
+      openComparisonModal: (datasetIds) =>
+        set({ comparisonDatasetIds: datasetIds }),
+
+      closeComparisonModal: () =>
+        set({ comparisonDatasetIds: null }),
 
       openPresetModal: () =>
         set({ presetModalOpen: true }),

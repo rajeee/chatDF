@@ -27,6 +27,7 @@ export function resetAllStores(): void {
     activeSqlExecutions: [],
     sqlResultModalIndex: null,
     schemaModalDatasetId: null,
+    comparisonDatasetIds: null,
   });
 }
 
@@ -78,6 +79,7 @@ export function setUiState(state: Partial<{
   activeSqlExecutions: SqlExecution[];
   sqlResultModalIndex: number | null;
   schemaModalDatasetId: string | null;
+  comparisonDatasetIds: string[] | null;
 }>): void {
   useUiStore.setState(state);
 }

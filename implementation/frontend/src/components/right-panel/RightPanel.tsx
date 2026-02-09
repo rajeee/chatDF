@@ -14,6 +14,7 @@ import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
 import { SchemaModal } from "./SchemaModal";
 import { PreviewModal } from "./PreviewModal";
+import { ComparisonModal } from "./ComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
 import { RunSqlPanel } from "./RunSqlPanel";
 
@@ -28,6 +29,11 @@ export function RightPanel() {
   const rightPanelWidth = useUiStore((s) => s.rightPanelWidth);
   const setRightPanelWidth = useUiStore((s) => s.setRightPanelWidth);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
+  const openComparisonModal = useUiStore((s) => s.openComparisonModal);
+  const readyDatasets = useMemo(
+    () => datasets.filter((d) => d.status === "ready"),
+    [datasets]
+  );
   const isDragging = useRef(false);
 
   const swipeRef = useSwipeToDismiss({
@@ -167,12 +173,41 @@ export function RightPanel() {
             ))
           )}
         </div>
+        {readyDatasets.length >= 2 && (
+          <button
+            data-testid="compare-datasets-button"
+            onClick={() =>
+              openComparisonModal([readyDatasets[0].id, readyDatasets[1].id])
+            }
+            className="mt-3 w-full flex items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium hover:brightness-110 active:scale-[0.98] transition-all duration-150"
+            style={{
+              borderColor: "var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+            Compare Datasets
+          </button>
+        )}
         {datasets.length > 0 && conversationId && (
           <RunSqlPanel conversationId={conversationId} />
         )}
       </div>
       <SchemaModal />
       <PreviewModal />
+      <ComparisonModal />
       <PresetSourcesModal />
     </aside>
   );

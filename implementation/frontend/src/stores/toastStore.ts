@@ -9,15 +9,16 @@ export interface Toast {
   type: ToastType;
   duration?: number; // ms, defaults to 5000
   dismissing?: boolean; // true when fade-out animation is playing
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastState {
   toasts: Toast[];
-  addToast: (message: string, type: ToastType, duration?: number) => void;
+  addToast: (message: string, type: ToastType, duration?: number, action?: { label: string; onClick: () => void }) => void;
   dismissToast: (id: string) => void;
   removeToast: (id: string) => void;
   success: (message: string, duration?: number) => void;
-  error: (message: string, duration?: number) => void;
+  error: (message: string, duration?: number, action?: { label: string; onClick: () => void }) => void;
   info: (message: string, duration?: number) => void;
 }
 
@@ -27,9 +28,9 @@ const MAX_TOTAL_TOASTS = 10; // Cap total stored toasts to prevent memory leaks
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
-  addToast: (message, type, duration = 5000) => {
+  addToast: (message, type, duration = 5000, action) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
-    const toast: Toast = { id, message, type, duration };
+    const toast: Toast = { id, message, type, duration, action };
 
     set((state) => {
       const updated = [...state.toasts, toast];
@@ -74,8 +75,8 @@ export const useToastStore = create<ToastState>((set) => ({
     useToastStore.getState().addToast(message, "success", duration);
   },
 
-  error: (message, duration) => {
-    useToastStore.getState().addToast(message, "error", duration);
+  error: (message, duration, action) => {
+    useToastStore.getState().addToast(message, "error", duration, action);
   },
 
   info: (message, duration) => {

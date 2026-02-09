@@ -83,6 +83,28 @@ export function ToastContainer() {
               {toast.message}
             </div>
 
+            {/* Action button */}
+            {toast.action && (
+              <button
+                data-testid="toast-action"
+                onClick={() => {
+                  toast.action!.onClick();
+                  dismissToast(toast.id);
+                }}
+                className="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded transition-all duration-150 hover:opacity-80 active:scale-95"
+                style={{
+                  color: toast.type === "error" ? "var(--color-error)" : toast.type === "success" ? "var(--color-success)" : "var(--color-info)",
+                  backgroundColor: toast.type === "error"
+                    ? "color-mix(in srgb, var(--color-error) 12%, transparent)"
+                    : toast.type === "success"
+                      ? "color-mix(in srgb, var(--color-success) 12%, transparent)"
+                      : "color-mix(in srgb, var(--color-info) 12%, transparent)",
+                }}
+              >
+                {toast.action.label}
+              </button>
+            )}
+
             {/* Close button */}
             <button
               onClick={() => dismissToast(toast.id)}

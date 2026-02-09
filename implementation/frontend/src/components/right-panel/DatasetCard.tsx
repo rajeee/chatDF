@@ -187,7 +187,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
             title="Copy dataset URL"
             data-testid="copy-url-button"
             className={`touch-action-btn absolute top-1 right-7 p-1 rounded transition-all duration-150 active:scale-90 ${
-              copied ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              copied ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
             }`}
             style={{ color: copied ? "var(--color-success)" : undefined }}
           >
@@ -206,7 +206,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
             onClick={handleRemove}
             aria-label="Remove dataset"
             title="Remove dataset"
-            className="touch-action-btn absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:text-red-500 active:scale-90 transition-all duration-150"
+            className="touch-action-btn absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500 active:scale-90 transition-all duration-150"
           >
             <svg
               className="w-4 h-4"
@@ -238,7 +238,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               aria-label="Retry"
               disabled={isRetrying}
               data-testid="retry-button"
-              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded border hover:bg-accent/10 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border hover:bg-accent/10 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRetrying && (
                 <svg

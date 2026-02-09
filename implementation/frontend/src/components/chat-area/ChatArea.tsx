@@ -136,7 +136,10 @@ export function ChatArea() {
       } catch (err) {
         console.error("Failed to send message:", err);
         const errorMsg = err instanceof Error ? err.message : "Failed to send message";
-        useToastStore.getState().error(errorMsg);
+        useToastStore.getState().error(errorMsg, undefined, {
+          label: "Retry",
+          onClick: () => handleSend(text),
+        });
         useChatStore.getState().markMessageFailed(userMessage.id);
         setLoadingPhase("idle");
         setStreaming(false);

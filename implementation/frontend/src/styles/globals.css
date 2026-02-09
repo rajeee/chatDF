@@ -399,7 +399,17 @@ select:focus-visible {
 @media (hover: none) {
   .touch-action-btn {
     opacity: 0.5 !important;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+}
+
+/* Show hidden action buttons when focused via keyboard (Tab navigation) */
+.touch-action-btn:focus-visible {
+  opacity: 1 !important;
 }
 
 /* Safe-area insets for notched phones (iPhone X+).

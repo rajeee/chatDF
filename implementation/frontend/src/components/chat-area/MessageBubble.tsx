@@ -184,7 +184,7 @@ function MessageBubbleComponent({
             <span>Failed to send</span>
             <button
               data-testid={`retry-btn-${message.id}`}
-              className="underline font-medium hover:opacity-80 active:scale-95 transition-all"
+              className="underline font-medium hover:opacity-80 active:scale-95 transition-all px-1 py-0.5"
               onClick={() => onRetry(message.id, message.content)}
             >
               Retry
@@ -321,7 +321,7 @@ function MessageBubbleComponent({
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
-                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': 0 } as React.CSSProperties}
                 onClick={() => onShowReasoning(reasoningContent)}
               >
@@ -332,7 +332,7 @@ function MessageBubbleComponent({
             {/* Show SQL button */}
             {message.sql_executions.length > 0 && (
               <button
-                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': reasoningContent ? 1 : 0 } as React.CSSProperties}
                 onClick={() => onShowSQL(message.sql_executions)}
               >
@@ -344,7 +344,7 @@ function MessageBubbleComponent({
             {visualizableIndex >= 0 && (
               <button
                 data-testid={`visualize-btn-${message.id}`}
-                className="action-btn-stagger text-xs px-3 py-1 rounded border font-medium hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
+                className="action-btn-stagger text-xs px-3 py-1 rounded border font-medium hover:opacity-90 focus-visible:ring-1 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
                 style={{
                   borderColor: "var(--color-success)",
                   color: "var(--color-success)",

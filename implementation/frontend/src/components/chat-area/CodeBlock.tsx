@@ -12,7 +12,7 @@ interface CodeBlockProps {
 }
 
 export function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
-  const { success } = useToastStore();
+  const { success, error: showError } = useToastStore();
 
   // Extract language from className (format: "language-python")
   const language = className?.replace(/^language-/, "") || "";
@@ -30,8 +30,8 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
     try {
       await navigator.clipboard.writeText(codeText);
       success("Code copied to clipboard");
-    } catch (err) {
-      console.error("Failed to copy code:", err);
+    } catch {
+      showError("Failed to copy code");
     }
   };
 

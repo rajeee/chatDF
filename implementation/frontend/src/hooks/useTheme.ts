@@ -24,6 +24,7 @@ export interface ThemeController {
 export function useTheme(): ThemeController {
   let mode: ThemeMode = "system";
   let mediaQuery: MediaQueryList | null = null;
+  let transitionTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // The listener we attach to matchMedia. Kept as a stable reference for removal.
   const onSystemChange = (e: MediaQueryListEvent) => {
@@ -80,10 +81,12 @@ export function useTheme(): ThemeController {
   function setTheme(m: ThemeMode) {
     mode = m;
     persist(m);
+    if (transitionTimeoutId) clearTimeout(transitionTimeoutId);
     document.documentElement.classList.add("theme-transitioning");
     applyTheme();
-    setTimeout(() => {
+    transitionTimeoutId = setTimeout(() => {
       document.documentElement.classList.remove("theme-transitioning");
+      transitionTimeoutId = null;
     }, 250);
   }
 
@@ -94,6 +97,10 @@ export function useTheme(): ThemeController {
   }
 
   function destroy() {
+    if (transitionTimeoutId) {
+      clearTimeout(transitionTimeoutId);
+      transitionTimeoutId = null;
+    }
     if (mediaQuery) {
       mediaQuery.removeEventListener("change", onSystemChange);
       mediaQuery = null;

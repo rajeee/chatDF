@@ -350,7 +350,7 @@ describe("ChatInput focus-visible (global CSS)", () => {
     // Textarea uses its own accent focus ring for better keyboard visibility
     expect(textarea.className).toContain("focus:ring-2");
     expect(textarea.className).toContain("focus:outline-none");
-    expect(textarea.className).toContain("transition-shadow");
+    expect(textarea.className).toContain("transition-all");
   });
 
   it("send button relies on global focus-visible styles", () => {

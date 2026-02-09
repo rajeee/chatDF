@@ -146,7 +146,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           <textarea
             ref={textareaRef}
             aria-label="Message input"
-            className="flex-1 resize-none rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:ring-2 focus:ring-[var(--color-accent)]/40 focus:border-[var(--color-accent)] focus:outline-none transition-shadow"
+            className="flex-1 resize-none rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2 text-sm max-h-[7.5rem] overflow-y-auto focus:ring-2 focus:ring-[var(--color-accent)]/40 focus:border-[var(--color-accent)] focus:outline-none transition-all duration-200"
             style={{
               borderColor: "var(--color-border)",
               backgroundColor: "var(--color-bg)",

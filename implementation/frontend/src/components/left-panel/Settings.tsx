@@ -3,7 +3,7 @@
 // Theme toggle (3-way: light/dark/system), Clear All Conversations with
 // confirmation modal, About modal.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
@@ -67,14 +67,16 @@ export function Settings() {
   // About modal
   const [showAbout, setShowAbout] = useState(false);
 
-  const handleEscapeAbout = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showAbout) {
-        setShowAbout(false);
-      }
-    },
-    [showAbout]
-  );
+  const showAboutRef = useRef(showAbout);
+  useEffect(() => {
+    showAboutRef.current = showAbout;
+  }, [showAbout]);
+
+  const handleEscapeAbout = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape" && showAboutRef.current) {
+      setShowAbout(false);
+    }
+  }, []);
 
   useEffect(() => {
     document.addEventListener("keydown", handleEscapeAbout);

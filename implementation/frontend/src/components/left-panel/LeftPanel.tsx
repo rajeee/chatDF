@@ -138,12 +138,14 @@ export function LeftPanel() {
           <Account />
         </div>
       </div>
-      {/* Resize handle */}
+      {/* Resize handle — wider hit area with visible feedback line */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400/50 transition-colors"
+        className="absolute top-0 -right-1 w-3 h-full cursor-col-resize group transition-colors"
         style={{ zIndex: 10 }}
-      />
+      >
+        <div className="absolute right-1 top-0 w-0.5 h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)]" />
+      </div>
     </aside>
   );
 }

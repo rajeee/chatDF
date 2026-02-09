@@ -86,12 +86,14 @@ export function RightPanel() {
         boxShadow: "-1px 0 3px var(--color-shadow)",
       }}
     >
-      {/* Resize handle (desktop only) */}
+      {/* Resize handle (desktop only) — wider hit area with visible feedback line */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-400/50 transition-colors hidden lg:block"
+        className="absolute top-0 -left-1 w-3 h-full cursor-col-resize group transition-colors hidden lg:block"
         style={{ zIndex: 10 }}
-      />
+      >
+        <div className="absolute left-1 top-0 w-0.5 h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)]" />
+      </div>
       <div className="flex flex-col h-full p-4 overflow-y-auto">
         {/* Close button and title (mobile only) */}
         <div className="flex items-center justify-between mb-3 lg:hidden">

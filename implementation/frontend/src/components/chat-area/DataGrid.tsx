@@ -18,8 +18,8 @@ import {
 function SortAscIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="14"
+      height="14"
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden="true"
@@ -34,8 +34,8 @@ function SortAscIcon() {
 function SortDescIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="14"
+      height="14"
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden="true"
@@ -50,12 +50,12 @@ function SortDescIcon() {
 function SortUnsortedIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="14"
+      height="14"
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden="true"
-      className="inline-block shrink-0 opacity-30"
+      className="inline-block shrink-0 opacity-0 group-hover:opacity-40 transition-opacity duration-150"
       data-testid="sort-unsorted-icon"
     >
       <path d="M6 1.5L9 5H3L6 1.5Z" fill="currentColor" />
@@ -202,13 +202,14 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                     <th
                       key={header.id}
                       role="columnheader"
-                      className={`px-3 py-2 text-left font-medium border-b cursor-pointer select-none transition-colors duration-200${
+                      className={`group px-3 py-2 text-left font-medium border-b cursor-pointer select-none transition-colors duration-200${
                         isNumeric ? " text-right" : ""
                       }${isSorted ? " bg-accent/5" : ""}`}
                       style={{
                         width: header.getSize(),
                         position: "relative",
-                        borderColor: "var(--color-border)",
+                        borderColor: isSorted ? "var(--color-accent)" : "var(--color-border)",
+                        borderBottomWidth: isSorted ? "2px" : undefined,
                       }}
                       onClick={header.column.getToggleSortingHandler()}
                     >

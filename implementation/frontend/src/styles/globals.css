@@ -465,6 +465,23 @@ select:focus-visible {
   animation: thinkingIconPulse 2s ease-in-out infinite;
 }
 
+/* Dropdown entrance animation — scale + fade for menus/dropdowns */
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dropdown-enter {
+  animation: dropdownIn 0.15s ease-out forwards;
+  transform-origin: top right;
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
@@ -481,7 +498,8 @@ select:focus-visible {
   .modal-scale-enter,
   .dataset-card-enter,
   .dataset-card-exit,
-  .animate-fade-in {
+  .animate-fade-in,
+  .dropdown-enter {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }

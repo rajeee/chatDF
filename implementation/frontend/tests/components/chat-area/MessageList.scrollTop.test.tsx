@@ -32,28 +32,32 @@ describe("MessageList scroll-to-top button", () => {
     expect(screen.queryByTestId("scroll-to-top-btn")).not.toBeInTheDocument();
   });
 
-  it("shows scroll-to-top button when scrolled past threshold", () => {
+  it("shows scroll-to-top button when scrolled past threshold", async () => {
     setChatIdle("conv-1", [makeMessage()]);
     renderWithProviders(<MessageList />);
 
-    act(() => {
+    await act(async () => {
       Object.defineProperty(window, "scrollY", { value: 200, writable: true, configurable: true });
       fireEvent.scroll(window);
+      // Flush rAF-throttled scroll handler
+      await new Promise((r) => requestAnimationFrame(r));
     });
 
     expect(screen.getByTestId("scroll-to-top-btn")).toBeInTheDocument();
   });
 
-  it("clicking scroll-to-top calls window.scrollTo", () => {
+  it("clicking scroll-to-top calls window.scrollTo", async () => {
     setChatIdle("conv-1", [makeMessage()]);
     renderWithProviders(<MessageList />);
 
     const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
 
     // Scroll down to make the button appear
-    act(() => {
+    await act(async () => {
       Object.defineProperty(window, "scrollY", { value: 200, writable: true, configurable: true });
       fireEvent.scroll(window);
+      // Flush rAF-throttled scroll handler
+      await new Promise((r) => requestAnimationFrame(r));
     });
 
     const btn = screen.getByTestId("scroll-to-top-btn");

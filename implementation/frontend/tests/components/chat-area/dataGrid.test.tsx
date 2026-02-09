@@ -556,14 +556,15 @@ describe("DG-SORT-ICONS: Sort indicator SVG icons", () => {
     expect(screen.queryByTestId("sort-desc-icon")).not.toBeInTheDocument();
   });
 
-  it("unsorted icon has opacity-30 class", () => {
+  it("unsorted icon is hidden by default and visible on group-hover", () => {
     renderWithProviders(
       <DataGrid columns={sampleColumns} rows={sampleRows} totalRows={5} />
     );
 
     const unsortedIcons = screen.getAllByTestId("sort-unsorted-icon");
     for (const icon of unsortedIcons) {
-      expect(icon).toHaveClass("opacity-30");
+      expect(icon).toHaveClass("opacity-0");
+      expect(icon).toHaveClass("group-hover:opacity-40");
     }
   });
 });

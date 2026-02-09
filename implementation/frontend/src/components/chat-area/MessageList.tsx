@@ -73,11 +73,18 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
     return scrollTop < SCROLL_THRESHOLD;
   }, []);
 
-  // Handle scroll events to detect manual scroll-up
+  // Handle scroll events to detect manual scroll-up (throttled for performance)
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setUserHasScrolledUp(!isNearBottom());
-      setShowScrollToTop(!isNearTop());
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          setUserHasScrolledUp(!isNearBottom());
+          setShowScrollToTop(!isNearTop());
+          ticking = false;
+        });
+      }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -249,7 +256,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
             {exportDropdownOpen && (
               <div
                 data-testid="export-dropdown"
-                className="absolute right-0 mt-1 w-48 rounded-lg border shadow-lg z-50 py-1"
+                className="absolute right-0 mt-1 w-48 rounded-lg border shadow-lg z-50 py-1 dropdown-enter"
                 style={{
                   backgroundColor: "var(--color-surface)",
                   borderColor: "var(--color-border)",

@@ -10,6 +10,7 @@ import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
 import { useToastStore } from "@/stores/toastStore";
+import { formatSql } from "@/utils/sqlFormatter";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -36,6 +37,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [result, setResult] = useState<RunQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [resultCopied, setResultCopied] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -138,6 +140,11 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [pendingSql, setPendingSql]);
 
+  const handleFormat = useCallback(() => {
+    if (!sql.trim()) return;
+    setSql(formatSql(sql));
+  }, [sql]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // When autocomplete is open, intercept navigation keys
@@ -171,13 +178,20 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
         }
       }
 
+      // Cmd/Ctrl+Shift+F to format
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        handleFormat();
+        return;
+      }
+
       // Cmd/Ctrl+Enter to execute
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         executeQuery();
       }
     },
-    [executeQuery, autocomplete, acceptSuggestion]
+    [executeQuery, autocomplete, acceptSuggestion, handleFormat]
   );
 
   // Handle textarea input changes — update sql and trigger autocomplete
@@ -303,6 +317,23 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
       useToastStore.getState().error(message);
     } finally {
       setExporting(false);
+    }
+  }, [result]);
+
+  // Copy results to clipboard as TSV (tab-separated values)
+  const handleCopyResults = useCallback(async () => {
+    if (!result) return;
+    const header = result.columns.join("\t");
+    const body = result.rows
+      .map((row) => row.map((cell) => (cell == null ? "" : String(cell))).join("\t"))
+      .join("\n");
+    const tsv = header + "\n" + body;
+    try {
+      await navigator.clipboard.writeText(tsv);
+      setResultCopied(true);
+      setTimeout(() => setResultCopied(false), 2000);
+    } catch {
+      // clipboard write failed silently
     }
   }, [result]);
 
@@ -595,6 +626,33 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 "Explain"
               )}
             </button>
+            <button
+              data-testid="run-sql-format"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors disabled:opacity-50"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "transparent",
+                color: "var(--color-text)",
+              }}
+              disabled={!sql.trim()}
+              onClick={handleFormat}
+              title={`Format SQL (${navigator.platform?.includes("Mac") ? "\u2318" : "Ctrl"}+Shift+F)`}
+            >
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+              Format
+            </button>
             <span
               className="text-[10px] opacity-50"
               style={{ color: "var(--color-text-muted)" }}
@@ -695,6 +753,25 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   )}
                 </span>
                 <div className="flex items-center gap-1.5">
+                  {/* Copy to clipboard button */}
+                  <button
+                    data-testid="copy-results-tsv"
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                      backgroundColor: "transparent",
+                    }}
+                    disabled={!result}
+                    onClick={handleCopyResults}
+                    title="Copy results as TSV"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    {resultCopied ? "Copied!" : "Copy"}
+                  </button>
                   {/* CSV export button */}
                   <button
                     data-testid="export-csv"

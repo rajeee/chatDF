@@ -19,7 +19,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: [path.resolve(testsDir, "setup.ts")],
     css: true,
-    include: ["tests/**/*.test.{ts,tsx}"],
+    include: ["tests/**/*.test.{ts,tsx}", "src/**/__tests__/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**"],
     coverage: {
       provider: "v8",

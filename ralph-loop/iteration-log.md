@@ -83,3 +83,5 @@ Track each improvement cycle: what was done, what was learned.
 | 77 | 2026-02-09 | Thinking indicator, DataGrid sort polish, message cascade | U96, U97, U98 | 824/832 frontend (+17 new tests, 8 pre-existing failures), 64/65 backend | e54cb90 |
 | 78 | 2026-02-09 | Dropdown animation, resize handles, scroll throttle, sort polish | U99, U100, U101, U102 | 824/832 frontend (0 new failures, 8 pre-existing), 64/65 backend | f17df44 |
 | 79 | 2026-02-09 | Optimistic pin, deferred search, query progress, mobile backdrop | U93, U103, U104, U105 | 824/832 frontend (0 new failures, 8 pre-existing), 64/65 backend | 75c8982 |
+| 80 | 2026-02-09 | Optimistic rename, pin shortcut, list transitions, exec time badge | U106, U107, U108, U109 | 824/832 frontend (0 new failures, 8 pre-existing), 64/65 backend | 52cf773 |
+| 81 | 2026-02-09 | Optimistic delete, accent focus ring, dataset hostname, scroll progress | U110, U111, U112, U113 | 824/831 frontend (0 new failures, 7 pre-existing), 64/65 backend | 41d5b34 |

@@ -112,3 +112,5 @@ Track each improvement cycle: what was done, what was learned.
 | 105 | 2026-02-09 | Query pagination, column descriptions, query history table | prior session | 1099/1107 frontend (8 pre-existing), 576/588 backend (12 pre-existing) | 03381b3 |
 | 106 | 2026-02-09 | SQL explain in RunSqlPanel, CSV/Excel export, query cache integration | U177, U178, U179 | 1099/1107 frontend (8 pre-existing), 576/588 backend (12 pre-existing, +12 new cache tests) | 30f6e05 |
 | 108 | 2026-02-09 | Dev Mode: full LLM visibility & controls (6 features) | work.md task | 1099/1107 frontend (8 pre-existing), 575/588 backend (12 pre-existing) | 67c1c14 |
+| 108b | 2026-02-09 | NL-to-SQL generation, query history tracking, dataset column descriptions | prior session | 1099/1107 frontend (8 pre-existing), 64/65 backend (1 pre-existing) | d83582e |
+| 109 | 2026-02-09 | Query History panel + fix NL-to-SQL tests | U180, U181 fix | 1123/1131 frontend (+24 new, 8 pre-existing), 72/73 backend (+8 fixed, 1 pre-existing) | f14efc6 |

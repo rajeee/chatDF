@@ -9,8 +9,5 @@
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 
-## Testing
-- **CodeMirror in tests**: Mock `useEditableCodeMirror` hook in jsdom tests — CodeMirror needs real DOM.
-
 ## Naming Conflicts
 - **`settings` module vs `settings` variable**: In `main.py`, `from app.routers import settings` gets shadowed by `settings = get_settings()`. Always alias router imports.

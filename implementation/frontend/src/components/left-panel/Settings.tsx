@@ -200,7 +200,7 @@ export function Settings() {
       {/* Clear All Conversations */}
       <div>
         {showClearConfirm ? (
-          <div className="p-2 border border-error/30 rounded bg-error/5">
+          <div className="p-2 border border-error/30 rounded bg-error/5 animate-fade-in">
             <p className="text-xs mb-2">
               This will permanently delete all conversations. This action cannot
               be undone.
@@ -214,7 +214,7 @@ export function Settings() {
               </button>
               <button
                 onClick={() => clearAllMutation.mutate()}
-                className="flex-1 px-2 py-1 text-xs rounded bg-error text-white hover:opacity-90"
+                className="flex-1 px-2 py-1 text-xs rounded bg-error text-white hover:opacity-90 transition-opacity duration-150"
               >
                 Delete All
               </button>

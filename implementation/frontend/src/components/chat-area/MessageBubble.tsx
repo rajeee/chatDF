@@ -239,7 +239,7 @@ function MessageBubbleComponent({
                 maxHeight: sqlExpanded ? "200px" : "0px",
                 opacity: sqlExpanded ? 1 : 0,
                 overflow: "hidden",
-                transition: "max-height 200ms ease, opacity 150ms ease",
+                transition: "max-height 200ms ease, opacity 200ms ease",
               }}
             >
               <pre

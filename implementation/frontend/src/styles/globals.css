@@ -23,6 +23,7 @@
     --color-surface-hover: rgba(0, 0, 0, 0.04);
     --color-text-muted: #9ca3af;
     --color-backdrop: rgba(0, 0, 0, 0.5);
+    --color-phase-thinking: #7c3aed;
 
     /* Syntax highlighting (light theme) */
     --syntax-keyword: #a626a4;
@@ -54,6 +55,7 @@
     --color-surface-hover: rgba(255, 255, 255, 0.08);
     --color-text-muted: #6b7280;
     --color-backdrop: rgba(0, 0, 0, 0.5);
+    --color-phase-thinking: #a78bfa;
 
     /* Syntax highlighting (dark theme) */
     --syntax-keyword: #c678dd;

@@ -114,7 +114,7 @@ describe("MessageBubble SQL Preview Animation", () => {
 
     const contentContainer = screen.getByTestId(`sql-preview-content-${mockMessage.id}`);
     expect(contentContainer).toHaveStyle({
-      transition: "max-height 200ms ease, opacity 150ms ease",
+      transition: "max-height 200ms ease, opacity 200ms ease",
     });
   });
 

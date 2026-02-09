@@ -9,9 +9,9 @@ import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetS
 import { useChatStore } from "@/stores/chatStore";
 
 const statusConfig: Record<ConnectionStatus, { color: string; label: string }> = {
-  connected: { color: "#22c55e", label: "Connected" },
-  disconnected: { color: "#ef4444", label: "Disconnected" },
-  reconnecting: { color: "#f59e0b", label: "Reconnecting" },
+  connected: { color: "var(--color-success)", label: "Connected" },
+  disconnected: { color: "var(--color-error)", label: "Disconnected" },
+  reconnecting: { color: "var(--color-warning)", label: "Reconnecting" },
 };
 
 export function Header() {

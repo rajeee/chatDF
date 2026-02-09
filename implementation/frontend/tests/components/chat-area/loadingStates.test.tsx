@@ -211,34 +211,31 @@ describe("LS-PROGRESS-1: Phase progress indicator", () => {
 });
 
 describe("LS-COLOR-1: Color-coded phases", () => {
-  it("thinking phase uses violet color", () => {
+  it("thinking phase uses violet color via CSS variable", () => {
     renderWithProviders(
       <LoadingStates phase="thinking" phaseStartTime={Date.now()} />
     );
     const label = screen.getByText("Thinking...");
     const pill = label.closest("[class*='rounded-full']")!;
-    // Light mode: violet #7c3aed = rgb(124, 58, 237)
-    expect(pill.getAttribute("style")).toContain("124, 58, 237");
+    expect(pill.getAttribute("style")).toContain("var(--color-phase-thinking)");
   });
 
-  it("executing phase uses blue color", () => {
+  it("executing phase uses accent color via CSS variable", () => {
     renderWithProviders(
       <LoadingStates phase="executing" phaseStartTime={Date.now()} />
     );
     const label = screen.getByText("Running query...");
     const pill = label.closest("[class*='rounded-full']")!;
-    // Light mode: blue #2563eb = rgb(37, 99, 235)
-    expect(pill.getAttribute("style")).toContain("37, 99, 235");
+    expect(pill.getAttribute("style")).toContain("var(--color-accent)");
   });
 
-  it("formatting phase uses green color", () => {
+  it("formatting phase uses success color via CSS variable", () => {
     renderWithProviders(
       <LoadingStates phase="formatting" phaseStartTime={Date.now()} />
     );
     const label = screen.getByText("Preparing response...");
     const pill = label.closest("[class*='rounded-full']")!;
-    // Light mode: green #059669 = rgb(5, 150, 105)
-    expect(pill.getAttribute("style")).toContain("5, 150, 105");
+    expect(pill.getAttribute("style")).toContain("var(--color-success)");
   });
 
   it("phase pill has background tint matching phase color", () => {

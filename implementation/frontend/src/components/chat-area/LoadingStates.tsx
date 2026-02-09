@@ -15,11 +15,11 @@ const PHASES = ["thinking", "executing", "formatting"] as const;
 
 const PHASE_CONFIG: Record<
   string,
-  { label: string; color: string; darkColor: string }
+  { label: string; cssVar: string }
 > = {
-  thinking: { label: "Thinking...", color: "#7c3aed", darkColor: "#a78bfa" },
-  executing: { label: "Running query...", color: "#2563eb", darkColor: "#60a5fa" },
-  formatting: { label: "Preparing response...", color: "#059669", darkColor: "#34d399" },
+  thinking: { label: "Thinking...", cssVar: "var(--color-phase-thinking)" },
+  executing: { label: "Running query...", cssVar: "var(--color-accent)" },
+  formatting: { label: "Preparing response...", cssVar: "var(--color-success)" },
 };
 
 const DELAY_THRESHOLD_MS = 30_000;
@@ -83,9 +83,6 @@ function PhaseProgress({
   currentPhase: "thinking" | "executing" | "formatting";
 }) {
   const currentIdx = PHASES.indexOf(currentPhase);
-  const isDark =
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark");
 
   return (
     <div data-testid="phase-progress" className="flex items-center gap-1">
@@ -93,7 +90,7 @@ function PhaseProgress({
         const config = PHASE_CONFIG[p];
         const isCompleted = i < currentIdx;
         const isActive = i === currentIdx;
-        const color = isDark ? config.darkColor : config.color;
+        const color = config.cssVar;
 
         return (
           <div key={p} className="flex items-center gap-1">
@@ -130,10 +127,6 @@ export function LoadingStates({ phase, phaseStartTime }: LoadingStatesProps) {
   const [isTimedOut, setIsTimedOut] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isDark =
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark");
-
   useEffect(() => {
     // Reset states when phase or phaseStartTime changes
     setIsDelayed(false);
@@ -167,7 +160,7 @@ export function LoadingStates({ phase, phaseStartTime }: LoadingStatesProps) {
   }
 
   const config = PHASE_CONFIG[phase];
-  const phaseColor = isDark ? config.darkColor : config.color;
+  const phaseColor = config.cssVar;
   const label = isDelayed ? "Taking longer than expected..." : config.label;
 
   const icon =
@@ -185,7 +178,7 @@ export function LoadingStates({ phase, phaseStartTime }: LoadingStatesProps) {
         className="inline-flex items-center gap-2 text-sm rounded-full px-3 py-1 w-fit"
         style={{
           color: phaseColor,
-          backgroundColor: `${phaseColor}12`,
+          backgroundColor: `color-mix(in srgb, ${phaseColor} 8%, transparent)`,
         }}
       >
         {icon}

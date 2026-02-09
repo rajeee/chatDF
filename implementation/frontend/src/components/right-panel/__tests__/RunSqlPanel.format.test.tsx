@@ -1,6 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { RunSqlPanel } from "../RunSqlPanel";
+
+// Capture the onChange and onFormat callbacks from useEditableCodeMirror for test access
+let mockOnChange: ((value: string, cursor: number) => void) | undefined;
+let mockOnFormat: (() => void) | undefined;
+
+vi.mock("@/hooks/useEditableCodeMirror", () => ({
+  useEditableCodeMirror: (options: {
+    onChange?: (value: string, cursor: number) => void;
+    onFormat?: () => void;
+  }) => {
+    mockOnChange = options.onChange;
+    mockOnFormat = options.onFormat;
+    return {
+      setValue: (doc: string) => { options.onChange?.(doc, doc.length); },
+      getValue: () => "",
+      getCursorPos: () => 0,
+      focus: vi.fn(),
+      viewRef: { current: null },
+    };
+  },
+}));
 
 vi.mock("@/api/client", () => ({
   apiPost: vi.fn(),
@@ -43,9 +64,18 @@ vi.mock("@/stores/toastStore", () => ({
   }),
 }));
 
+vi.mock("@/stores/uiStore", () => ({
+  useUiStore: vi.fn((selector) => {
+    const state = { pendingSql: null, setPendingSql: vi.fn() };
+    return selector(state);
+  }),
+}));
+
 describe("RunSqlPanel Format button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOnChange = undefined;
+    mockOnFormat = undefined;
   });
 
   it("Format button is visible when panel is expanded", () => {
@@ -70,49 +100,47 @@ describe("RunSqlPanel Format button", () => {
     render(<RunSqlPanel conversationId="test-conv" />);
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    const textarea = screen.getByTestId("run-sql-textarea") as HTMLTextAreaElement;
+    const hiddenInput = screen.getByTestId("run-sql-textarea") as HTMLInputElement;
 
-    // Type unformatted SQL
-    fireEvent.change(textarea, {
-      target: { value: "SELECT id, name FROM users WHERE age > 18 AND status = 'active'" },
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => {
+      mockOnChange?.("SELECT id, name FROM users WHERE age > 18 AND status = 'active'", 60);
     });
 
     // Click format
     fireEvent.click(screen.getByTestId("run-sql-format"));
 
-    // Textarea should now contain formatted SQL
-    expect(textarea.value).toContain("SELECT\n");
-    expect(textarea.value).toContain("  id,");
-    expect(textarea.value).toContain("  name");
-    expect(textarea.value).toContain("FROM users");
-    expect(textarea.value).toContain("WHERE\n");
-    expect(textarea.value).toContain("  age > 18");
-    expect(textarea.value).toContain("  AND status = 'active'");
+    // Hidden input value should now contain formatted SQL
+    const value = hiddenInput.getAttribute("value") ?? "";
+    expect(value).toContain("SELECT\n");
+    expect(value).toContain("  id,");
+    expect(value).toContain("  name");
+    expect(value).toContain("FROM users");
+    expect(value).toContain("WHERE\n");
+    expect(value).toContain("  age > 18");
+    expect(value).toContain("  AND status = 'active'");
   });
 
   it("Ctrl+Shift+F keyboard shortcut formats SQL", () => {
     render(<RunSqlPanel conversationId="test-conv" />);
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    const textarea = screen.getByTestId("run-sql-textarea") as HTMLTextAreaElement;
+    const hiddenInput = screen.getByTestId("run-sql-textarea") as HTMLInputElement;
 
-    // Type unformatted SQL
-    fireEvent.change(textarea, {
-      target: { value: "SELECT id, name FROM users ORDER BY name" },
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => {
+      mockOnChange?.("SELECT id, name FROM users ORDER BY name", 40);
     });
 
-    // Press Ctrl+Shift+F
-    fireEvent.keyDown(textarea, {
-      key: "f",
-      ctrlKey: true,
-      shiftKey: true,
-    });
+    // Simulate Ctrl+Shift+F by invoking the onFormat callback captured from the mock
+    act(() => { mockOnFormat?.(); });
 
-    // Textarea should now contain formatted SQL
-    expect(textarea.value).toContain("SELECT\n");
-    expect(textarea.value).toContain("  id,");
-    expect(textarea.value).toContain("  name");
-    expect(textarea.value).toContain("FROM users");
-    expect(textarea.value).toContain("ORDER BY name");
+    // Hidden input value should now contain formatted SQL
+    const value = hiddenInput.getAttribute("value") ?? "";
+    expect(value).toContain("SELECT\n");
+    expect(value).toContain("  id,");
+    expect(value).toContain("  name");
+    expect(value).toContain("FROM users");
+    expect(value).toContain("ORDER BY name");
   });
 });

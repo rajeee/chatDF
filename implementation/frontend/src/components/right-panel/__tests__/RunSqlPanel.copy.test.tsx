@@ -1,6 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { RunSqlPanel } from "../RunSqlPanel";
+
+// Capture the onChange callback from useEditableCodeMirror for test access
+let mockOnChange: ((value: string, cursor: number) => void) | undefined;
+
+vi.mock("@/hooks/useEditableCodeMirror", () => ({
+  useEditableCodeMirror: (options: { onChange?: (value: string, cursor: number) => void }) => {
+    mockOnChange = options.onChange;
+    return {
+      setValue: (doc: string) => { options.onChange?.(doc, doc.length); },
+      getValue: () => "",
+      getCursorPos: () => 0,
+      focus: vi.fn(),
+      viewRef: { current: null },
+    };
+  },
+}));
 
 vi.mock("@/api/client", () => ({
   apiPost: vi.fn(),
@@ -64,6 +80,7 @@ Object.defineProperty(navigator, "clipboard", {
 describe("RunSqlPanel copy to clipboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOnChange = undefined;
   });
 
   async function executeQueryAndGetResults() {
@@ -87,9 +104,8 @@ describe("RunSqlPanel copy to clipboard", () => {
     // Expand the panel
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    // Type query and execute
-    const textarea = screen.getByTestId("run-sql-textarea");
-    fireEvent.change(textarea, { target: { value: "SELECT * FROM t" } });
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => { mockOnChange?.("SELECT * FROM t", 15); });
     fireEvent.click(screen.getByTestId("run-sql-execute"));
 
     await waitFor(() => {

@@ -1,6 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { RunSqlPanel } from "../RunSqlPanel";
+
+// Capture the onChange callback from useEditableCodeMirror for test access
+let mockOnChange: ((value: string, cursor: number) => void) | undefined;
+
+vi.mock("@/hooks/useEditableCodeMirror", () => ({
+  useEditableCodeMirror: (options: { onChange?: (value: string, cursor: number) => void }) => {
+    mockOnChange = options.onChange;
+    return {
+      setValue: (doc: string) => { options.onChange?.(doc, doc.length); },
+      getValue: () => "",
+      getCursorPos: () => 0,
+      focus: vi.fn(),
+      viewRef: { current: null },
+    };
+  },
+}));
 
 // Mock apiPost
 vi.mock("@/api/client", () => ({
@@ -8,6 +24,8 @@ vi.mock("@/api/client", () => ({
   apiPatch: vi.fn(),
   apiGet: vi.fn(),
   apiDelete: vi.fn(),
+  explainSql: vi.fn(),
+  generateSql: vi.fn(),
 }));
 
 // Mock stores
@@ -37,9 +55,27 @@ vi.mock("@/hooks/useSqlAutocomplete", () => ({
   }),
 }));
 
+vi.mock("@/stores/toastStore", () => ({
+  useToastStore: Object.assign(vi.fn(), {
+    getState: () => ({ error: vi.fn(), success: vi.fn() }),
+  }),
+}));
+
+vi.mock("@/stores/uiStore", () => ({
+  useUiStore: vi.fn((selector) => {
+    const state = { pendingSql: null, setPendingSql: vi.fn() };
+    return selector(state);
+  }),
+}));
+
+vi.mock("@/utils/sqlFormatter", () => ({
+  formatSql: vi.fn((s: string) => s),
+}));
+
 describe("RunSqlPanel pagination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOnChange = undefined;
   });
 
   it("shows pagination controls when multiple pages exist", async () => {
@@ -59,9 +95,8 @@ describe("RunSqlPanel pagination", () => {
     // Expand the panel
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    // Type query and execute
-    const textarea = screen.getByTestId("run-sql-textarea");
-    fireEvent.change(textarea, { target: { value: "SELECT * FROM t" } });
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => { mockOnChange?.("SELECT * FROM t", 15); });
     fireEvent.click(screen.getByTestId("run-sql-execute"));
 
     await waitFor(() => {
@@ -89,8 +124,8 @@ describe("RunSqlPanel pagination", () => {
     render(<RunSqlPanel conversationId="test-conv" />);
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    const textarea = screen.getByTestId("run-sql-textarea");
-    fireEvent.change(textarea, { target: { value: "SELECT 1" } });
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => { mockOnChange?.("SELECT 1", 8); });
     fireEvent.click(screen.getByTestId("run-sql-execute"));
 
     await waitFor(() => {
@@ -125,8 +160,8 @@ describe("RunSqlPanel pagination", () => {
     render(<RunSqlPanel conversationId="test-conv" />);
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
 
-    const textarea = screen.getByTestId("run-sql-textarea");
-    fireEvent.change(textarea, { target: { value: "SELECT * FROM t" } });
+    // Simulate typing in the CodeMirror editor via mock
+    act(() => { mockOnChange?.("SELECT * FROM t", 15); });
     fireEvent.click(screen.getByTestId("run-sql-execute"));
 
     await waitFor(() => {

@@ -2,15 +2,20 @@
 // Users can type SQL queries and execute them against loaded datasets
 // using Cmd/Ctrl+Enter or the Run button.
 // Includes SQL autocomplete for keywords, table names, and column names.
+// Uses CodeMirror 6 for the SQL editor with syntax highlighting.
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { apiPost, explainSql, generateSql } from "@/api/client";
 import { useUiStore } from "@/stores/uiStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
-import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
+import {
+  useSqlAutocomplete,
+  type Suggestion,
+} from "@/hooks/useSqlAutocomplete";
 import { useToastStore } from "@/stores/toastStore";
 import { formatSql } from "@/utils/sqlFormatter";
+import { useEditableCodeMirror } from "@/hooks/useEditableCodeMirror";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
@@ -44,12 +49,52 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [explanationExpanded, setExplanationExpanded] = useState(true);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [sortColumn, setSortColumn] = useState<number | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const pendingSql = useUiStore((s) => s.pendingSql);
   const setPendingSql = useUiStore((s) => s.setPendingSql);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
   const autocomplete = useSqlAutocomplete();
+
+  // Theme detection (same approach as SQLPanel.tsx)
+  const isDark = document.documentElement.classList.contains("dark");
+
+  // Refs for callbacks passed to CodeMirror so the hook doesn't
+  // need to be recreated when executeQuery/handleFormat change.
+  const executeQueryRef = useRef<() => void>(() => {});
+  const handleFormatRef = useRef<() => void>(() => {});
+
+  const sortedRows = useMemo(() => {
+    if (sortColumn == null || !result) return result?.rows ?? [];
+    const col = sortColumn;
+    const dir = sortDirection === "asc" ? 1 : -1;
+    return [...result.rows].sort((a, b) => {
+      const va = a[col];
+      const vb = b[col];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }, [result, sortColumn, sortDirection]);
+
+  const handleSortClick = useCallback((colIndex: number) => {
+    if (sortColumn === colIndex) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        // Third click: clear sort
+        setSortColumn(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortColumn(colIndex);
+      setSortDirection("asc");
+    }
+  }, [sortColumn, sortDirection]);
 
   const executeQuery = useCallback(async () => {
     const trimmed = sql.trim();
@@ -59,6 +104,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setError(null);
     setResult(null);
     setCurrentPage(1);
+    setSortColumn(null);
+    setSortDirection("asc");
 
     try {
       const response = await apiPost<RunQueryResponse>(
@@ -78,52 +125,118 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [sql, isExecuting, conversationId, addQuery]);
 
-  const fetchPage = useCallback(async (page: number) => {
-    const trimmed = sql.trim();
-    if (!trimmed || isExecuting || !result) return;
+  const fetchPage = useCallback(
+    async (page: number) => {
+      const trimmed = sql.trim();
+      if (!trimmed || isExecuting || !result) return;
 
-    setIsExecuting(true);
-    setError(null);
+      setIsExecuting(true);
+      setError(null);
+      setSortColumn(null);
+      setSortDirection("asc");
 
-    try {
-      const response = await apiPost<RunQueryResponse>(
-        `/conversations/${conversationId}/query`,
-        { sql: trimmed, page, page_size: result.page_size },
-        60_000
+      try {
+        const response = await apiPost<RunQueryResponse>(
+          `/conversations/${conversationId}/query`,
+          { sql: trimmed, page, page_size: result.page_size },
+          60_000
+        );
+        setResult(response);
+        setCurrentPage(response.page);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Query execution failed";
+        setError(message);
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [sql, isExecuting, conversationId, result]
+  );
+
+  // Handle CodeMirror content changes — update sql state and trigger autocomplete
+  const handleEditorChange = useCallback(
+    (newValue: string, cursorPos: number) => {
+      setSql(newValue);
+      // Trigger autocomplete (pass a dummy textarea element; autocomplete only uses value + cursor)
+      autocomplete.handleInput(
+        newValue,
+        cursorPos,
+        document.createElement("textarea")
       );
-      setResult(response);
-      setCurrentPage(response.page);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Query execution failed";
-      setError(message);
-    } finally {
-      setIsExecuting(false);
-    }
-  }, [sql, isExecuting, conversationId, result]);
+    },
+    [autocomplete]
+  );
 
-  // Accept an autocomplete suggestion: update sql + cursor position
+  // Stable wrappers that use refs to avoid recreating CodeMirror on callback changes
+  const stableOnExecute = useCallback(() => {
+    executeQueryRef.current();
+  }, []);
+
+  const stableOnFormat = useCallback(() => {
+    handleFormatRef.current();
+  }, []);
+
+  // Initialize CodeMirror editable editor
+  const editor = useEditableCodeMirror({
+    containerRef: editorContainerRef,
+    initialDoc: sql,
+    isDark,
+    onChange: handleEditorChange,
+    onExecute: stableOnExecute,
+    onFormat: stableOnFormat,
+  });
+
+  // handleFormat needs editor, so define it after the hook
+  const handleFormat = useCallback(() => {
+    if (!sql.trim()) return;
+    const formatted = formatSql(sql);
+    setSql(formatted);
+    editor.setValue(formatted);
+  }, [sql, editor]);
+
+  // Keep refs up to date
+  useEffect(() => {
+    executeQueryRef.current = executeQuery;
+  }, [executeQuery]);
+
+  useEffect(() => {
+    handleFormatRef.current = handleFormat;
+  }, [handleFormat]);
+
+  // Accept an autocomplete suggestion: update sql + cursor position via CodeMirror
   const acceptSuggestion = useCallback(
     (suggestion: Suggestion) => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-      const cursorPos = textarea.selectionStart ?? sql.length;
-      const { newValue, newCursorPos } = autocomplete.accept(sql, cursorPos, suggestion);
+      const cursorPos = editor.getCursorPos();
+      const currentSql = editor.getValue();
+      const { newValue, newCursorPos } = autocomplete.accept(
+        currentSql,
+        cursorPos,
+        suggestion
+      );
       setSql(newValue);
+      editor.setValue(newValue);
       autocomplete.close();
-      // Restore cursor position after React re-renders
+      // Set cursor after the inserted text
       requestAnimationFrame(() => {
-        textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        const view = editor.viewRef.current;
+        if (view) {
+          view.dispatch({
+            selection: { anchor: newCursorPos },
+          });
+          view.focus();
+        }
       });
     },
-    [sql, autocomplete]
+    [autocomplete, editor]
   );
 
   // Scroll selected item into view in the dropdown
   useEffect(() => {
     if (!autocomplete.isOpen || !dropdownRef.current) return;
-    const selected = dropdownRef.current.children[autocomplete.selectedIndex] as HTMLElement | undefined;
+    const selected = dropdownRef.current.children[
+      autocomplete.selectedIndex
+    ] as HTMLElement | undefined;
     selected?.scrollIntoView({ block: "nearest" });
   }, [autocomplete.selectedIndex, autocomplete.isOpen]);
 
@@ -131,78 +244,51 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   useEffect(() => {
     if (pendingSql != null) {
       setSql(pendingSql);
+      editor.setValue(pendingSql);
       setIsExpanded(true);
       setPendingSql(null);
-      // Focus the textarea after React re-renders with new value
+      // Focus the editor after React re-renders
       requestAnimationFrame(() => {
-        textareaRef.current?.focus();
+        editor.focus();
       });
     }
-  }, [pendingSql, setPendingSql]);
+  }, [pendingSql, setPendingSql, editor]);
 
-  const handleFormat = useCallback(() => {
-    if (!sql.trim()) return;
-    setSql(formatSql(sql));
-  }, [sql]);
+  // Handle DOM keydown on the CodeMirror container for autocomplete navigation
+  const handleEditorContainerKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!autocomplete.isOpen) return;
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // When autocomplete is open, intercept navigation keys
-      if (autocomplete.isOpen) {
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          autocomplete.moveSelection(1);
-          return;
-        }
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          autocomplete.moveSelection(-1);
-          return;
-        }
-        if (e.key === "Tab" || e.key === "Enter") {
-          // Tab or Enter accepts the current suggestion (unless Cmd/Ctrl+Enter)
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            // Let Cmd/Ctrl+Enter fall through to execute
-            autocomplete.close();
-          } else {
-            e.preventDefault();
-            const suggestion = autocomplete.suggestions[autocomplete.selectedIndex];
-            if (suggestion) acceptSuggestion(suggestion);
-            return;
-          }
-        }
-        if (e.key === "Escape") {
-          e.preventDefault();
-          autocomplete.close();
-          return;
-        }
-      }
-
-      // Cmd/Ctrl+Shift+F to format
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        handleFormat();
+        autocomplete.moveSelection(1);
         return;
       }
-
-      // Cmd/Ctrl+Enter to execute
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      if (e.key === "ArrowUp") {
         e.preventDefault();
-        executeQuery();
+        autocomplete.moveSelection(-1);
+        return;
+      }
+      if (e.key === "Tab" || e.key === "Enter") {
+        // Tab or Enter accepts the current suggestion (unless Cmd/Ctrl+Enter)
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+          // Let Cmd/Ctrl+Enter fall through to CodeMirror execute binding
+          autocomplete.close();
+        } else {
+          e.preventDefault();
+          const suggestion =
+            autocomplete.suggestions[autocomplete.selectedIndex];
+          if (suggestion) acceptSuggestion(suggestion);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        autocomplete.close();
+        return;
       }
     },
-    [executeQuery, autocomplete, acceptSuggestion, handleFormat]
-  );
-
-  // Handle textarea input changes — update sql and trigger autocomplete
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value;
-      setSql(newValue);
-      const cursorPos = e.target.selectionStart ?? newValue.length;
-      autocomplete.handleInput(newValue, cursorPos, e.target);
-    },
-    [autocomplete]
+    [autocomplete, acceptSuggestion]
   );
 
   const handleSaveQuery = useCallback(async () => {
@@ -210,7 +296,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     if (!trimmed) return;
     const defaultName = trimmed.replace(/\s+/g, " ").slice(0, 50);
     try {
-      await useSavedQueryStore.getState().saveQuery(defaultName, trimmed, undefined, result?.execution_time_ms);
+      await useSavedQueryStore
+        .getState()
+        .saveQuery(defaultName, trimmed, undefined, result?.execution_time_ms);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -246,6 +334,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     try {
       const response = await generateSql(conversationId, trimmed);
       setSql(response.sql);
+      editor.setValue(response.sql);
       if (response.explanation) {
         setExplanation(response.explanation);
         setExplanationExpanded(true);
@@ -257,75 +346,81 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     } finally {
       setIsGenerating(false);
     }
-  }, [nlQuestion, isGenerating, conversationId]);
+  }, [nlQuestion, isGenerating, conversationId, editor]);
 
   // Export results as CSV or XLSX via the backend export endpoints
-  const handleExport = useCallback(async (format: "csv" | "xlsx") => {
-    if (!result) return;
+  const handleExport = useCallback(
+    async (format: "csv" | "xlsx") => {
+      if (!result) return;
 
-    const setExporting = format === "csv" ? setExportingCsv : setExportingXlsx;
-    setExporting(true);
+      const setExporting =
+        format === "csv" ? setExportingCsv : setExportingXlsx;
+      setExporting(true);
 
-    try {
-      const response = await fetch(`${API_BASE}/export/${format}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          columns: result.columns,
-          rows: result.rows,
-          filename: "query-results",
-        }),
-      });
+      try {
+        const response = await fetch(`${API_BASE}/export/${format}`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            columns: result.columns,
+            rows: result.rows,
+            filename: "query-results",
+          }),
+        });
 
-      if (!response.ok) {
-        let errorMessage = `Export failed (HTTP ${response.status})`;
-        try {
-          const body = await response.json();
-          if (body && typeof body.error === "string") {
-            errorMessage = body.error;
+        if (!response.ok) {
+          let errorMessage = `Export failed (HTTP ${response.status})`;
+          try {
+            const body = await response.json();
+            if (body && typeof body.error === "string") {
+              errorMessage = body.error;
+            }
+          } catch {
+            // Response was not JSON
           }
-        } catch {
-          // Response was not JSON
+          throw new Error(errorMessage);
         }
-        throw new Error(errorMessage);
-      }
 
-      // Extract filename from Content-Disposition header if available
-      const disposition = response.headers.get("Content-Disposition");
-      let filename = `query-results.${format}`;
-      if (disposition) {
-        const match = disposition.match(/filename="?([^";\n]+)"?/);
-        if (match?.[1]) {
-          filename = match[1];
+        // Extract filename from Content-Disposition header if available
+        const disposition = response.headers.get("Content-Disposition");
+        let filename = `query-results.${format}`;
+        if (disposition) {
+          const match = disposition.match(/filename="?([^";\n]+)"?/);
+          if (match?.[1]) {
+            filename = match[1];
+          }
         }
-      }
 
-      // Create blob and trigger download
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Export failed";
-      useToastStore.getState().error(message);
-    } finally {
-      setExporting(false);
-    }
-  }, [result]);
+        // Create blob and trigger download
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Export failed";
+        useToastStore.getState().error(message);
+      } finally {
+        setExporting(false);
+      }
+    },
+    [result]
+  );
 
   // Copy results to clipboard as TSV (tab-separated values)
   const handleCopyResults = useCallback(async () => {
     if (!result) return;
     const header = result.columns.join("\t");
     const body = result.rows
-      .map((row) => row.map((cell) => (cell == null ? "" : String(cell))).join("\t"))
+      .map((row) =>
+        row.map((cell) => (cell == null ? "" : String(cell))).join("\t")
+      )
       .join("\n");
     const tsv = header + "\n" + body;
     try {
@@ -447,12 +542,19 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
             </button>
           </div>
 
-          {/* SQL textarea with autocomplete */}
+          {/* SQL CodeMirror editor with autocomplete */}
           <div className="relative">
-            <textarea
-              ref={textareaRef}
+            {/* Hidden input for test compatibility — keeps data-testid available */}
+            <input
+              type="hidden"
               data-testid="run-sql-textarea"
-              className="w-full rounded border px-2 py-1.5 text-xs font-mono resize-y focus:outline-none focus:ring-1"
+              value={sql}
+              readOnly
+            />
+            <div
+              ref={editorContainerRef}
+              data-testid="run-sql-editor"
+              className="w-full rounded border overflow-auto"
               style={{
                 borderColor: "var(--color-border)",
                 backgroundColor: "var(--color-bg)",
@@ -460,20 +562,18 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 minHeight: "4rem",
                 maxHeight: "12rem",
               }}
-              placeholder="SELECT * FROM table_name LIMIT 10"
-              value={sql}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
+              onKeyDownCapture={handleEditorContainerKeyDown}
               onBlur={() => {
                 // Delay close so click on suggestion can fire first
                 setTimeout(() => autocomplete.close(), 150);
               }}
-              rows={3}
-              aria-label="SQL query input"
               role="combobox"
               aria-expanded={autocomplete.isOpen}
+              aria-label="SQL query input"
               aria-autocomplete="list"
-              aria-controls={autocomplete.isOpen ? "sql-autocomplete-list" : undefined}
+              aria-controls={
+                autocomplete.isOpen ? "sql-autocomplete-list" : undefined
+              }
               aria-activedescendant={
                 autocomplete.isOpen
                   ? `sql-autocomplete-item-${autocomplete.selectedIndex}`
@@ -510,7 +610,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                       color: "var(--color-text)",
                     }}
                     onMouseDown={(e) => {
-                      // Use mousedown (not click) so it fires before textarea blur
+                      // Use mousedown (not click) so it fires before editor blur
                       e.preventDefault();
                       acceptSuggestion(suggestion);
                     }}
@@ -545,7 +645,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     </span>
 
                     {/* Label */}
-                    <span className="font-mono truncate">{suggestion.label}</span>
+                    <span className="font-mono truncate">
+                      {suggestion.label}
+                    </span>
 
                     {/* Detail (right-aligned, muted) */}
                     {suggestion.detail && (
@@ -590,7 +692,12 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </>
               ) : (
                 <>
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    stroke="none"
+                  >
                     <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
                   Run
@@ -744,7 +851,10 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   backgroundColor: "var(--color-bg)",
                 }}
               >
-                <span className="text-[10px] font-medium" style={{ color: "var(--color-text)" }}>
+                <span
+                  className="text-[10px] font-medium"
+                  style={{ color: "var(--color-text)" }}
+                >
                   {result.total_rows.toLocaleString()} rows
                   {result.execution_time_ms != null && (
                     <span className="opacity-50 ml-1">
@@ -766,7 +876,15 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     onClick={handleCopyResults}
                     title="Copy results as TSV"
                   >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      className="w-3 h-3"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
@@ -785,8 +903,18 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     onClick={() => handleExport("csv")}
                     title="Export as CSV"
                   >
-                    {exportingCsv ? spinnerSvg : (
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {exportingCsv ? (
+                      spinnerSvg
+                    ) : (
+                      <svg
+                        className="w-3 h-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
@@ -807,8 +935,18 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     onClick={() => handleExport("xlsx")}
                     title="Export as Excel"
                   >
-                    {exportingXlsx ? spinnerSvg : (
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {exportingXlsx ? (
+                      spinnerSvg
+                    ) : (
+                      <svg
+                        className="w-3 h-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
@@ -830,7 +968,10 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
 
               {/* Results table */}
               <div className="overflow-auto" style={{ maxHeight: "12rem" }}>
-                <table className="w-full text-[10px]" style={{ color: "var(--color-text)" }}>
+                <table
+                  className="w-full text-[10px]"
+                  style={{ color: "var(--color-text)" }}
+                >
                   <thead>
                     <tr
                       className="sticky top-0"
@@ -839,16 +980,38 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                       {result.columns.map((col, i) => (
                         <th
                           key={i}
-                          className="px-1.5 py-1 text-left font-medium whitespace-nowrap border-b"
+                          data-testid={`sort-header-${i}`}
+                          className="px-1.5 py-1 text-left font-medium whitespace-nowrap border-b cursor-pointer select-none hover:opacity-70 transition-opacity"
                           style={{ borderColor: "var(--color-border)" }}
+                          onClick={() => handleSortClick(i)}
                         >
-                          {col}
+                          <span className="inline-flex items-center gap-0.5">
+                            {col}
+                            {sortColumn === i && (
+                              <svg
+                                className="w-2.5 h-2.5 shrink-0"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                data-testid={`sort-indicator-${sortDirection}`}
+                              >
+                                {sortDirection === "asc" ? (
+                                  <polyline points="18 15 12 9 6 15" />
+                                ) : (
+                                  <polyline points="6 9 12 15 18 9" />
+                                )}
+                              </svg>
+                            )}
+                          </span>
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {result.rows.map((row, ri) => (
+                    {sortedRows.map((row, ri) => (
                       <tr
                         key={ri}
                         className="hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"

@@ -163,6 +163,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
             <span className="relative group/stats">
               <span className="text-xs opacity-60 whitespace-nowrap">
                 {formatNumber(dataset.row_count)} rows x {formatNumber(dataset.column_count)} cols
+                {dataset.file_size_bytes ? ` · ${formatFileSize(dataset.file_size_bytes)}` : ""}
               </span>
               <span
                 data-testid="dataset-stats-tooltip"
@@ -175,6 +176,9 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
                 }}
               >
                 <span className="block">Format: {getFormat(dataset.url)}</span>
+                {dataset.file_size_bytes ? (
+                  <span className="block">Size: {formatFileSize(dataset.file_size_bytes)}</span>
+                ) : null}
                 {getColumnTypeSummary(dataset.schema_json) && (
                   <span className="block">Columns: {getColumnTypeSummary(dataset.schema_json)}</span>
                 )}

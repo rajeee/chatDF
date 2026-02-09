@@ -23,6 +23,7 @@ EXPECTED_TABLES = {
     "saved_queries",
     "query_history",
     "user_settings",
+    "query_results_cache",
 }
 
 

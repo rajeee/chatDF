@@ -298,6 +298,18 @@ export async function searchDatasets(
 }
 
 // ---------------------------------------------------------------------------
+// Bulk conversation operations
+// ---------------------------------------------------------------------------
+
+export async function bulkDeleteConversations(ids: string[]): Promise<{ deleted: number }> {
+  return apiPost("/conversations/bulk-delete", { ids });
+}
+
+export async function bulkPinConversations(ids: string[], is_pinned: boolean): Promise<{ updated: number }> {
+  return apiPost("/conversations/bulk-pin", { ids, is_pinned });
+}
+
+// ---------------------------------------------------------------------------
 // Message deletion
 // ---------------------------------------------------------------------------
 

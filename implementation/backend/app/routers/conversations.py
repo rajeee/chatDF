@@ -5,6 +5,8 @@ Implements: spec/backend/rest_api/plan.md#routersconversationspy
 Endpoints:
 - POST /conversations                          -> create_conversation
 - GET /conversations                           -> list_conversations
+- POST /conversations/bulk-delete              -> bulk_delete_conversations
+- POST /conversations/bulk-pin                 -> bulk_pin_conversations
 - GET /conversations/{conversation_id}         -> get_conversation_detail
 - GET /conversations/{conversation_id}/export  -> export_conversation
 - PATCH /conversations/{conversation_id}       -> rename_conversation
@@ -348,6 +350,69 @@ async def search_conversations(
         )
 
     return SearchResponse(results=results, total=len(results))
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/bulk-delete
+# Delete multiple conversations at once
+# ---------------------------------------------------------------------------
+
+
+@router.post("/bulk-delete")
+async def bulk_delete_conversations(
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Delete multiple conversations at once."""
+    ids = body.get("ids", [])
+    if not ids or len(ids) > 50:
+        raise HTTPException(400, "Provide 1-50 conversation IDs")
+    deleted = 0
+    for cid in ids:
+        # Verify ownership
+        row = await db.execute(
+            "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
+            (cid, user["id"]),
+        )
+        if await row.fetchone():
+            await db.execute("DELETE FROM conversations WHERE id = ?", (cid,))
+            deleted += 1
+    await db.commit()
+    return {"deleted": deleted}
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/bulk-pin
+# Pin or unpin multiple conversations at once
+# ---------------------------------------------------------------------------
+
+
+@router.post("/bulk-pin")
+async def bulk_pin_conversations(
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Pin or unpin multiple conversations at once."""
+    ids = body.get("ids", [])
+    is_pinned = body.get("is_pinned", True)
+    if not ids or len(ids) > 50:
+        raise HTTPException(400, "Provide 1-50 conversation IDs")
+    updated = 0
+    for cid in ids:
+        row = await db.execute(
+            "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
+            (cid, user["id"]),
+        )
+        if await row.fetchone():
+            await db.execute(
+                "UPDATE conversations SET is_pinned = ? WHERE id = ?",
+                (1 if is_pinned else 0, cid),
+            )
+            updated += 1
+    await db.commit()
+    return {"updated": updated}
 
 
 # ---------------------------------------------------------------------------

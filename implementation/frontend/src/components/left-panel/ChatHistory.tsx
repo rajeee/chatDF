@@ -11,8 +11,9 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { apiGet, apiPatch, apiDelete, apiPost, searchConversations, SearchResult } from "@/api/client";
+import { apiGet, apiPatch, apiDelete, apiPost, searchConversations, SearchResult, bulkDeleteConversations, bulkPinConversations } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
+import { useDraftStore } from "@/stores/draftStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { formatRelativeTime } from "@/utils/relativeTime";
@@ -150,6 +151,7 @@ export function ChatHistory() {
   const queryClient = useQueryClient();
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const drafts = useDraftStore((s) => s.drafts);
   const { success, error: showError } = useToastStore();
 
   const { data, isPending } = useQuery({
@@ -243,6 +245,11 @@ export function ChatHistory() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
     null
   );
+
+  // Bulk select mode state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
 
   const editInputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -858,6 +865,18 @@ export function ChatHistory() {
                               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                             </svg>
                             {conv.message_count}
+                          </span>
+                        )}
+                        {drafts[conv.id] && (
+                          <span
+                            data-testid="draft-indicator"
+                            className="inline-flex items-center px-1.5 py-0 rounded-full text-[10px] leading-4 font-medium shrink-0"
+                            style={{
+                              backgroundColor: "rgba(234, 179, 8, 0.15)",
+                              color: "rgb(202, 138, 4)",
+                            }}
+                          >
+                            Draft
                           </span>
                         )}
                       </span>

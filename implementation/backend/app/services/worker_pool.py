@@ -10,11 +10,13 @@ for worker tasks (validate_url, get_schema, run_query).
 from __future__ import annotations
 
 import asyncio
+import logging
 import multiprocessing
 import multiprocessing.pool
 from concurrent.futures import ProcessPoolExecutor
 
 from app.services.query_cache import QueryCache
+from app.services import persistent_cache
 from app.workers.data_worker import (
     compute_correlations as _compute_correlations_fn,
     execute_query as _execute_query,
@@ -23,6 +25,8 @@ from app.workers.data_worker import (
     profile_column as _profile_column_fn,
     profile_columns as _profile_columns_fn,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_POOL_SIZE = 4
 MAX_TASKS_PER_CHILD = 50
@@ -40,6 +44,15 @@ class WorkerPool:
     def __init__(self, pool: multiprocessing.pool.Pool) -> None:
         self._pool = pool
         self._query_cache = QueryCache()
+        self._db_pool = None  # set later via set_db_pool()
+
+    def set_db_pool(self, db_pool) -> None:
+        """Attach the database pool for persistent cache access.
+
+        Called during application lifespan setup after both the database
+        pool and worker pool have been initialized.
+        """
+        self._db_pool = db_pool
 
     async def validate_url(self, url: str) -> dict:
         return await _validate_url(self._pool, url)
@@ -48,20 +61,60 @@ class WorkerPool:
         return await _get_schema(self._pool, url)
 
     async def run_query(self, sql: str, datasets: list[dict]) -> dict:
-        # Check cache first
+        # Check in-memory cache first
         cached = self._query_cache.get(sql, datasets)
         if cached is not None:
             return {**cached, "cached": True}
+
+        # Check persistent cache (if database pool is available)
+        if self._db_pool is not None:
+            try:
+                db_conn = await self._db_pool.acquire_read()
+                try:
+                    persistent_result = await persistent_cache.get(
+                        sql, datasets, db_conn
+                    )
+                finally:
+                    await self._db_pool.release_read(db_conn)
+
+                if persistent_result is not None:
+                    # Promote to in-memory cache for faster subsequent access
+                    self._query_cache.put(sql, datasets, persistent_result)
+                    return {**persistent_result, "cached": True}
+            except Exception:
+                logger.warning(
+                    "Failed to check persistent cache, falling back to query execution",
+                    exc_info=True,
+                )
+
         # Execute query in worker process
         result = await _run_query(self._pool, sql, datasets)
-        # Cache successful results
+
+        # Cache successful results in memory
         self._query_cache.put(sql, datasets, result)
+
+        # Store in persistent cache (if database pool is available)
+        if self._db_pool is not None:
+            try:
+                write_conn = self._db_pool.get_write_connection()
+                await persistent_cache.put(sql, datasets, result, write_conn)
+            except Exception:
+                logger.warning(
+                    "Failed to store result in persistent cache",
+                    exc_info=True,
+                )
+
         return result
 
     @property
     def query_cache(self) -> QueryCache:
         """Expose the query cache for stats and management endpoints."""
         return self._query_cache
+
+    @property
+    def db_pool(self):
+        """Expose the database pool for persistent cache endpoints."""
+        return self._db_pool
 
     async def profile_columns(self, url: str) -> dict:
         return await _profile_columns(self._pool, url)

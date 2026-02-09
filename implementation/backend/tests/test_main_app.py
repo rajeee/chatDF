@@ -304,7 +304,7 @@ class TestAppLifecycleDb:
 
     @pytest.mark.asyncio
     async def test_all_tables_exist(self, fresh_db):
-        """init_db creates all 8 tables."""
+        """init_db creates all expected tables."""
         cursor = await fresh_db.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
         )
@@ -314,6 +314,7 @@ class TestAppLifecycleDb:
             "datasets",
             "messages",
             "query_history",
+            "query_results_cache",
             "referral_keys",
             "saved_queries",
             "sessions",
@@ -325,7 +326,7 @@ class TestAppLifecycleDb:
 
     @pytest.mark.asyncio
     async def test_all_indexes_exist(self, fresh_db):
-        """init_db creates all 8 indexes."""
+        """init_db creates all expected indexes."""
         cursor = await fresh_db.execute(
             "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name"
         )
@@ -334,6 +335,7 @@ class TestAppLifecycleDb:
             "idx_conversations_user_id",
             "idx_datasets_conversation_id",
             "idx_messages_conversation_id",
+            "idx_query_cache_expires",
             "idx_query_history_user_id",
             "idx_referral_keys_used_by",
             "idx_saved_queries_user_id",

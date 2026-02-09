@@ -131,6 +131,17 @@ CREATE TABLE IF NOT EXISTS user_settings (
     updated_at      TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS query_results_cache (
+    cache_key       TEXT PRIMARY KEY,
+    sql_query       TEXT NOT NULL,
+    dataset_urls    TEXT NOT NULL,
+    result_json     TEXT NOT NULL,
+    row_count       INTEGER,
+    created_at      TEXT NOT NULL,
+    expires_at      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_query_cache_expires ON query_results_cache(expires_at);
 CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
 CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id, created_at);
 """

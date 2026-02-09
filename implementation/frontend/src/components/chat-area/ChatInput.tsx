@@ -6,6 +6,7 @@
 
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useChatStore } from "@/stores/chatStore";
+import { useDraftStore } from "@/stores/draftStore";
 import { useDevModeStore } from "@/stores/devModeStore";
 import { QueryHistoryDropdown } from "./QueryHistoryDropdown";
 import { PromptPreviewModal } from "./PromptPreviewModal";
@@ -32,14 +33,68 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const isStreaming = useChatStore((s) => s.isStreaming);
+    const activeConversationId = useChatStore((s) => s.activeConversationId);
     const devMode = useDevModeStore((s) => s.devMode);
     const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
     const loadingPhase = useChatStore((s) => s.loadingPhase);
+    const setDraft = useDraftStore((s) => s.setDraft);
+    const clearDraft = useDraftStore((s) => s.clearDraft);
 
     const charCount = inputValue.length;
     const trimmedEmpty = inputValue.trim().length === 0;
     const isSending = loadingPhase === "thinking" && !isStreaming;
     const isReady = !trimmedEmpty && !dailyLimitReached && !isSending;
+
+    // Ref to track the latest input value for the cleanup effect (avoids stale closures)
+    const latestInputRef = useRef(inputValue);
+    latestInputRef.current = inputValue;
+
+    // Ref to track the latest conversation ID for the cleanup effect
+    const latestConvIdRef = useRef(activeConversationId);
+    latestConvIdRef.current = activeConversationId;
+
+    // Debounce timer ref for draft saving
+    const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Restore draft when conversation changes
+    useEffect(() => {
+      if (activeConversationId) {
+        const draft = useDraftStore.getState().getDraft(activeConversationId);
+        if (draft) {
+          setInputValue(draft);
+          requestAnimationFrame(resizeTextarea);
+        } else {
+          setInputValue("");
+        }
+      } else {
+        setInputValue("");
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeConversationId]);
+
+    // Debounced draft save whenever inputValue changes
+    useEffect(() => {
+      if (!activeConversationId) return;
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = setTimeout(() => {
+        setDraft(activeConversationId, inputValue);
+      }, 500);
+      return () => {
+        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      };
+    }, [inputValue, activeConversationId, setDraft]);
+
+    // Save draft immediately on unmount
+    useEffect(() => {
+      return () => {
+        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        const convId = latestConvIdRef.current;
+        const text = latestInputRef.current;
+        if (convId) {
+          useDraftStore.getState().setDraft(convId, text);
+        }
+      };
+    }, []);
 
     // Auto-focus on mount
     useEffect(() => {
@@ -66,6 +121,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     if (!trimmed || dailyLimitReached) return;
     onSend(trimmed);
     setInputValue("");
+    // Clear draft for the current conversation after sending
+    const convId = latestConvIdRef.current;
+    if (convId) {
+      clearDraft(convId);
+    }
     // Reset textarea height after clearing and re-focus
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
@@ -74,7 +134,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         textarea.focus();
       }
     });
-  }, [inputValue, dailyLimitReached, onSend]);
+  }, [inputValue, dailyLimitReached, onSend, clearDraft]);
 
   // Expose focus, sendMessage, and setInputValue methods to parent via ref
   useImperativeHandle(

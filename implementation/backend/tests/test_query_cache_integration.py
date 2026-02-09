@@ -256,10 +256,13 @@ class TestCacheStatsEndpoint:
         ctx = authed_client
         response = await ctx["client"].get("/health/cache/stats")
         data = response.json()
-        assert data["size"] == 0
-        assert data["hits"] == 0
-        assert data["misses"] == 0
-        assert data["hit_rate"] == 0.0
+        assert "in_memory" in data
+        assert "persistent" in data
+        mem = data["in_memory"]
+        assert mem["size"] == 0
+        assert mem["hits"] == 0
+        assert mem["misses"] == 0
+        assert mem["hit_rate"] == 0.0
 
     @pytest.mark.asyncio
     async def test_stats_after_queries(self, authed_client):
@@ -281,10 +284,11 @@ class TestCacheStatsEndpoint:
 
         response = await ctx["client"].get("/health/cache/stats")
         data = response.json()
-        assert data["hits"] == 1
-        assert data["misses"] == 1
-        assert data["size"] == 1
-        assert data["hit_rate"] == 50.0
+        mem = data["in_memory"]
+        assert mem["hits"] == 1
+        assert mem["misses"] == 1
+        assert mem["size"] == 1
+        assert mem["hit_rate"] == 50.0
 
     @pytest.mark.asyncio
     async def test_stats_no_auth_required(self, seeded_db):
@@ -333,7 +337,7 @@ class TestCacheClearEndpoint:
 
         # Verify entry exists
         stats_resp = await ctx["client"].get("/health/cache/stats")
-        assert stats_resp.json()["size"] == 1
+        assert stats_resp.json()["in_memory"]["size"] == 1
 
         # Clear
         clear_resp = await ctx["client"].post("/health/cache/clear")
@@ -341,7 +345,7 @@ class TestCacheClearEndpoint:
 
         # Verify cache is empty
         stats_resp = await ctx["client"].get("/health/cache/stats")
-        assert stats_resp.json()["size"] == 0
+        assert stats_resp.json()["in_memory"]["size"] == 0
 
     @pytest.mark.asyncio
     async def test_query_after_clear_is_miss(self, authed_client):

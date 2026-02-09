@@ -6,6 +6,8 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 
+from app.services import persistent_cache
+
 router = APIRouter()
 
 _start_time = time.monotonic()
@@ -57,9 +59,29 @@ def _get_cache(request: Request):
 
 @router.get("/cache/stats")
 async def cache_stats(request: Request):
-    """Return query cache statistics (hit rate, total hits, misses, entry count)."""
-    cache = _get_cache(request)
-    return cache.stats
+    """Return in-memory and persistent query cache statistics."""
+    pool = getattr(request.app.state, "worker_pool", None)
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Worker pool unavailable")
+
+    in_memory = pool.query_cache.stats
+
+    # Persistent cache stats (if db_pool is available)
+    persistent_stats = {"size": 0, "oldest_entry": None, "newest_entry": None}
+    if pool.db_pool is not None:
+        try:
+            db_conn = await pool.db_pool.acquire_read()
+            try:
+                persistent_stats = await persistent_cache.stats(db_conn)
+            finally:
+                await pool.db_pool.release_read(db_conn)
+        except Exception:
+            pass  # return defaults on error
+
+    return {
+        "in_memory": in_memory,
+        "persistent": persistent_stats,
+    }
 
 
 @router.post("/cache/clear")
@@ -68,3 +90,17 @@ async def cache_clear(request: Request):
     cache = _get_cache(request)
     cache.clear()
     return {"success": True, "message": "Cache cleared"}
+
+
+@router.post("/cache/cleanup")
+async def cache_cleanup(request: Request):
+    """Remove expired entries from the persistent query cache."""
+    pool = getattr(request.app.state, "worker_pool", None)
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Worker pool unavailable")
+    if pool.db_pool is None:
+        raise HTTPException(status_code=503, detail="Database pool unavailable")
+
+    write_conn = pool.db_pool.get_write_connection()
+    removed = await persistent_cache.cleanup(write_conn)
+    return {"success": True, "removed": removed}

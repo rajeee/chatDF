@@ -55,6 +55,7 @@ async def lifespan(application: FastAPI):
     # -- Worker pool --
     # Implements: spec/backend/plan.md#Lifespan (start worker pool on startup)
     pool = worker_pool.start(settings.worker_pool_size)
+    pool.set_db_pool(db_pool)  # enable persistent query result caching
     application.state.worker_pool = pool
 
     yield

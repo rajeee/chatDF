@@ -14,5 +14,8 @@
 - **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
 
+## Naming Conflicts
+- **`settings` module vs `settings` variable**: In `main.py`, `from app.routers import settings` gets shadowed by `settings = get_settings()`. Always use aliased imports like `from app.routers import settings as settings_router`.
+
 ## Dependencies
 - **Polars write_excel needs xlsxwriter**: `df.write_excel()` requires `xlsxwriter` installed separately — not bundled with Polars.

@@ -6,6 +6,7 @@ Endpoints:
 - POST /conversations                          -> create_conversation
 - GET /conversations                           -> list_conversations
 - GET /conversations/{conversation_id}         -> get_conversation_detail
+- GET /conversations/{conversation_id}/export  -> export_conversation
 - PATCH /conversations/{conversation_id}       -> rename_conversation
 - DELETE /conversations/{conversation_id}      -> delete_conversation
 - DELETE /conversations                        -> clear_all_conversations
@@ -18,6 +19,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 import secrets
@@ -26,6 +28,7 @@ from uuid import uuid4
 
 import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
@@ -413,6 +416,79 @@ async def get_conversation_detail(
         updated_at=datetime.fromisoformat(conversation["updated_at"]),
         messages=messages,
         datasets=datasets,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}/export
+# Download conversation as JSON file
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{conversation_id}/export")
+async def export_conversation(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> StreamingResponse:
+    """Export a conversation as a downloadable JSON file.
+
+    Includes conversation metadata, all messages, and all datasets.
+    """
+    conv_id = conversation["id"]
+
+    # Fetch messages
+    cursor = await db.execute(
+        "SELECT role, content, created_at, sql_query "
+        "FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conv_id,),
+    )
+    message_rows = await cursor.fetchall()
+    messages = [
+        {
+            "role": row["role"],
+            "content": row["content"],
+            "created_at": row["created_at"],
+            "sql_query": row["sql_query"],
+        }
+        for row in message_rows
+    ]
+
+    # Fetch datasets
+    cursor = await db.execute(
+        "SELECT name, url, row_count, column_count, schema_json "
+        "FROM datasets WHERE conversation_id = ?",
+        (conv_id,),
+    )
+    dataset_rows = await cursor.fetchall()
+    datasets = [
+        {
+            "name": row["name"],
+            "url": row["url"],
+            "row_count": row["row_count"],
+            "column_count": row["column_count"],
+            "schema_json": row["schema_json"],
+        }
+        for row in dataset_rows
+    ]
+
+    export_data = {
+        "conversation": {
+            "id": conv_id,
+            "title": conversation["title"],
+            "created_at": conversation["created_at"],
+        },
+        "messages": messages,
+        "datasets": datasets,
+    }
+
+    json_bytes = json.dumps(export_data, indent=2, default=str).encode("utf-8")
+
+    return StreamingResponse(
+        iter([json_bytes]),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="conversation-{conv_id}.json"',
+        },
     )
 
 

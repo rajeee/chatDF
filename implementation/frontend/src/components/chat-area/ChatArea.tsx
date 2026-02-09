@@ -219,9 +219,38 @@ export function ChatArea() {
 
       {/* Constrained-width inner container */}
       <div className="flex flex-col w-full max-w-3xl flex-1">
-        {/* Share button - visible when conversation has messages */}
+        {/* Share + Download buttons - visible when conversation has messages */}
         {hasMessages && activeConversationId && (
-          <div className="flex justify-end px-2 sm:px-4 pt-2">
+          <div className="flex justify-end gap-1 px-2 sm:px-4 pt-2">
+            {/* Download JSON button */}
+            <button
+              data-testid="download-conversation-btn"
+              className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
+              style={{ color: "var(--color-text)" }}
+              onClick={() => {
+                window.open(`/conversations/${activeConversationId}/export`, "_blank");
+              }}
+              title="Download conversation as JSON"
+              aria-label="Download conversation as JSON"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+
+            {/* Share button */}
             <div className="relative" ref={shareContainerRef}>
               <button
                 data-testid="share-btn"

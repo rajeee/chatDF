@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore, type ColumnProfile } from "@/stores/datasetStore";
-import { apiPost, apiPatch } from "@/api/client";
+import { apiGet, apiPost, apiPatch } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -306,9 +306,19 @@ export function SchemaModal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"schema" | "stats">("schema");
+  const [activeTab, setActiveTab] = useState<"schema" | "stats" | "descriptions">("schema");
+  const [descriptions, setDescriptions] = useState<Record<string, string>>({});
+  const [descLoading, setDescLoading] = useState(false);
+  const [savingCol, setSavingCol] = useState<string | null>(null);
+  const [savedCol, setSavedCol] = useState<string | null>(null);
+  const [editedDescs, setEditedDescs] = useState<Record<string, string>>({});
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  const [columnDetail, setColumnDetail] = useState<Record<string, any> | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [columnDetailCache, setColumnDetailCache] = useState<Record<string, any>>({});
   const nameInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const descFetchedRef = useRef(false);
 
   useFocusTrap(modalRef, !!schemaModalDatasetId);
 
@@ -319,6 +329,9 @@ export function SchemaModal() {
     }
     setSearchTerm("");
     setActiveTab("schema");
+    setDescriptions({});
+    setEditedDescs({});
+    descFetchedRef.current = false;
   }, [dataset]);
 
   // Auto-trigger profiling when switching to Statistics tab (if not already profiled).
@@ -327,6 +340,27 @@ export function SchemaModal() {
       profileDataset(conversationId, dataset.id);
     }
   }, [activeTab, columnProfiles, isProfiling, conversationId, dataset, profileDataset]);
+
+  // Fetch column descriptions when switching to Descriptions tab.
+  useEffect(() => {
+    if (activeTab === "descriptions" && conversationId && dataset && !descFetchedRef.current) {
+      descFetchedRef.current = true;
+      setDescLoading(true);
+      apiGet<{ descriptions: Record<string, string> }>(
+        `/conversations/${conversationId}/datasets/${dataset.id}/column-descriptions`
+      )
+        .then((res) => {
+          setDescriptions(res.descriptions || {});
+          setEditedDescs(res.descriptions || {});
+        })
+        .catch(() => {
+          // Silently fail; descriptions will just be empty
+        })
+        .finally(() => {
+          setDescLoading(false);
+        });
+    }
+  }, [activeTab, conversationId, dataset]);
 
   // Focus the table name input on open.
   useEffect(() => {
@@ -415,11 +449,73 @@ export function SchemaModal() {
     await profileDataset(conversationId, dataset.id);
   }
 
+  async function handleColumnClick(col: Column) {
+    if (selectedColumn === col.name) {
+      // Toggle off
+      setSelectedColumn(null);
+      setColumnDetail(null);
+      return;
+    }
+    setSelectedColumn(col.name);
+
+    // Check cache first
+    if (columnDetailCache[col.name]) {
+      setColumnDetail(columnDetailCache[col.name]);
+      return;
+    }
+
+    // Fetch from API
+    if (!conversationId || !dataset) return;
+    setDetailLoading(true);
+    setColumnDetail(null);
+    try {
+      const result = await apiPost<{ stats: Record<string, any> }>(
+        `/conversations/${conversationId}/datasets/${dataset.id}/profile-column`,
+        { column_name: col.name, column_type: col.type }
+      );
+      setColumnDetail(result.stats);
+      setColumnDetailCache((prev) => ({ ...prev, [col.name]: result.stats }));
+    } catch {
+      setColumnDetail({ _error: "Failed to load column details" });
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
   // Build a lookup map from column name to its profile for efficient access
   const profileMap = new Map<string, ColumnProfile>();
   if (columnProfiles) {
     for (const p of columnProfiles) {
       profileMap.set(p.name, p);
+    }
+  }
+
+  async function handleDescriptionSave(colName: string) {
+    if (!conversationId || !dataset) return;
+    const newValue = editedDescs[colName] ?? "";
+    // Skip save if unchanged
+    if (newValue === (descriptions[colName] ?? "")) return;
+
+    setSavingCol(colName);
+    const merged = { ...descriptions, ...editedDescs };
+    // Remove empty descriptions
+    const cleaned: Record<string, string> = {};
+    for (const [k, v] of Object.entries(merged)) {
+      if (v.trim()) cleaned[k] = v;
+    }
+
+    try {
+      await apiPatch(
+        `/conversations/${conversationId}/datasets/${dataset.id}/column-descriptions`,
+        { descriptions: cleaned }
+      );
+      setDescriptions(cleaned);
+      setSavedCol(colName);
+      setTimeout(() => setSavedCol(null), 1500);
+    } catch {
+      // Silently fail for now
+    } finally {
+      setSavingCol(null);
     }
   }
 
@@ -519,6 +615,17 @@ export function SchemaModal() {
               onClick={() => setActiveTab("stats")}
             >
               Statistics
+            </button>
+            <button
+              data-testid="schema-tab-descriptions"
+              className={`px-3 py-1.5 text-sm font-medium transition-all duration-150 border-b-2 ${
+                activeTab === "descriptions"
+                  ? "border-current opacity-100"
+                  : "border-transparent opacity-50 hover:opacity-70"
+              }`}
+              onClick={() => setActiveTab("descriptions")}
+            >
+              Descriptions
             </button>
           </div>
 
@@ -722,6 +829,91 @@ export function SchemaModal() {
                       />
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ===== Descriptions Tab ===== */}
+          {activeTab === "descriptions" && (
+            <div data-testid="descriptions-tab-content">
+              {descLoading && (
+                <div className="flex items-center justify-center py-8 gap-2 text-sm opacity-60" data-testid="descriptions-loading">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Loading descriptions...
+                </div>
+              )}
+              {!descLoading && (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto" data-testid="descriptions-list">
+                  {columns.map((col) => (
+                    <div
+                      key={col.name}
+                      data-testid={`desc-item-${col.name}`}
+                      className="rounded-lg border p-3"
+                      style={{ borderColor: "var(--color-border)" }}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <TypeIcon type={col.type} />
+                        <span className="font-medium text-sm">{col.name}</span>
+                        <span
+                          className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full opacity-60"
+                          style={{ backgroundColor: "var(--color-border)" }}
+                        >
+                          {mapType(col.type)}
+                        </span>
+                        {savingCol === col.name && (
+                          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-50" data-testid={`desc-saving-${col.name}`} />
+                        )}
+                        {savedCol === col.name && (
+                          <svg
+                            data-testid={`desc-saved-${col.name}`}
+                            className="w-4 h-4 shrink-0"
+                            style={{ color: "var(--color-success)" }}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                      <textarea
+                        data-testid={`desc-input-${col.name}`}
+                        className="w-full rounded border px-2 py-1 text-sm resize-none"
+                        style={{
+                          backgroundColor: "var(--color-surface)",
+                          borderColor: "var(--color-border)",
+                          color: "var(--color-text)",
+                          minHeight: "2rem",
+                        }}
+                        rows={1}
+                        placeholder="Add a description..."
+                        value={editedDescs[col.name] ?? ""}
+                        onChange={(e) => {
+                          setEditedDescs((prev) => ({
+                            ...prev,
+                            [col.name]: e.target.value,
+                          }));
+                        }}
+                        onBlur={() => handleDescriptionSave(col.name)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            (e.target as HTMLTextAreaElement).blur();
+                          }
+                        }}
+                        maxLength={500}
+                      />
+                    </div>
+                  ))}
+                  {columns.length === 0 && (
+                    <div className="text-center py-4 text-sm opacity-50">
+                      No columns available
+                    </div>
+                  )}
                 </div>
               )}
             </div>

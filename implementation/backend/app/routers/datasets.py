@@ -28,6 +28,7 @@ from app.models import (
     DatasetAckResponse,
     DatasetDetailResponse,
     DatasetPreviewResponse,
+    ProfileColumnRequest,
     RenameDatasetRequest,
     SuccessResponse,
 )
@@ -343,6 +344,34 @@ async def profile_dataset(
         raise HTTPException(status_code=500, detail=result["error"])
     if "error_type" in result:
         raise HTTPException(status_code=500, detail=result.get("message", "Profiling failed"))
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/datasets/{dataset_id}/profile-column
+# Single-column detailed profiling endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{dataset_id}/profile-column")
+async def profile_single_column(
+    request: Request,
+    dataset_id: str,
+    body: ProfileColumnRequest,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """Profile a single column with detailed statistics."""
+    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    worker_pool = _get_worker_pool(request)
+    result = await worker_pool.profile_column(
+        ds["url"], ds["name"], body.column_name, body.column_type
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
 
     return result
 

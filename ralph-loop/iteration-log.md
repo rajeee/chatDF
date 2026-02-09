@@ -123,3 +123,5 @@ Track each improvement cycle: what was done, what was learned.
 | 117 | 2026-02-09 | Query result comparison modal, popular dataset catalog | U176, U195 | 1287 frontend pass, 64/65 backend (1 pre-existing) | 49b275e |
 | 117b | 2026-02-09 | Dataset discovery panel, saved query pinning | prior session | 1292 frontend pass, 64/65 backend (1 pre-existing) | 14c487e |
 | 118 | 2026-02-09 | Multi-dataset JOIN templates, conversation analysis templates | U160, U194 | 42 new tests pass, 64/65 backend (1 pre-existing) | 96f0380 |
+| 119 | 2026-02-09 | HTML export, file upload, bookmarks panel, schema diff modal | prior session | 1391 frontend pass, 64/65 backend (1 pre-existing) | 932f899 |
+| 120 | 2026-02-09 | Conversation branching + bookmark button integration | U199, U200 | 1406 frontend (+15 new), 64/65 backend (+9 branch tests, 1 pre-existing) | 59817f2 |

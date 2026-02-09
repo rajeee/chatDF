@@ -25,11 +25,15 @@ def chat_complete(
     token_count: int,
     sql_executions: list[dict] | None = None,
     reasoning: str | None = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    tool_call_trace: list[dict] | None = None,
 ) -> dict:
     """LLM response finished.
 
     Compressed format: type=cc, message_id=mid, sql_query=sq, token_count=tc,
-    sql_executions=se, reasoning=r
+    sql_executions=se, reasoning=r, input_tokens=it, output_tokens=ot,
+    tool_call_trace=tct
     Omit null fields.
     """
     result: dict = {
@@ -37,11 +41,15 @@ def chat_complete(
         "mid": message_id,
         "tc": token_count,
         "se": sql_executions or [],
+        "it": input_tokens,
+        "ot": output_tokens,
     }
     if sql_query:
         result["sq"] = sql_query
     if reasoning:
         result["r"] = reasoning
+    if tool_call_trace:
+        result["tct"] = tool_call_trace
     return result
 
 

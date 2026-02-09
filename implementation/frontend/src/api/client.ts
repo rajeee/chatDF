@@ -126,6 +126,22 @@ export async function apiPost<T>(
 }
 
 /**
+ * Send a PUT request with an optional JSON body and parse the response.
+ */
+export async function apiPut<T>(path: string, body?: unknown, timeoutMs?: number): Promise<T> {
+  const options: RequestInit = {
+    method: "PUT",
+    credentials: "include",
+  };
+  if (body !== undefined) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetchWithTimeout(`${BASE_URL}${path}`, options, timeoutMs);
+  return handleResponse<T>(response);
+}
+
+/**
  * Send a PATCH request with a JSON body and parse the response.
  */
 export async function apiPatch<T>(
@@ -294,4 +310,15 @@ export async function explainSql(
     `/conversations/${conversationId}/explain-sql`,
     { query, schema_json: schemaJson }
   );
+}
+
+// ---------------------------------------------------------------------------
+// Message redo
+// ---------------------------------------------------------------------------
+
+export async function redoMessage(
+  conversationId: string,
+  messageId: string
+): Promise<{ message_id: string; status: string }> {
+  return apiPost(`/conversations/${conversationId}/messages/${messageId}/redo`);
 }

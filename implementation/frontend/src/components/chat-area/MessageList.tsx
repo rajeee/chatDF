@@ -13,7 +13,7 @@ import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
-import { deleteMessage, forkConversation } from "@/api/client";
+import { deleteMessage, forkConversation, redoMessage } from "@/api/client";
 import { TokenUsage } from "./TokenUsage";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
@@ -203,6 +203,21 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       } catch (error) {
         console.error("Failed to delete message:", error);
         showToast("Failed to delete message", "error");
+      }
+    },
+    [activeConversationId, showToast]
+  );
+
+  const handleRedo = useCallback(
+    async (messageId: string) => {
+      if (!activeConversationId) return;
+
+      try {
+        await redoMessage(activeConversationId, messageId);
+        showToast("Redoing message...", "success");
+      } catch (error) {
+        console.error("Failed to redo message:", error);
+        showToast("Failed to redo message", "error");
       }
     },
     [activeConversationId, showToast]
@@ -430,6 +445,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onRetry={onRetry}
               onFork={handleFork}
               onDelete={handleDelete}
+              onRedo={handleRedo}
               searchQuery={searchQuery}
             />
           );

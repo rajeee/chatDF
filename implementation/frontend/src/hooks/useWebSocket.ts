@@ -10,7 +10,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatDFSocket } from "@/lib/websocket";
-import { useChatStore, type SqlExecution } from "@/stores/chatStore";
+import { useChatStore, type SqlExecution, type TraceEntry } from "@/stores/chatStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
@@ -113,10 +113,17 @@ export function useWebSocket(isAuthenticated: boolean): void {
               sqlExecs[pending.executionIndex].chartSpec = pending.spec;
             }
           }
+          const inputTokens = (msg.it ?? msg.input_tokens ?? 0) as number;
+          const outputTokens = (msg.ot ?? msg.output_tokens ?? 0) as number;
+          const toolCallTrace = (msg.tct ?? msg.tool_call_trace ?? null) as TraceEntry[] | null;
+
           chatStore.finalizeStreamingMessage({
             sql_query: ((msg.sq || msg.sql_query) as string) ?? null,
             sql_executions: sqlExecs,
             reasoning: ((msg.r || msg.reasoning) as string) ?? null,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            tool_call_trace: toolCallTrace,
           });
           chatStore.setStreaming(false);
           chatStore.setLoadingPhase("idle");

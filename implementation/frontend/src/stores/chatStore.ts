@@ -19,6 +19,14 @@ export interface ChartSpec {
   location_type?: string;      // choropleth location type (state_name, state_abbr, etc.)
 }
 
+export interface TraceEntry {
+  type: "tool_call" | "text" | "reasoning";
+  tool?: string;
+  args?: Record<string, unknown>;
+  result?: string;
+  content?: string;
+}
+
 export interface SqlExecution {
   query: string;
   columns: string[] | null;
@@ -38,6 +46,9 @@ export interface Message {
   reasoning: string | null;
   created_at: string;
   sendFailed?: boolean;
+  input_tokens?: number;
+  output_tokens?: number;
+  tool_call_trace?: TraceEntry[] | null;
 }
 
 /** Parse sql_query column into structured SqlExecution[].

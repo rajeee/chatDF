@@ -66,7 +66,10 @@ CREATE TABLE IF NOT EXISTS messages (
     sql_query         TEXT,
     reasoning         TEXT,
     token_count       INTEGER NOT NULL DEFAULT 0,
-    created_at        TEXT NOT NULL
+    created_at        TEXT NOT NULL,
+    input_tokens      INTEGER NOT NULL DEFAULT 0,
+    output_tokens     INTEGER NOT NULL DEFAULT 0,
+    tool_call_trace   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS datasets (
@@ -125,6 +128,13 @@ CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_datasets_conversation_id ON datasets(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_token_usage_user_timestamp ON token_usage(user_id, timestamp);
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id         TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    dev_mode        INTEGER NOT NULL DEFAULT 1,
+    selected_model  TEXT NOT NULL DEFAULT 'gemini-2.5-flash',
+    updated_at      TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
 CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id, created_at);
 """

@@ -6,7 +6,9 @@
 
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useChatStore } from "@/stores/chatStore";
+import { useDevModeStore } from "@/stores/devModeStore";
 import { QueryHistoryDropdown } from "./QueryHistoryDropdown";
+import { PromptPreviewModal } from "./PromptPreviewModal";
 
 const CHAR_LIMIT = 2000;
 const CHAR_COUNTER_THRESHOLD = 1800;
@@ -26,9 +28,11 @@ export interface ChatInputHandle {
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   ({ onSend, onStop }, ref) => {
     const [inputValue, setInputValue] = useState("");
+    const [previewOpen, setPreviewOpen] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const isStreaming = useChatStore((s) => s.isStreaming);
+    const devMode = useDevModeStore((s) => s.devMode);
     const dailyLimitReached = useChatStore((s) => s.dailyLimitReached);
     const loadingPhase = useChatStore((s) => s.loadingPhase);
 
@@ -166,6 +170,23 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             disabled={dailyLimitReached || isStreaming}
           />
 
+          {devMode && !isStreaming && (
+            <button
+              type="button"
+              data-testid="prompt-preview-btn"
+              aria-label="Preview prompt"
+              title="Preview what will be sent to the LLM"
+              className="flex-shrink-0 rounded-lg p-2 opacity-40 hover:opacity-100 transition-all duration-150 hover:bg-[var(--color-accent)]/10"
+              onClick={() => setPreviewOpen(true)}
+              disabled={trimmedEmpty}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          )}
+
           {isStreaming ? (
             <button
               type="button"
@@ -230,6 +251,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {formattedCount} / {formattedLimit}
           </span>
         )}
+
+        <PromptPreviewModal
+          open={previewOpen}
+          onClose={() => { setPreviewOpen(false); }}
+          inputValue={inputValue}
+        />
       </div>
     );
   }

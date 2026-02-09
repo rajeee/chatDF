@@ -134,6 +134,9 @@ class MessageResponse(BaseModel):
     content: str
     sql_query: str | None = None
     reasoning: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tool_call_trace: str | None = None
     created_at: datetime
 
 
@@ -315,3 +318,43 @@ class ErrorResponse(BaseModel):
 
     error: str
     details: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Settings models (Dev Mode)
+# ---------------------------------------------------------------------------
+
+
+class UpdateSettingsRequest(BaseModel):
+    """Body for ``PUT /settings``."""
+
+    dev_mode: bool | None = None
+    selected_model: str | None = None
+
+
+class SettingsResponse(BaseModel):
+    """Response for ``GET /settings`` and ``PUT /settings``."""
+
+    dev_mode: bool
+    selected_model: str
+
+
+# ---------------------------------------------------------------------------
+# Prompt Preview models (Dev Mode)
+# ---------------------------------------------------------------------------
+
+
+class PromptPreviewRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/prompt-preview``."""
+
+    content: str = Field(..., min_length=1, max_length=10000)
+
+
+class PromptPreviewResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/prompt-preview``."""
+
+    system_prompt: str
+    messages: list[dict]
+    tools: list[str]
+    new_message: str
+    estimated_tokens: int

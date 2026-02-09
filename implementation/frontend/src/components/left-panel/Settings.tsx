@@ -5,16 +5,35 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiDelete } from "@/api/client";
+import { apiDelete, apiGet, apiPut } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { useToastStore } from "@/stores/toastStore";
+import { useDevModeStore, AVAILABLE_MODELS } from "@/stores/devModeStore";
 
 export function Settings() {
   const queryClient = useQueryClient();
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const { success, error: showError } = useToastStore();
+
+  // Dev Mode
+  const devMode = useDevModeStore((s) => s.devMode);
+  const setDevMode = useDevModeStore((s) => s.setDevMode);
+  const selectedModel = useDevModeStore((s) => s.selectedModel);
+  const setSelectedModel = useDevModeStore((s) => s.setSelectedModel);
+
+  // Sync settings from backend on mount
+  useEffect(() => {
+    apiGet<{ dev_mode: boolean; selected_model: string }>("/settings")
+      .then((settings) => {
+        setDevMode(settings.dev_mode);
+        setSelectedModel(settings.selected_model);
+      })
+      .catch(() => {
+        // Failed to fetch settings, use defaults from localStorage
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Message Density
   const messageDensity = useUiStore((s) => s.messageDensity);
@@ -85,6 +104,59 @@ export function Settings() {
 
   return (
     <div className="space-y-3 text-sm">
+      {/* Dev Mode Toggle */}
+      <div>
+        <div className="text-xs opacity-50 mb-1">Dev Mode</div>
+        <button
+          data-testid="dev-mode-toggle"
+          onClick={() => {
+            const newVal = !devMode;
+            setDevMode(newVal);
+            // Fire and forget: sync to backend
+            apiPut("/settings", { dev_mode: newVal }).catch(() => {});
+          }}
+          className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors ${
+            devMode ? "bg-accent/10 text-accent" : "hover:bg-black/5 dark:hover:bg-white/10"
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Dev Mode
+          </span>
+          <span className={`w-8 h-4 rounded-full transition-colors relative ${devMode ? "bg-accent" : "bg-gray-400"}`}>
+            <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${devMode ? "translate-x-4" : "translate-x-0.5"}`} />
+          </span>
+        </button>
+      </div>
+
+      {/* Model Selector (only when dev mode is on) */}
+      {devMode && (
+        <div>
+          <div className="text-xs opacity-50 mb-1">Model</div>
+          <select
+            data-testid="model-selector"
+            value={selectedModel}
+            onChange={(e) => {
+              setSelectedModel(e.target.value);
+              apiPut("/settings", { selected_model: e.target.value }).catch(() => {});
+            }}
+            className="w-full px-2 py-1.5 rounded border text-xs"
+            style={{
+              borderColor: "var(--color-border)",
+              backgroundColor: "var(--color-bg)",
+              color: "var(--color-text)",
+            }}
+          >
+            {AVAILABLE_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Theme Toggle */}
       <div>
         <div className="text-xs opacity-50 mb-1">Theme</div>

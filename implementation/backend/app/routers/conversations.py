@@ -41,6 +41,8 @@ from app.models import (
     MessageAckResponse,
     MessageResponse,
     PinConversationRequest,
+    PromptPreviewRequest,
+    PromptPreviewResponse,
     PublicConversationResponse,
     RenameConversationRequest,
     RunQueryRequest,
@@ -52,6 +54,7 @@ from app.models import (
     SuccessResponse,
 )
 from app.services import chat_service
+from app.services import dataset_service, llm_service
 
 router = APIRouter()
 public_router = APIRouter()
@@ -229,7 +232,8 @@ async def get_conversation_detail(
 
     # Fetch messages
     cursor = await db.execute(
-        "SELECT id, role, content, sql_query, reasoning, created_at "
+        "SELECT id, role, content, sql_query, reasoning, input_tokens, output_tokens, "
+        "tool_call_trace, created_at "
         "FROM messages WHERE conversation_id = ? ORDER BY created_at",
         (conv_id,),
     )
@@ -241,6 +245,9 @@ async def get_conversation_detail(
             content=row["content"],
             sql_query=row["sql_query"],
             reasoning=row["reasoning"],
+            input_tokens=row["input_tokens"] or 0,
+            output_tokens=row["output_tokens"] or 0,
+            tool_call_trace=row["tool_call_trace"],
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in message_rows
@@ -841,6 +848,153 @@ async def explain_sql(
 
 
 # ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/prompt-preview
+# Build and return the full prompt that would be sent to the LLM
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{conversation_id}/prompt-preview",
+    response_model=PromptPreviewResponse,
+)
+async def prompt_preview(
+    body: PromptPreviewRequest,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> PromptPreviewResponse:
+    """Build the full LLM prompt for a hypothetical user message (without sending it)."""
+    conv_id = conversation["id"]
+
+    # Build conversation context (same as process_message steps 5-6)
+    cursor = await db.execute(
+        "SELECT id, conversation_id, role, content, sql_query, token_count, created_at "
+        "FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conv_id,),
+    )
+    rows = await cursor.fetchall()
+    messages_raw: list[dict] = [dict(r) for r in rows]
+    messages_pruned = llm_service.prune_context(messages_raw)
+
+    # Fetch datasets
+    datasets = await dataset_service.get_datasets(db, conv_id)
+
+    # Build system prompt
+    system_prompt = llm_service.build_system_prompt(datasets)
+
+    # Build contents list
+    contents = llm_service._messages_to_contents(messages_pruned)
+
+    # Format messages for response
+    formatted_messages = [
+        {"role": msg["role"], "content": msg["content"]}
+        for msg in messages_pruned
+        if msg.get("role") != "system"
+    ]
+
+    # Get tool declaration names
+    tool_names = []
+    for tool in llm_service.TOOLS:
+        if hasattr(tool, "function_declarations") and tool.function_declarations:
+            for decl in tool.function_declarations:
+                tool_names.append(decl.name)
+
+    # Estimate tokens: total chars // 4
+    total_chars = len(system_prompt)
+    for msg in formatted_messages:
+        total_chars += len(msg.get("content", ""))
+    total_chars += len(body.content)
+    estimated_tokens = total_chars // 4
+
+    return PromptPreviewResponse(
+        system_prompt=system_prompt,
+        messages=formatted_messages,
+        tools=tool_names,
+        new_message=body.content,
+        estimated_tokens=estimated_tokens,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/messages/{message_id}/redo
+# Re-send a user message through the LLM flow
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/messages/{message_id}/redo", response_model=MessageAckResponse)
+async def redo_message(
+    request: Request,
+    message_id: str,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> MessageAckResponse:
+    """Redo an assistant message: delete it and re-process the preceding user message."""
+    conv_id = conversation["id"]
+
+    # 1. Verify the message exists and belongs to this conversation
+    cursor = await db.execute(
+        "SELECT id, role, created_at FROM messages WHERE id = ? AND conversation_id = ?",
+        (message_id, conv_id),
+    )
+    msg_row = await cursor.fetchone()
+    if msg_row is None:
+        raise HTTPException(status_code=404, detail="Message not found in this conversation")
+
+    # 2. Verify it's an assistant message
+    if msg_row["role"] != "assistant":
+        raise HTTPException(status_code=400, detail="Can only redo assistant messages")
+
+    # 3. Find the preceding user message
+    cursor = await db.execute(
+        "SELECT id, content FROM messages "
+        "WHERE conversation_id = ? AND role = 'user' AND created_at < ? "
+        "ORDER BY created_at DESC LIMIT 1",
+        (conv_id, msg_row["created_at"]),
+    )
+    user_msg_row = await cursor.fetchone()
+    if user_msg_row is None:
+        raise HTTPException(status_code=400, detail="No preceding user message found")
+
+    user_content = user_msg_row["content"]
+
+    # 4. Delete the assistant message and the preceding user message
+    #    (process_message will re-create the user message)
+    await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+    await db.execute("DELETE FROM messages WHERE id = ?", (user_msg_row["id"],))
+    await db.commit()
+
+    # 5. Re-send through LLM flow (same pattern as send_message)
+    connection_manager = getattr(request.app.state, "connection_manager", None)
+
+    async def ws_send(message: dict) -> None:
+        if connection_manager is not None:
+            await connection_manager.send_to_user(user["id"], message)
+
+    pool = getattr(request.app.state, "worker_pool", None)
+
+    async def _background_redo() -> None:
+        try:
+            await chat_service.process_message(
+                db=db,
+                conversation_id=conv_id,
+                user_id=user["id"],
+                content=user_content,
+                ws_send=ws_send,
+                pool=pool,
+            )
+        except Exception:
+            _logger.exception(
+                "Background redo failed for conversation %s, message %s",
+                conv_id,
+                message_id,
+            )
+
+    asyncio.create_task(_background_redo())
+
+    return MessageAckResponse(message_id=message_id, status="processing")
+
+
+# ---------------------------------------------------------------------------
 # GET /shared/{share_token} — Public (no auth required)
 # ---------------------------------------------------------------------------
 
@@ -864,7 +1018,8 @@ async def get_public_conversation(
 
     # Fetch messages
     cursor = await db.execute(
-        "SELECT id, role, content, sql_query, reasoning, created_at "
+        "SELECT id, role, content, sql_query, reasoning, input_tokens, output_tokens, "
+        "tool_call_trace, created_at "
         "FROM messages WHERE conversation_id = ? ORDER BY created_at",
         (conversation["id"],),
     )
@@ -876,6 +1031,9 @@ async def get_public_conversation(
             content=r["content"],
             sql_query=r["sql_query"],
             reasoning=r["reasoning"],
+            input_tokens=r["input_tokens"] or 0,
+            output_tokens=r["output_tokens"] or 0,
+            tool_call_trace=r["tool_call_trace"],
             created_at=datetime.fromisoformat(r["created_at"]),
         )
         for r in message_rows

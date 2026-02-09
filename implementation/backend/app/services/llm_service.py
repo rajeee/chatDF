@@ -219,6 +219,7 @@ class StreamResult:
     sql_queries: list[str] = field(default_factory=list)
     sql_executions: list[SqlExecution] = field(default_factory=list)
     followup_suggestions: list[str] = field(default_factory=list)
+    tool_call_trace: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -427,6 +428,7 @@ async def stream_chat(
     pool: object | None = None,
     db: object | None = None,
     conversation_id: str | None = None,
+    model_id: str | None = None,
 ) -> StreamResult:
     """Stream a chat response from Gemini, handling tool calls.
 
@@ -438,6 +440,7 @@ async def stream_chat(
         pool: Optional worker pool for SQL execution.
         db: Optional database connection for dataset loading.
         conversation_id: Optional conversation ID for dataset loading.
+        model_id: Optional model ID override (defaults to MODULE_ID constant).
 
     Returns:
         StreamResult with token counts, assistant message, and tool call count.
@@ -445,6 +448,8 @@ async def stream_chat(
     result = StreamResult()
     system_prompt = build_system_prompt(datasets)
     contents = _messages_to_contents(messages)
+    effective_model = model_id or MODEL_ID
+    trace_entries: list[dict] = []
 
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
@@ -465,7 +470,7 @@ async def stream_chat(
         for attempt in range(MAX_GEMINI_RETRIES + 1):
             try:
                 stream = await client.aio.models.generate_content_stream(
-                    model=MODEL_ID,
+                    model=effective_model,
                     contents=contents,
                     config=config,
                 )
@@ -515,6 +520,7 @@ async def stream_chat(
                                 if getattr(part, "thought", False):
                                     # Reasoning/thinking token
                                     collected_reasoning += part.text
+                                    trace_entries.append({"type": "reasoning", "content": part.text})
                                     await ws_send(ws_messages.reasoning_token(token=part.text))
                                 else:
                                     # Normal output token
@@ -522,6 +528,7 @@ async def stream_chat(
                                         await ws_send(ws_messages.reasoning_complete())
                                         reasoning_emitted = True
                                     collected_text += part.text
+                                    trace_entries.append({"type": "text", "content": part.text})
                                     await ws_send(ws_messages.chat_token(token=part.text, message_id="streaming"))
 
                             # Function call part
@@ -684,6 +691,14 @@ async def stream_chat(
         else:
             tool_result_str = f"Unknown tool: {tool_call_name}"
 
+        # Record tool call in trace
+        trace_entries.append({
+            "type": "tool_call",
+            "tool": tool_call_name,
+            "args": tool_call_args,
+            "result": tool_result_str,
+        })
+
         # Append tool call and result to contents for next Gemini call
         contents.append(
             types.Content(
@@ -706,4 +721,5 @@ async def stream_chat(
 
     result.assistant_message = collected_text
     result.reasoning = collected_reasoning
+    result.tool_call_trace = trace_entries
     return result

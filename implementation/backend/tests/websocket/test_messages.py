@@ -85,11 +85,11 @@ class TestChatComplete:
 
     def test_exact_keys_with_sql(self):
         result = chat_complete(message_id="m", sql_query="q", token_count=1)
-        assert set(result.keys()) == {"type", "mid", "sq", "tc", "se"}
+        assert set(result.keys()) == {"type", "mid", "sq", "tc", "se", "it", "ot"}
 
     def test_exact_keys_without_sql(self):
         result = chat_complete(message_id="m", sql_query=None, token_count=1)
-        assert set(result.keys()) == {"type", "mid", "tc", "se"}
+        assert set(result.keys()) == {"type", "mid", "tc", "se", "it", "ot"}
 
 
 # ---- WS-MSG-3: chat_error ----

@@ -8,6 +8,7 @@ import { memo, useMemo, useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useDevModeStore } from "@/stores/devModeStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
@@ -38,6 +39,7 @@ interface MessageBubbleProps {
   onRetry?: (messageId: string, content: string) => void;
   onFork?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
+  onRedo?: (messageId: string) => void;
   searchQuery?: string;
 }
 
@@ -53,6 +55,12 @@ function formatTimestamp(isoString: string): string {
   return date.toLocaleDateString();
 }
 
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 function MessageBubbleComponent({
   message,
   isCurrentlyStreaming,
@@ -64,10 +72,12 @@ function MessageBubbleComponent({
   onRetry,
   onFork,
   onDelete,
+  onRedo,
   searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const messageDensity = useUiStore((s) => s.messageDensity);
+  const devMode = useDevModeStore((s) => s.devMode);
   const reasoningContent = message.reasoning;
 
   // Find the first sql_execution that has chartable data
@@ -82,6 +92,7 @@ function MessageBubbleComponent({
   }, [message.sql_executions]);
 
   const [sqlExpanded, setSqlExpanded] = useState(false);
+  const [traceExpanded, setTraceExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -319,6 +330,112 @@ function MessageBubbleComponent({
           </div>
         )}
 
+        {/* Tool Call Trace Viewer (dev mode) */}
+        {!isUser && devMode && !isCurrentlyStreaming && message.tool_call_trace && message.tool_call_trace.length > 0 && (
+          <div
+            data-testid={`trace-viewer-${message.id}`}
+            className="mt-2 rounded overflow-hidden text-xs"
+            style={{
+              backgroundColor: "var(--color-bg)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <button
+              data-testid={`trace-viewer-toggle-${message.id}`}
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-left opacity-60 hover:opacity-100 transition-opacity"
+              style={{ color: "var(--color-text)" }}
+              onClick={() => setTraceExpanded(!traceExpanded)}
+            >
+              <svg
+                className={`w-3 h-3 transition-transform duration-200 ${traceExpanded ? "rotate-90" : ""}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              <span className="font-mono opacity-70">Tool Calls ({message.tool_call_trace.length})</span>
+            </button>
+            <div
+              data-testid={`trace-viewer-content-${message.id}`}
+              style={{
+                maxHeight: traceExpanded ? "400px" : "0px",
+                opacity: traceExpanded ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 200ms ease, opacity 200ms ease",
+              }}
+            >
+              <div
+                className="px-2 py-1.5 border-t flex flex-col gap-1.5"
+                style={{
+                  borderColor: "var(--color-border)",
+                  maxHeight: "380px",
+                  overflowY: "auto",
+                }}
+              >
+                {message.tool_call_trace.map((entry, i) => (
+                  <div
+                    key={i}
+                    className="rounded px-2 py-1.5"
+                    style={{
+                      backgroundColor: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {entry.type === "reasoning" && (
+                      <>
+                        <div className="font-mono font-medium opacity-60 text-[10px] mb-0.5" style={{ color: "var(--color-accent)" }}>
+                          Thinking...
+                        </div>
+                        <div className="font-mono text-[10px] opacity-70 break-words" style={{ color: "var(--color-text)" }}>
+                          {(entry.content ?? "").length > 200 ? `${entry.content!.slice(0, 200)}...` : entry.content}
+                        </div>
+                      </>
+                    )}
+                    {entry.type === "text" && (
+                      <>
+                        <div className="font-mono font-medium opacity-60 text-[10px] mb-0.5" style={{ color: "var(--color-success)" }}>
+                          Response
+                        </div>
+                        <div className="font-mono text-[10px] opacity-70 break-words" style={{ color: "var(--color-text)" }}>
+                          {(entry.content ?? "").length > 200 ? `${entry.content!.slice(0, 200)}...` : entry.content}
+                        </div>
+                      </>
+                    )}
+                    {entry.type === "tool_call" && (
+                      <>
+                        <div className="font-mono font-medium text-[10px] mb-0.5" style={{ color: "var(--color-warning, var(--color-accent))" }}>
+                          {entry.tool ?? "unknown_tool"}
+                        </div>
+                        {entry.args && (
+                          <pre
+                            className="font-mono text-[10px] opacity-60 break-words whitespace-pre-wrap mb-0.5"
+                            style={{ color: "var(--color-text)" }}
+                          >
+                            {(() => {
+                              const json = JSON.stringify(entry.args, null, 2);
+                              return json.length > 300 ? `${json.slice(0, 300)}...` : json;
+                            })()}
+                          </pre>
+                        )}
+                        {entry.result && (
+                          <div
+                            className="font-mono text-[10px] opacity-50 break-words mt-0.5 pt-0.5"
+                            style={{ color: "var(--color-text)", borderTop: "1px solid var(--color-border)" }}
+                          >
+                            {entry.result.length > 200 ? `${entry.result.slice(0, 200)}...` : entry.result}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Inline LLM-requested chart */}
         {!isUser && !isCurrentlyStreaming && message.sql_executions.some(e => e.chartSpec && e.columns && e.rows) && (
           <div
@@ -348,7 +465,7 @@ function MessageBubbleComponent({
         )}
 
         {/* Action buttons row */}
-        {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0) && (
+        {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0 || (devMode && onRedo)) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {/* Show Reasoning button */}
             {reasoningContent && (
@@ -392,6 +509,27 @@ function MessageBubbleComponent({
                   <rect x="17" y="3" width="4" height="18" rx="1" />
                 </svg>
                 Visualize
+              </button>
+            )}
+
+            {/* Redo button (dev mode) */}
+            {devMode && onRedo && (
+              <button
+                data-testid={`redo-btn-${message.id}`}
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1"
+                style={{
+                  borderColor: "var(--color-accent)",
+                  color: "var(--color-accent)",
+                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0) + (visualizableIndex >= 0 ? 1 : 0),
+                } as React.CSSProperties}
+                onClick={() => onRedo(message.id)}
+                aria-label="Redo this message"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                Redo
               </button>
             )}
           </div>
@@ -505,34 +643,47 @@ function MessageBubbleComponent({
       </div>
 
       {/* Timestamp with custom tooltip */}
-      <span className="relative group/timestamp">
-        <span
-          data-testid={`timestamp-${message.id}`}
-          className="text-xs mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
-          style={{ color: "var(--color-text)" }}
-        >
-          {formatTimestamp(message.created_at)}
+      <div className="flex items-center gap-2 mt-1">
+        <span className="relative group/timestamp">
+          <span
+            data-testid={`timestamp-${message.id}`}
+            className="text-xs opacity-30 group-hover:opacity-60 transition-opacity"
+            style={{ color: "var(--color-text)" }}
+          >
+            {formatTimestamp(message.created_at)}
+          </span>
+          <span
+            data-testid={`timestamp-tooltip-${message.id}`}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] rounded whitespace-nowrap opacity-0 group-hover/timestamp:opacity-100 transition-opacity duration-150 pointer-events-none z-50"
+            style={{
+              background: "var(--color-surface)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            {new Date(message.created_at).toLocaleString(undefined, {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
         </span>
-        <span
-          data-testid={`timestamp-tooltip-${message.id}`}
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] rounded whitespace-nowrap opacity-0 group-hover/timestamp:opacity-100 transition-opacity duration-150 pointer-events-none z-50"
-          style={{
-            background: "var(--color-surface)",
-            color: "var(--color-text)",
-            border: "1px solid var(--color-border)",
-          }}
-        >
-          {new Date(message.created_at).toLocaleString(undefined, {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
-        </span>
-      </span>
+
+        {/* Token usage badge (dev mode) */}
+        {!isUser && devMode && !isCurrentlyStreaming && ((message.input_tokens ?? 0) > 0 || (message.output_tokens ?? 0) > 0) && (
+          <span
+            data-testid={`token-badge-${message.id}`}
+            className="text-[10px] font-mono opacity-50"
+            style={{ color: "var(--color-text)" }}
+          >
+            {formatTokens(message.input_tokens ?? 0)} in / {formatTokens(message.output_tokens ?? 0)} out
+          </span>
+        )}
+      </div>
     </div>
   );
 }

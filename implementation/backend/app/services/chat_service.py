@@ -149,6 +149,16 @@ async def process_message(
         datasets = await dataset_service.get_datasets(db, conversation_id)
 
         # -------------------------------------------------------------------
+        # Step 6b: Read user's selected model from user_settings
+        # -------------------------------------------------------------------
+        cursor = await db.execute(
+            "SELECT selected_model FROM user_settings WHERE user_id = ?",
+            (user_id,),
+        )
+        settings_row = await cursor.fetchone()
+        selected_model = settings_row["selected_model"] if settings_row else None
+
+        # -------------------------------------------------------------------
         # Step 7: Send query_status("generating")
         # -------------------------------------------------------------------
         await ws_send(ws_messages.query_status(phase="generating"))
@@ -164,6 +174,7 @@ async def process_message(
             pool=pool,
             db=db,
             conversation_id=conversation_id,
+            model_id=selected_model,
         )
 
         # -------------------------------------------------------------------
@@ -202,10 +213,18 @@ async def process_message(
             else None
         )
 
+        # Serialize tool_call_trace for DB storage
+        tool_call_trace_json = (
+            json.dumps(result.tool_call_trace, default=str)
+            if result.tool_call_trace
+            else None
+        )
+
         await db.execute(
             "INSERT INTO messages "
-            "(id, conversation_id, role, content, sql_query, token_count, created_at, reasoning) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "(id, conversation_id, role, content, sql_query, token_count, created_at, reasoning, "
+            "input_tokens, output_tokens, tool_call_trace) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 asst_msg_id,
                 conversation_id,
@@ -215,6 +234,9 @@ async def process_message(
                 token_count,
                 asst_now,
                 result.reasoning or None,
+                result.input_tokens,
+                result.output_tokens,
+                tool_call_trace_json,
             ),
         )
         await db.commit()
@@ -240,6 +262,9 @@ async def process_message(
                 token_count=token_count,
                 sql_executions=sql_executions_for_ws,
                 reasoning=result.reasoning or None,
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                tool_call_trace=result.tool_call_trace or None,
             )
         )
 

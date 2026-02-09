@@ -22,6 +22,7 @@ EXPECTED_TABLES = {
     "token_usage",
     "saved_queries",
     "query_history",
+    "user_settings",
 }
 
 

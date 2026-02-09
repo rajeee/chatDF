@@ -318,6 +318,7 @@ class TestAppLifecycleDb:
             "saved_queries",
             "sessions",
             "token_usage",
+            "user_settings",
             "users",
         ])
         assert tables == expected_tables

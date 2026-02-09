@@ -124,6 +124,13 @@ CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_datasets_conversation_id ON datasets(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_token_usage_user_timestamp ON token_usage(user_id, timestamp);
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id         TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    dev_mode        INTEGER NOT NULL DEFAULT 1,
+    selected_model  TEXT NOT NULL DEFAULT 'gemini-2.5-flash',
+    updated_at      TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
 CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id, created_at);
 """
@@ -274,6 +281,33 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     try:
         await conn.execute(
             "ALTER TABLE datasets ADD COLUMN column_descriptions TEXT NOT NULL DEFAULT '{}'"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add input_tokens column to messages
+    try:
+        await conn.execute(
+            "ALTER TABLE messages ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add output_tokens column to messages
+    try:
+        await conn.execute(
+            "ALTER TABLE messages ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add tool_call_trace column to messages
+    try:
+        await conn.execute(
+            "ALTER TABLE messages ADD COLUMN tool_call_trace TEXT"
         )
         await conn.commit()
     except Exception:

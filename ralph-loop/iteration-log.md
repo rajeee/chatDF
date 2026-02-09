@@ -100,3 +100,5 @@ Track each improvement cycle: what was done, what was learned.
 | 93 | 2026-02-09 | Message deletion, drag-and-drop dataset URL loading | new features | 948/955 frontend (7 pre-existing), backend pass | c62dcb4 |
 | 94 | 2026-02-09 | Column visibility toggle, saved query run button, health endpoint | U153-U159 | 948/955 frontend (7 pre-existing), backend pass | 6d65bf2 |
 | 95 | 2026-02-09 | JSON export, schema column search, save query from SQL modal | U162, U163, U164 | 983/990 frontend (+35 new tests, 7 pre-existing), 137/138 backend (1 pre-existing) | 9cdb92e |
+| 96 | 2026-02-09 | Run SQL panel, conversation templates, SQL result persistence | U165, U166, U168 | 979/986 frontend (7 pre-existing), backend pass | e679d03 |
+| 97 | 2026-02-09 | Fix broken LLM tool call tests, update onboarding tests | test fixes | 979/986 frontend (7 pre-existing), 539/545 backend (6 pre-existing) | 3570013 |

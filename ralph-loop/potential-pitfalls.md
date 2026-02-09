@@ -10,9 +10,8 @@
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 
 ## Testing
-- **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.
-- **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
+- **CodeMirror in tests**: Mock `useEditableCodeMirror` hook in jsdom tests — CodeMirror needs real DOM.
 
 ## Naming Conflicts
 - **`settings` module vs `settings` variable**: In `main.py`, `from app.routers import settings` gets shadowed by `settings = get_settings()`. Always alias router imports.

@@ -41,6 +41,7 @@ interface MessageBubbleProps {
   onVisualize: (executions: SqlExecution[], index: number) => void;
   onRetry?: (messageId: string, content: string) => void;
   onFork?: (messageId: string) => void;
+  onBranch?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onRedo?: (messageId: string) => void;
   searchQuery?: string;
@@ -74,6 +75,7 @@ function MessageBubbleComponent({
   onVisualize,
   onRetry,
   onFork,
+  onBranch,
   onDelete,
   onRedo,
   searchQuery,
@@ -105,6 +107,7 @@ function MessageBubbleComponent({
   const [traceExpanded, setTraceExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
+  const [branched, setBranched] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -121,6 +124,14 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
+
+  const handleBranchClick = useCallback(() => {
+    if (onBranch) {
+      onBranch(message.id);
+      setBranched(true);
+      setTimeout(() => setBranched(false), 1500);
+    }
+  }, [onBranch, message.id]);
 
   const handleBookmarkClick = useCallback(() => {
     if (isMessageBookmarked) {
@@ -713,6 +724,40 @@ function MessageBubbleComponent({
                   <circle cx="18" cy="6" r="3" />
                   <circle cx="6" cy="18" r="3" />
                   <path d="M18 9a9 9 0 0 1-9 9" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          {/* Branch button */}
+          {onBranch && !isCurrentlyStreaming && (
+            <button
+              data-testid={`branch-btn-${message.id}`}
+              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
+                branched
+                  ? "opacity-100"
+                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
+              } active:scale-90`}
+              style={{
+                color: branched ? "var(--color-success)" : isUser ? "var(--color-white)" : "var(--color-text)",
+              }}
+              onClick={handleBranchClick}
+              aria-label={branched ? "Branched" : "Branch from here"}
+              title="Branch conversation from here"
+            >
+              {branched ? (
+                <span className="flex items-center gap-0.5 copy-check-enter">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+              ) : (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="18" r="3" />
+                  <circle cx="6" cy="6" r="3" />
+                  <circle cx="18" cy="6" r="3" />
+                  <path d="M12 15V9" />
+                  <path d="M6 9v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V9" />
                 </svg>
               )}
             </button>

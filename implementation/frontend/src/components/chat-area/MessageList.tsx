@@ -13,7 +13,7 @@ import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
-import { deleteMessage, forkConversation, redoMessage, exportConversationHtml } from "@/api/client";
+import { deleteMessage, forkConversation, branchConversation, redoMessage, exportConversationHtml } from "@/api/client";
 import { TokenUsage } from "./TokenUsage";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
@@ -187,6 +187,26 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       } catch (error) {
         console.error("Failed to fork conversation:", error);
         showToast("Failed to fork conversation", "error");
+      }
+    },
+    [activeConversationId, queryClient, setActiveConversation, showToast]
+  );
+
+  const handleBranch = useCallback(
+    async (messageId: string) => {
+      if (!activeConversationId) return;
+
+      try {
+        const result = await branchConversation(activeConversationId, messageId);
+        // Invalidate conversations list to refresh sidebar
+        await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        // Switch to the new conversation
+        setActiveConversation(result.id);
+        // Show success toast
+        showToast("Branched conversation created", "success");
+      } catch (error) {
+        console.error("Failed to branch conversation:", error);
+        showToast("Failed to branch conversation", "error");
       }
     },
     [activeConversationId, queryClient, setActiveConversation, showToast]
@@ -479,6 +499,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onVisualize={handleVisualize}
               onRetry={onRetry}
               onFork={handleFork}
+              onBranch={handleBranch}
               onDelete={handleDelete}
               onRedo={handleRedo}
               searchQuery={searchQuery}

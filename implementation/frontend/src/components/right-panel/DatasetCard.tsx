@@ -26,6 +26,42 @@ function getHostname(url: string): string {
   }
 }
 
+export function getFormat(url: string): string {
+  try {
+    const pathname = new URL(url).pathname;
+    const lastSegment = pathname.split("/").pop() ?? "";
+    const dotIndex = lastSegment.lastIndexOf(".");
+    if (dotIndex === -1 || dotIndex === lastSegment.length - 1) return "Unknown";
+    const ext = lastSegment.slice(dotIndex + 1).toLowerCase();
+    if (!ext) return "Unknown";
+    // Capitalize first letter
+    return ext.charAt(0).toUpperCase() + ext.slice(1);
+  } catch {
+    return "Unknown";
+  }
+}
+
+export function getColumnTypeSummary(schemaJson: string): string {
+  try {
+    const schema = JSON.parse(schemaJson);
+    if (!schema || typeof schema !== "object") return "";
+    const entries = Object.values(schema) as string[];
+    if (entries.length === 0) return "";
+    // Count occurrences of each type
+    const counts: Record<string, number> = {};
+    for (const type of entries) {
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+    // Sort by count descending, then alphabetically
+    const sorted = Object.entries(counts).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    );
+    return sorted.map(([type, count]) => `${count} ${type}`).join(", ");
+  } catch {
+    return "";
+  }
+}
+
 function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
@@ -116,8 +152,25 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
             <span className="font-semibold text-sm truncate">
               {dataset.name}
             </span>
-            <span className="text-xs opacity-60 whitespace-nowrap">
-              {formatNumber(dataset.row_count)} rows x {formatNumber(dataset.column_count)} cols
+            <span className="relative group/stats">
+              <span className="text-xs opacity-60 whitespace-nowrap">
+                {formatNumber(dataset.row_count)} rows x {formatNumber(dataset.column_count)} cols
+              </span>
+              <span
+                data-testid="dataset-stats-tooltip"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-[10px] rounded whitespace-nowrap opacity-0 group-hover/stats:opacity-100 transition-opacity duration-150 pointer-events-none z-50"
+                style={{
+                  background: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  border: "1px solid var(--color-border)",
+                  boxShadow: "0 2px 8px var(--color-shadow)",
+                }}
+              >
+                <span className="block">Format: {getFormat(dataset.url)}</span>
+                {getColumnTypeSummary(dataset.schema_json) && (
+                  <span className="block">Columns: {getColumnTypeSummary(dataset.schema_json)}</span>
+                )}
+              </span>
             </span>
           </div>
           <span className="text-xs opacity-40 truncate block" title={dataset.url}>

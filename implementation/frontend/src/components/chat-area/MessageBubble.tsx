@@ -7,6 +7,7 @@
 import { memo, useMemo, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
+import { useUiStore } from "@/stores/uiStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
@@ -62,6 +63,7 @@ function MessageBubbleComponent({
   searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const messageDensity = useUiStore((s) => s.messageDensity);
   const reasoningContent = message.reasoning;
 
   // Find the first sql_execution that has chartable data
@@ -98,7 +100,13 @@ function MessageBubbleComponent({
     >
       <div
         data-testid={`message-bubble-${message.id}`}
-        className="relative max-w-[80%] rounded-lg px-4 py-2 text-sm break-words"
+        className={`relative max-w-[80%] rounded-lg break-words ${
+          ({
+            compact: "px-3 py-1 text-xs",
+            normal: "px-4 py-2 text-sm",
+            spacious: "px-5 py-3 text-sm",
+          })[messageDensity]
+        }`}
         style={{
           backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
           color: isUser ? "var(--color-white)" : "var(--color-text)",

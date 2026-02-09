@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
+import { useUiStore } from "@/stores/uiStore";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -14,6 +15,10 @@ export function Settings() {
   const queryClient = useQueryClient();
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const { success, error: showError } = useToastStore();
+
+  // Message Density
+  const messageDensity = useUiStore((s) => s.messageDensity);
+  const setMessageDensity = useUiStore((s) => s.setMessageDensity);
 
   // Theme
   const theme = useTheme();
@@ -133,6 +138,61 @@ export function Settings() {
               <line x1="12" y1="17" x2="12" y2="21" />
             </svg>
             System
+          </button>
+        </div>
+      </div>
+
+      {/* Message Density */}
+      <div>
+        <div className="text-xs opacity-50 mb-1">Message Density</div>
+        <div className="flex rounded overflow-hidden border border-border">
+          <button
+            data-testid="density-compact"
+            onClick={() => setMessageDensity("compact")}
+            className={`flex-1 px-2 py-1 text-xs transition-colors flex items-center justify-center gap-1 ${
+              messageDensity === "compact"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="2" y1="2" x2="10" y2="2" />
+              <line x1="2" y1="4.5" x2="10" y2="4.5" />
+              <line x1="2" y1="7" x2="10" y2="7" />
+              <line x1="2" y1="9.5" x2="10" y2="9.5" />
+            </svg>
+            Compact
+          </button>
+          <button
+            data-testid="density-normal"
+            onClick={() => setMessageDensity("normal")}
+            className={`flex-1 px-2 py-1 text-xs transition-colors flex items-center justify-center gap-1 ${
+              messageDensity === "normal"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="2" y1="2.5" x2="10" y2="2.5" />
+              <line x1="2" y1="6" x2="10" y2="6" />
+              <line x1="2" y1="9.5" x2="10" y2="9.5" />
+            </svg>
+            Normal
+          </button>
+          <button
+            data-testid="density-spacious"
+            onClick={() => setMessageDensity("spacious")}
+            className={`flex-1 px-2 py-1 text-xs transition-colors flex items-center justify-center gap-1 ${
+              messageDensity === "spacious"
+                ? "bg-accent text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="2" y1="3.5" x2="10" y2="3.5" />
+              <line x1="2" y1="8.5" x2="10" y2="8.5" />
+            </svg>
+            Spacious
           </button>
         </div>
       </div>

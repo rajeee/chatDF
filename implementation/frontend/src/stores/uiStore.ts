@@ -8,6 +8,7 @@ interface UiState {
   leftPanelWidth: number;
   rightPanelOpen: boolean;
   rightPanelWidth: number;
+  messageDensity: "compact" | "normal" | "spacious";
   sqlModalOpen: boolean;
   activeSqlExecutions: SqlExecution[];
   sqlResultModalIndex: number | null;
@@ -25,6 +26,7 @@ interface UiActions {
   setLeftPanelWidth: (w: number) => void;
   toggleRightPanel: () => void;
   setRightPanelWidth: (w: number) => void;
+  setMessageDensity: (density: "compact" | "normal" | "spacious") => void;
   openSqlModal: (executions: SqlExecution[]) => void;
   closeSqlModal: () => void;
   openSqlResultModal: (index: number) => void;
@@ -49,6 +51,7 @@ export const useUiStore = create<UiState & UiActions>()(
       leftPanelWidth: 260,
       rightPanelOpen: true,
       rightPanelWidth: 300,
+      messageDensity: "normal" as const,
       sqlModalOpen: false,
       activeSqlExecutions: [],
       sqlResultModalIndex: null,
@@ -71,6 +74,8 @@ export const useUiStore = create<UiState & UiActions>()(
 
       setRightPanelWidth: (w) =>
         set({ rightPanelWidth: Math.max(200, Math.min(500, w)) }),
+
+      setMessageDensity: (density) => set({ messageDensity: density }),
 
       openSqlModal: (executions) =>
         set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: null, sqlResultViewMode: "table" }),
@@ -124,6 +129,7 @@ export const useUiStore = create<UiState & UiActions>()(
         leftPanelWidth: state.leftPanelWidth,
         rightPanelOpen: state.rightPanelOpen,
         rightPanelWidth: state.rightPanelWidth,
+        messageDensity: state.messageDensity,
       }),
     }
   )

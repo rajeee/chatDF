@@ -31,6 +31,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
   const searchQuery = useChatStore((s) => s.searchQuery);
   const searchOpen = useChatStore((s) => s.searchOpen);
+  const messageDensity = useUiStore((s) => s.messageDensity);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
   const openChartModal = useUiStore((s) => s.openChartModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
@@ -352,7 +353,13 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
 
       <div
         data-testid="message-list-scroll"
-        className={`px-2 py-2 sm:px-4 sm:py-4 space-y-3 sm:space-y-4${isFirstMessageEntrance ? " first-message-entrance" : ""}`}
+        className={`${
+          ({
+            compact: "px-2 py-1 space-y-1 sm:px-3 sm:py-2 sm:space-y-2",
+            normal: "px-2 py-2 space-y-3 sm:px-4 sm:py-4 sm:space-y-4",
+            spacious: "px-3 py-3 space-y-5 sm:px-6 sm:py-6 sm:space-y-6",
+          })[messageDensity]
+        }${isFirstMessageEntrance ? " first-message-entrance" : ""}`}
         role="log"
         aria-live="polite"
         aria-label="Chat messages"

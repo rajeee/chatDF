@@ -8,6 +8,5 @@
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
-- **Textarea onBlur vs dropdown mouseDown timing**: When a textarea blur dismisses a dropdown, use `mouseDown` (not `click`) on dropdown items, or delay blur dismiss with setTimeout to let the click fire first.
 - **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse` with proper Content-Disposition headers, rather than adding heavy JS libraries to the frontend bundle.
-- **Gemini SDK ClientError has `.code` (HTTP status int) and `.status` (string like "RESOURCE_EXHAUSTED")**: Use `.code == 429` to detect rate limits. The SDK's built-in retry (`HttpRetryOptions`) is not surfaced through exceptions — implement your own retry loop for custom behavior (e.g., sending WS progress updates during wait).
+- **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. The SDK's built-in retry isn't surfaced through exceptions — implement your own retry loop.

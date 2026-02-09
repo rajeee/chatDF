@@ -31,6 +31,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
@@ -122,6 +123,32 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
           <span className="text-xs opacity-40 truncate block" title={dataset.url}>
             {getHostname(dataset.url)}
           </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(dataset.url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            aria-label={copied ? "URL copied" : "Copy dataset URL"}
+            title="Copy dataset URL"
+            data-testid="copy-url-button"
+            className={`touch-action-btn absolute top-1 right-7 p-1 rounded transition-all duration-150 active:scale-90 ${
+              copied ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}
+            style={{ color: copied ? "var(--color-success)" : undefined }}
+          >
+            {copied ? (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            )}
+          </button>
           <button
             onClick={handleRemove}
             aria-label="Remove dataset"

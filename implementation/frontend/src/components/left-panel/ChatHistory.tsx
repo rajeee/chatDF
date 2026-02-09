@@ -592,6 +592,10 @@ export function ChatHistory() {
         </div>
       )}
 
+      {deferredSearchQuery.trim() && filteredConversations.length > 0 && (
+        <span data-testid="search-result-count" className="text-[10px] opacity-40 px-2 py-0.5 animate-fade-in">{filteredConversations.length} result{filteredConversations.length !== 1 ? 's' : ''}</span>
+      )}
+
       {isPending ? (
         <ul className="flex-1 overflow-y-auto space-y-0.5">
           {[...Array(3)].map((_, i) => (
@@ -647,7 +651,7 @@ export function ChatHistory() {
                 aria-current={activeConversationId === conv.id ? "page" : undefined}
                 className={`group relative flex items-center px-2 py-2 rounded cursor-pointer text-sm transition-all duration-150 border-l-2 ${deferredSearchQuery ? "list-item-enter" : ""} ${
                   activeConversationId === conv.id
-                    ? "border-[var(--color-accent)] bg-blue-500/10"
+                    ? "border-[var(--color-accent)] bg-blue-500/10 shadow-[inset_0_0_0_1px_rgba(37,99,235,0.15)]"
                     : conv.is_pinned
                       ? "border-blue-400/50 hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"
                       : "border-transparent hover:bg-gray-500/10 hover:translate-y-[-1px] hover:shadow-sm"

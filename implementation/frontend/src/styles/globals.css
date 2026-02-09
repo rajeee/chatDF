@@ -514,6 +514,22 @@ select:focus-visible {
   animation: listItemEnter 0.15s ease-out both;
 }
 
+/* Copy confirmation — scale-in checkmark */
+@keyframes copyCheckIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.copy-check-enter {
+  animation: copyCheckIn 0.2s ease-out forwards;
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
@@ -533,7 +549,8 @@ select:focus-visible {
   .animate-fade-in,
   .dropdown-enter,
   .list-item-enter,
-  .search-bar-enter {
+  .search-bar-enter,
+  .copy-check-enter {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }

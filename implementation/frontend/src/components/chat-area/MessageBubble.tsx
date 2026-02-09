@@ -375,7 +375,7 @@ function MessageBubbleComponent({
           aria-label={copied ? "Copied" : "Copy message"}
         >
           {copied ? (
-            <span className="flex items-center gap-0.5">
+            <span className="flex items-center gap-0.5 copy-check-enter">
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="20 6 9 17 4 12" />
               </svg>

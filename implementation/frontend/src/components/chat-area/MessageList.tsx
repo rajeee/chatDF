@@ -13,7 +13,7 @@ import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
-import { forkConversation } from "@/api/client";
+import { deleteMessage, forkConversation } from "@/api/client";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
@@ -189,6 +189,22 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       }
     },
     [activeConversationId, queryClient, setActiveConversation, showToast]
+  );
+
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      if (!activeConversationId) return;
+
+      try {
+        await deleteMessage(activeConversationId, messageId);
+        useChatStore.getState().removeMessage(messageId);
+        showToast("Message deleted", "success");
+      } catch (error) {
+        console.error("Failed to delete message:", error);
+        showToast("Failed to delete message", "error");
+      }
+    },
+    [activeConversationId, showToast]
   );
 
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -411,6 +427,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onVisualize={handleVisualize}
               onRetry={onRetry}
               onFork={handleFork}
+              onDelete={handleDelete}
               searchQuery={searchQuery}
             />
           );

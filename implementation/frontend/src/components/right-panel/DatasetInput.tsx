@@ -39,6 +39,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const [validated, setValidated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const allDatasets = useDatasetStore((s) => s.datasets);
   const datasets = useMemo(
@@ -184,11 +185,75 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
     }
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const droppedUrl = (
+      e.dataTransfer.getData("text/uri-list") ||
+      e.dataTransfer.getData("text/plain")
+    ).trim();
+
+    if (droppedUrl && URL_REGEX.test(droppedUrl)) {
+      setUrl(droppedUrl);
+      submitUrl(droppedUrl);
+    }
+  }
+
   const addDisabled =
     atLimit || url.trim() === "" || isSubmitting || error !== null;
 
   return (
-    <div data-testid="dataset-input">
+    <div
+      data-testid="dataset-input"
+      data-drop-zone="dataset-drop-zone"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        position: "relative",
+        borderRadius: "0.375rem",
+        border: isDragOver ? "2px dashed var(--color-accent)" : "2px dashed transparent",
+        padding: isDragOver ? "0.5rem" : "0.5rem",
+        transition: "border-color 200ms ease",
+      }}
+    >
+      {isDragOver && (
+        <div
+          data-testid="drop-overlay"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "color-mix(in srgb, var(--color-accent) 10%, transparent)",
+            borderRadius: "0.375rem",
+            zIndex: 10,
+            pointerEvents: "none",
+          }}
+        >
+          <span style={{ color: "var(--color-accent)", fontWeight: 600, fontSize: "0.875rem" }}>
+            Drop URL here
+          </span>
+        </div>
+      )}
       {/* Preset Sources button */}
       <button
         onClick={openPresetModal}

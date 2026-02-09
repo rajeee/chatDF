@@ -4,7 +4,7 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -37,6 +37,7 @@ interface MessageBubbleProps {
   onVisualize: (executions: SqlExecution[], index: number) => void;
   onRetry?: (messageId: string, content: string) => void;
   onFork?: (messageId: string) => void;
+  onDelete?: (messageId: string) => void;
   searchQuery?: string;
 }
 
@@ -62,6 +63,7 @@ function MessageBubbleComponent({
   onVisualize,
   onRetry,
   onFork,
+  onDelete,
   searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -82,6 +84,8 @@ function MessageBubbleComponent({
   const [sqlExpanded, setSqlExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopyClick = useCallback(() => {
     onCopy(message.content);
@@ -96,6 +100,23 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
+
+  const handleDeleteClick = useCallback(() => {
+    if (!onDelete) return;
+    if (deleteConfirm) {
+      // Second click within 2s — actually delete
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+      setDeleteConfirm(false);
+      onDelete(message.id);
+    } else {
+      // First click — show confirmation
+      setDeleteConfirm(true);
+      deleteTimerRef.current = setTimeout(() => {
+        setDeleteConfirm(false);
+        deleteTimerRef.current = null;
+      }, 2000);
+    }
+  }, [onDelete, message.id, deleteConfirm]);
 
   return (
     <div
@@ -378,6 +399,43 @@ function MessageBubbleComponent({
 
         {/* Action buttons row - top right */}
         <div className="absolute top-1 right-1 flex items-center gap-1">
+          {/* Delete button */}
+          {onDelete && !isCurrentlyStreaming && (
+            <button
+              data-testid={`delete-btn-${message.id}`}
+              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
+                deleteConfirm
+                  ? "opacity-100"
+                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
+              } active:scale-90`}
+              style={{
+                color: deleteConfirm ? "var(--color-error)" : isUser ? "var(--color-white)" : "var(--color-text)",
+              }}
+              onClick={handleDeleteClick}
+              aria-label={deleteConfirm ? "Confirm delete" : "Delete message"}
+              title={deleteConfirm ? "Click again to confirm" : "Delete message"}
+            >
+              {deleteConfirm ? (
+                <span className="flex items-center gap-0.5 copy-check-enter">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                  <span className="text-[10px] font-medium">Delete?</span>
+                </span>
+              ) : (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Fork button - only shown on assistant messages */}
           {!isUser && onFork && !isCurrentlyStreaming && (
             <button

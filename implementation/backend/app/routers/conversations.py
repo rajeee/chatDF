@@ -10,6 +10,7 @@ Endpoints:
 - DELETE /conversations/{conversation_id}      -> delete_conversation
 - DELETE /conversations                        -> clear_all_conversations
 - POST /conversations/{conversation_id}/messages -> send_message
+- DELETE /conversations/{conversation_id}/messages/{message_id} -> delete_message
 - POST /conversations/{conversation_id}/stop     -> stop_generation
 """
 
@@ -442,6 +443,40 @@ async def send_message(
     asyncio.create_task(_background_process())
 
     return MessageAckResponse(message_id=msg_id, status="processing")
+
+
+# ---------------------------------------------------------------------------
+# DELETE /conversations/{conversation_id}/messages/{message_id}
+# Delete a single message from a conversation
+# ---------------------------------------------------------------------------
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}",
+    response_model=SuccessResponse,
+)
+async def delete_message(
+    message_id: str,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SuccessResponse:
+    """Delete a single message from a conversation."""
+    # Verify the message belongs to this conversation
+    cursor = await db.execute(
+        "SELECT id FROM messages WHERE id = ? AND conversation_id = ?",
+        (message_id, conversation["id"]),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found in this conversation",
+        )
+
+    await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+    await db.commit()
+
+    return SuccessResponse(success=True)
 
 
 # ---------------------------------------------------------------------------

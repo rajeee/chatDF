@@ -220,6 +220,19 @@ export async function searchConversations(query: string, limit = 20): Promise<Se
 }
 
 // ---------------------------------------------------------------------------
+// Message deletion
+// ---------------------------------------------------------------------------
+
+export async function deleteMessage(
+  conversationId: string,
+  messageId: string
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `/conversations/${conversationId}/messages/${messageId}`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Conversation fork
 // ---------------------------------------------------------------------------
 

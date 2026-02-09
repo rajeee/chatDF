@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/api/client";
+import { apiGet, apiPost, apiPatch, apiDelete, shareQuery as apiShareQuery, unshareQuery as apiUnshareQuery } from "@/api/client";
 
 export interface SavedQueryResultData {
   columns: string[];
@@ -16,6 +16,7 @@ export interface SavedQuery {
   execution_time_ms?: number | null;
   folder: string;
   is_pinned: boolean;
+  share_token?: string | null;
 }
 
 interface SavedQueryState {
@@ -59,6 +60,7 @@ interface RawSavedQuery {
   execution_time_ms?: number | null;
   folder?: string;
   is_pinned?: boolean;
+  share_token?: string | null;
 }
 
 export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()((set, get) => ({

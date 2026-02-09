@@ -542,6 +542,34 @@ export async function exportConversationHtml(conversationId: string): Promise<vo
 }
 
 // ---------------------------------------------------------------------------
+// Saved query sharing
+// ---------------------------------------------------------------------------
+
+export async function shareQuery(queryId: string): Promise<{ share_url: string }> {
+  return apiPost(`/saved-queries/${queryId}/share`);
+}
+
+export async function unshareQuery(queryId: string): Promise<{ success: boolean }> {
+  return apiDelete(`/saved-queries/${queryId}/share`);
+}
+
+export interface SharedResultData {
+  name: string;
+  query: string;
+  result_data: {
+    columns: string[];
+    rows: unknown[][];
+    total_rows: number;
+  } | null;
+  execution_time_ms: number | null;
+  created_at: string;
+}
+
+export async function getSharedResult(token: string): Promise<SharedResultData> {
+  return apiGetPublic(`/api/shared/result/${token}`);
+}
+
+// ---------------------------------------------------------------------------
 // Message redo
 // ---------------------------------------------------------------------------
 

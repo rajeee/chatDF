@@ -351,6 +351,22 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     except Exception:
         pass  # Column already exists
 
+    # Migration: add share_token column to saved_queries for shareable result URLs
+    try:
+        await conn.execute(
+            "ALTER TABLE saved_queries ADD COLUMN share_token TEXT"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+    try:
+        await conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_saved_queries_share_token ON saved_queries(share_token)"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Index already exists
+
 
 # Backward compatibility alias
 init_db = init_db_schema

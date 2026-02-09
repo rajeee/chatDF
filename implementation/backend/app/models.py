@@ -260,6 +260,7 @@ class SavedQueryResponse(BaseModel):
     execution_time_ms: float | None = None
     folder: str = ""
     is_pinned: bool = False
+    share_token: str | None = None
 
 
 class UpdateFolderRequest(BaseModel):
@@ -279,6 +280,22 @@ class ShareConversationResponse(BaseModel):
 
     share_token: str
     share_url: str
+
+
+class ShareSavedQueryResponse(BaseModel):
+    """Response for ``POST /saved-queries/{id}/share``."""
+
+    share_url: str
+
+
+class SharedResultResponse(BaseModel):
+    """Response for ``GET /api/shared/result/{token}``."""
+
+    name: str
+    query: str
+    result_data: dict | None = None
+    execution_time_ms: float | None = None
+    created_at: str
 
 
 class PublicConversationResponse(BaseModel):

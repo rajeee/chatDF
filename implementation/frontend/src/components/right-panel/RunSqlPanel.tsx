@@ -60,6 +60,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const savePopoverRef = useRef<HTMLDivElement>(null);
   const [resultCopied, setResultCopied] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [pinnedQueryId, setPinnedQueryId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -184,6 +186,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setShowChart(false);
     setResultFilter("");
     setDebouncedFilter("");
+    setPinned(false);
+    setPinnedQueryId(null);
 
     try {
       const response = await apiPost<RunQueryResponse>(
@@ -393,6 +397,38 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
       // silently fail
     }
   }, [sql, result, saveName, saveFolder]);
+
+  const handlePinResult = useCallback(async () => {
+    const trimmed = sql.trim();
+    if (!trimmed || !result) return;
+
+    if (pinned && pinnedQueryId) {
+      // Already pinned — unpin it
+      await useSavedQueryStore.getState().togglePin(pinnedQueryId);
+      setPinned(false);
+      setPinnedQueryId(null);
+      useToastStore.getState().success("Result unpinned");
+      return;
+    }
+
+    try {
+      const autoName = `Pinned: ${trimmed.replace(/\s+/g, " ").slice(0, 30)}`;
+      const saved = await useSavedQueryStore.getState().saveQuery(
+        autoName,
+        trimmed,
+        result
+          ? { columns: result.columns, rows: result.rows, total_rows: result.total_rows }
+          : undefined,
+        result?.execution_time_ms
+      );
+      await useSavedQueryStore.getState().togglePin(saved.id);
+      setPinned(true);
+      setPinnedQueryId(saved.id);
+      useToastStore.getState().success("Result pinned");
+    } catch {
+      // silently fail
+    }
+  }, [sql, result, pinned, pinnedQueryId]);
 
   // Close save popover on click outside
   useEffect(() => {
@@ -1309,6 +1345,15 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                       </div>
                     )}
                   </div>
+                  {/* Pin result button */}
+                  <button
+                    data-testid="run-sql-pin"
+                    className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
+                    style={{ color: pinned ? "var(--color-text)" : "var(--color-accent)" }}
+                    onClick={handlePinResult}
+                  >
+                    {pinned ? "Unpin" : "Pin Result"}
+                  </button>
                   {/* Visualize toggle button */}
                   {detectChartTypes(result.columns, result.rows).length > 0 && (
                     <button

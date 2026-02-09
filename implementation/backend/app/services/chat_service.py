@@ -272,6 +272,22 @@ async def process_message(
         # Re-raise domain errors without sending chat_error
         raise
 
+    except llm_service.GeminiRateLimitError as exc:
+        # -------------------------------------------------------------------
+        # Gemini 429: send user-friendly error (no traceback in logs)
+        # -------------------------------------------------------------------
+        logger.warning("Gemini rate limit for conversation %s: %s", conversation_id, exc)
+        try:
+            await ws_send(
+                ws_messages.chat_error(
+                    error=str(exc),
+                    details=None,
+                )
+            )
+        except Exception:
+            logger.exception("Failed to send chat_error via WebSocket")
+        raise
+
     except Exception as exc:
         # -------------------------------------------------------------------
         # Error handling: send chat_error via WS

@@ -10,15 +10,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass, field
 
 from google.genai import Client
 from google.genai import types
+from google.genai.errors import ClientError
 
 from app.config import get_settings
 from app.services import worker_pool
 from app.services import dataset_service
 from app.services import ws_messages
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -28,6 +32,8 @@ from app.services import ws_messages
 MODEL_ID = "gemini-2.5-flash"
 MAX_TOOL_CALLS_PER_TURN = 5
 MAX_SQL_RETRIES = 3
+MAX_GEMINI_RETRIES = 3
+GEMINI_RETRY_BASE_DELAY = 2  # seconds; doubles each retry (2, 4, 8)
 
 # ---------------------------------------------------------------------------
 # Gemini client (module-level singleton)
@@ -166,6 +172,21 @@ _suggest_followups_decl = types.FunctionDeclaration(
 )
 
 TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl, _create_chart_decl, _suggest_followups_decl])]
+
+
+# ---------------------------------------------------------------------------
+# Gemini rate-limit error
+# ---------------------------------------------------------------------------
+
+
+class GeminiRateLimitError(Exception):
+    """Raised when Gemini API returns 429 and all retries are exhausted."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The AI service is temporarily busy. Please try again in a moment."
+        )
+
 
 # ---------------------------------------------------------------------------
 # StreamResult
@@ -425,12 +446,40 @@ async def stream_chat(
     reasoning_emitted = False
 
     while True:
-        # Call Gemini async streaming API (non-blocking for the event loop)
-        stream = await client.aio.models.generate_content_stream(
-            model=MODEL_ID,
-            contents=contents,
-            config=config,
-        )
+        # Call Gemini async streaming API with retry on 429 RESOURCE_EXHAUSTED
+        stream = None
+        for attempt in range(MAX_GEMINI_RETRIES + 1):
+            try:
+                stream = await client.aio.models.generate_content_stream(
+                    model=MODEL_ID,
+                    contents=contents,
+                    config=config,
+                )
+                break  # success — exit retry loop
+            except ClientError as exc:
+                if exc.code == 429 and attempt < MAX_GEMINI_RETRIES:
+                    delay = GEMINI_RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(
+                        "Gemini 429 RESOURCE_EXHAUSTED (attempt %d/%d), "
+                        "retrying in %ds",
+                        attempt + 1,
+                        MAX_GEMINI_RETRIES,
+                        delay,
+                    )
+                    await ws_send(ws_messages.chat_token(
+                        token="",
+                        message_id="streaming",
+                    ))
+                    await asyncio.sleep(delay)
+                elif exc.code == 429:
+                    # All retries exhausted
+                    logger.error(
+                        "Gemini 429 RESOURCE_EXHAUSTED — all %d retries exhausted",
+                        MAX_GEMINI_RETRIES,
+                    )
+                    raise GeminiRateLimitError() from exc
+                else:
+                    raise  # non-429 ClientError — propagate as-is
 
         found_tool_call = False
         tool_call_name = None

@@ -12,3 +12,4 @@
 - **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. The SDK's built-in retry isn't surfaced through exceptions — implement your own retry loop.
 - **"Last mile" integrations are high ROI**: When backend endpoints exist but lack frontend UI, wiring them up is low-effort/high-impact. Always check for unused backend capabilities before building new ones.
 - **Mock at the source, not the consumer**: When a function does `from module_a import thing` locally inside a function body, patch `module_a.thing`, not `module_b.thing` where the function lives. The local import resolves at the source module.
+- **Cross-tab state handoff via store**: When one UI tab needs to send data to a component in another tab (e.g., history → SQL panel), use a transient store value (`pendingSql`) that the target component consumes and clears via `useEffect`. Don't persist this state.

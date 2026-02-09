@@ -114,3 +114,4 @@ Track each improvement cycle: what was done, what was learned.
 | 108 | 2026-02-09 | Dev Mode: full LLM visibility & controls (6 features) | work.md task | 1099/1107 frontend (8 pre-existing), 575/588 backend (12 pre-existing) | 67c1c14 |
 | 108b | 2026-02-09 | NL-to-SQL generation, query history tracking, dataset column descriptions | prior session | 1099/1107 frontend (8 pre-existing), 64/65 backend (1 pre-existing) | d83582e |
 | 109 | 2026-02-09 | Query History panel + fix NL-to-SQL tests | U180, U181 fix | 1123/1131 frontend (+24 new, 8 pre-existing), 72/73 backend (+8 fixed, 1 pre-existing) | f14efc6 |
+| 111 | 2026-02-09 | Query history re-run + favorite/star queries | U183, U184 | 1132/1140 frontend (+9 new, 8 pre-existing), 64/65 backend (+9 new star tests, 1 pre-existing) | 66f88b0 |

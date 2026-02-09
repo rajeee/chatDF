@@ -253,6 +253,7 @@ class SavedQueryResponse(BaseModel):
     result_json: str | None = None
     execution_time_ms: float | None = None
     folder: str = ""
+    is_pinned: bool = False
 
 
 class UpdateFolderRequest(BaseModel):

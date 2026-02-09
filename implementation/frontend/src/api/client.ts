@@ -298,6 +298,44 @@ export async function searchDatasets(
 }
 
 // ---------------------------------------------------------------------------
+// Dataset discovery (Natural Language search)
+// ---------------------------------------------------------------------------
+
+export interface DatasetDiscoveryResult {
+  id: string;
+  description: string | null;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  last_modified: string | null;
+  parquet_url: string;
+  relevance_score: number;
+}
+
+export interface DatasetDiscoveryResponse {
+  results: DatasetDiscoveryResult[];
+  total: number;
+  keywords: string[];
+  matched_categories: string[];
+}
+
+/**
+ * Discover datasets using a natural language description.
+ */
+export async function discoverDatasets(
+  query: string,
+  limit: number = 10
+): Promise<DatasetDiscoveryResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+  });
+  return apiGet<DatasetDiscoveryResponse>(
+    `/api/dataset-discover?${params.toString()}`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Bulk conversation operations
 // ---------------------------------------------------------------------------
 

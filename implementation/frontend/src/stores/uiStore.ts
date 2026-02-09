@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SqlExecution } from "@/stores/chatStore";
 
-export type RightPanelTab = "datasets" | "history";
+export type RightPanelTab = "datasets" | "history" | "discover";
 
 interface UiState {
   leftPanelOpen: boolean;

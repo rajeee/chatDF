@@ -15,6 +15,7 @@ export interface SavedQuery {
   result_data?: SavedQueryResultData;
   execution_time_ms?: number | null;
   folder: string;
+  is_pinned: boolean;
 }
 
 interface SavedQueryState {
@@ -27,6 +28,7 @@ interface SavedQueryActions {
   saveQuery: (name: string, query: string, resultData?: SavedQueryResultData, executionTimeMs?: number | null, folder?: string) => Promise<SavedQuery>;
   deleteQuery: (id: string) => Promise<void>;
   moveToFolder: (id: string, folder: string) => Promise<void>;
+  togglePin: (id: string) => Promise<void>;
   getFolders: () => string[];
 }
 
@@ -35,7 +37,7 @@ const MAX_BOOKMARK_ROWS = 100;
 
 /** Parse a raw API response (with result_json string) into a SavedQuery with result_data. */
 function parseRawSavedQuery(raw: RawSavedQuery): SavedQuery {
-  const { result_json, execution_time_ms, folder, ...rest } = raw;
+  const { result_json, execution_time_ms, folder, is_pinned, ...rest } = raw;
   let result_data: SavedQueryResultData | undefined;
   if (result_json) {
     try {
@@ -44,7 +46,7 @@ function parseRawSavedQuery(raw: RawSavedQuery): SavedQuery {
       // Ignore malformed JSON
     }
   }
-  return { ...rest, result_data, execution_time_ms, folder: folder ?? "" };
+  return { ...rest, result_data, execution_time_ms, folder: folder ?? "", is_pinned: is_pinned ?? false };
 }
 
 /** Raw API shape (result_json is a JSON string from the backend). */
@@ -56,6 +58,7 @@ interface RawSavedQuery {
   result_json?: string | null;
   execution_time_ms?: number | null;
   folder?: string;
+  is_pinned?: boolean;
 }
 
 export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()((set, get) => ({
@@ -108,6 +111,42 @@ export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()(
         q.id === id ? { ...q, folder } : q
       ),
     }));
+  },
+
+  togglePin: async (id: string) => {
+    // Optimistically update the pin state
+    const currentQueries = get().queries;
+    const query = currentQueries.find((q) => q.id === id);
+    if (!query) return;
+    const newPinned = !query.is_pinned;
+    set((state) => {
+      const updated = state.queries.map((q) =>
+        q.id === id ? { ...q, is_pinned: newPinned } : q
+      );
+      // Sort pinned to top, then by original order
+      updated.sort((a, b) => {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        return 0;
+      });
+      return { queries: updated };
+    });
+    try {
+      await apiPatch(`/saved-queries/${id}/pin`);
+    } catch {
+      // Revert on failure
+      set((state) => {
+        const reverted = state.queries.map((q) =>
+          q.id === id ? { ...q, is_pinned: !newPinned } : q
+        );
+        reverted.sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          return 0;
+        });
+        return { queries: reverted };
+      });
+    }
   },
 
   getFolders: () => {

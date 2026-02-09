@@ -23,6 +23,7 @@ import { QueryResultComparisonModal } from "./QueryResultComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
 import { RunSqlPanel } from "./RunSqlPanel";
 import { QueryHistoryPanel } from "./QueryHistoryPanel";
+import { DatasetDiscoveryPanel } from "./DatasetDiscoveryPanel";
 
 export function RightPanel() {
   const conversationId = useChatStore((s) => s.activeConversationId);
@@ -207,6 +208,12 @@ export function RightPanel() {
                 <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             )},
+            { key: "discover" as RightPanelTab, label: "Discover", icon: (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            )},
             { key: "history" as RightPanelTab, label: "History", icon: (
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
@@ -317,6 +324,10 @@ export function RightPanel() {
                 <RunSqlPanel conversationId={conversationId} />
               )}
             </>
+          )}
+
+          {rightPanelTab === "discover" && (
+            <DatasetDiscoveryPanel />
           )}
 
           {rightPanelTab === "history" && (

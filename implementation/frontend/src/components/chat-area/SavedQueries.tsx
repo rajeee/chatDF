@@ -193,6 +193,7 @@ function SavedQueryItem({
   onRunQuery?: (query: string) => void;
 }) {
   const deleteQuery = useSavedQueryStore((s) => s.deleteQuery);
+  const togglePin = useSavedQueryStore((s) => s.togglePin);
 
   const handleViewResults = useCallback((query: string, resultData: { columns: string[]; rows: unknown[][]; total_rows: number }) => {
     const execution: SqlExecution = {
@@ -212,7 +213,7 @@ function SavedQueryItem({
     <div key={q.id}>
       <div
         data-testid={`saved-query-${q.id}`}
-        className="flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+        className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group${q.is_pinned ? " bg-blue-50/50 dark:bg-blue-900/10" : ""}`}
         style={{ color: "var(--color-text)" }}
         onClick={() => onCopy(q.query, q.id)}
       >
@@ -289,6 +290,18 @@ function SavedQueryItem({
             </svg>
           </button>
         )}
+        <button
+          data-testid={`pin-saved-query-${q.id}`}
+          className={`p-0.5 rounded transition-opacity ${q.is_pinned ? "opacity-100" : "opacity-0 group-hover:opacity-60 hover:!opacity-100"}`}
+          style={{ color: q.is_pinned ? "var(--color-accent)" : "var(--color-text-muted)" }}
+          onClick={(e) => { e.stopPropagation(); togglePin(q.id); }}
+          aria-label={q.is_pinned ? `Unpin ${q.name}` : `Pin ${q.name}`}
+          title={q.is_pinned ? "Unpin query" : "Pin query"}
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill={q.is_pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 4.5L19.5 9l-3 3 1.5 7.5L12 13.5 5.5 20l2-7.5-3.5-3L9 4.5 12 2l3 2.5z" />
+          </svg>
+        </button>
         <FolderDropdown queryId={q.id} currentFolder={q.folder} folders={folders} />
         {onRunQuery && (
           <button

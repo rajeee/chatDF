@@ -5,6 +5,7 @@ Endpoints:
 - GET /saved-queries               -> list saved queries
 - GET /saved-queries/folders       -> list unique folder names
 - PATCH /saved-queries/{id}/folder -> move a query to a different folder
+- PATCH /saved-queries/{id}/pin    -> toggle pin status
 - DELETE /saved-queries/{id}       -> delete a saved query
 """
 
@@ -45,6 +46,7 @@ async def save_query(
         id=query_id, name=body.name, query=body.query, result_json=body.result_json,
         execution_time_ms=body.execution_time_ms,
         folder=body.folder,
+        is_pinned=False,
         created_at=datetime.fromisoformat(now),
     )
 
@@ -70,7 +72,7 @@ async def list_saved_queries(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> SavedQueryListResponse:
     cursor = await db.execute(
-        "SELECT id, name, query, result_json, execution_time_ms, folder, created_at FROM saved_queries WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT id, name, query, result_json, execution_time_ms, folder, is_pinned, created_at FROM saved_queries WHERE user_id = ? ORDER BY is_pinned DESC, created_at DESC",
         (user["id"],),
     )
     rows = await cursor.fetchall()
@@ -82,6 +84,7 @@ async def list_saved_queries(
             result_json=row["result_json"],
             execution_time_ms=row["execution_time_ms"],
             folder=row["folder"],
+            is_pinned=bool(row["is_pinned"]),
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in rows
@@ -112,6 +115,40 @@ async def update_query_folder(
     )
     await db.commit()
     return SuccessResponse(success=True)
+
+
+@router.patch("/{query_id}/pin", response_model=SavedQueryResponse)
+async def toggle_pin(
+    query_id: str,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> SavedQueryResponse:
+    """Toggle the is_pinned status of a saved query."""
+    cursor = await db.execute(
+        "SELECT id, name, query, result_json, execution_time_ms, folder, is_pinned, created_at FROM saved_queries WHERE id = ? AND user_id = ?",
+        (query_id, user["id"]),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        from app.exceptions import NotFoundError
+
+        raise NotFoundError("Saved query not found")
+    new_pinned = 0 if row["is_pinned"] else 1
+    await db.execute(
+        "UPDATE saved_queries SET is_pinned = ? WHERE id = ?",
+        (new_pinned, query_id),
+    )
+    await db.commit()
+    return SavedQueryResponse(
+        id=row["id"],
+        name=row["name"],
+        query=row["query"],
+        result_json=row["result_json"],
+        execution_time_ms=row["execution_time_ms"],
+        folder=row["folder"],
+        is_pinned=bool(new_pinned),
+        created_at=datetime.fromisoformat(row["created_at"]),
+    )
 
 
 @router.delete("/{query_id}", response_model=SuccessResponse)

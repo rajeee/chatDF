@@ -79,10 +79,20 @@ export function QueryResultComparisonModal() {
     }
   }, [isOpen, handleKeyDown]);
 
-  // Build list of saved queries that have result data
+  // Build list of saved queries that have result data, split into pinned and unpinned
   const savedWithData = useMemo(
     () => savedQueries.filter((q) => q.result_data),
     [savedQueries]
+  );
+
+  const pinnedWithData = useMemo(
+    () => savedWithData.filter((q) => q.is_pinned),
+    [savedWithData]
+  );
+
+  const unpinnedWithData = useMemo(
+    () => savedWithData.filter((q) => !q.is_pinned),
+    [savedWithData]
   );
 
   // Resolve a source key to a ComparisonResult
@@ -148,9 +158,18 @@ export function QueryResultComparisonModal() {
     return (
       <>
         {currentResult && <option value="current">Current Result</option>}
-        {savedWithData.length > 0 && (
+        {pinnedWithData.length > 0 && (
+          <optgroup label="Pinned">
+            {pinnedWithData.map((sq) => (
+              <option key={sq.id} value={`saved:${sq.id}`}>
+                [pinned] {sq.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {unpinnedWithData.length > 0 && (
           <optgroup label="Saved Queries">
-            {savedWithData.map((sq) => (
+            {unpinnedWithData.map((sq) => (
               <option key={sq.id} value={`saved:${sq.id}`}>
                 {sq.name}
               </option>

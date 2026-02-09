@@ -342,6 +342,15 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     except Exception:
         pass  # Column already exists
 
+    # Migration: add is_pinned column to saved_queries
+    try:
+        await conn.execute(
+            "ALTER TABLE saved_queries ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
 
 # Backward compatibility alias
 init_db = init_db_schema

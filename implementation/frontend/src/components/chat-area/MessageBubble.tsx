@@ -14,6 +14,8 @@ import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
 import { detectChartTypes } from "@/utils/chartDetection";
 import { highlightText } from "@/utils/highlightText";
+import { downloadCsv } from "@/utils/csvExport";
+import { downloadExcel } from "@/utils/excelExport";
 
 /** Recursively highlight text nodes within React children */
 function highlightChildren(children: React.ReactNode, query: string): React.ReactNode {
@@ -274,6 +276,21 @@ function MessageBubbleComponent({
                   </span>
                 );
               })()}
+              {(() => {
+                const totalRows = message.sql_executions.reduce(
+                  (sum, e) => sum + (e.total_rows ?? e.rows?.length ?? 0), 0
+                );
+                if (totalRows <= 0) return null;
+                return (
+                  <span
+                    data-testid={`sql-rows-badge-${message.id}`}
+                    className="opacity-40 font-mono tabular-nums text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: "var(--color-border)" }}
+                  >
+                    {totalRows.toLocaleString()} rows
+                  </span>
+                );
+              })()}
             </button>
             {/* SQL preview content with smooth expand/collapse */}
             <div
@@ -298,6 +315,47 @@ function MessageBubbleComponent({
               >
                 {message.sql_executions.map((exec, i) => exec.query).join(";\n\n")}
               </pre>
+              {/* Quick export buttons */}
+              {message.sql_executions.some(e => e.columns && e.rows && e.rows.length > 0) && (
+                <div
+                  data-testid={`sql-quick-export-${message.id}`}
+                  className="flex items-center gap-1 px-2 py-1 border-t"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <span className="text-[10px] opacity-40 mr-1">Export:</span>
+                  {message.sql_executions.map((exec, i) => {
+                    if (!exec.columns || !exec.rows || exec.rows.length === 0) return null;
+                    const label = message.sql_executions.filter(e => e.columns && e.rows && e.rows.length > 0).length > 1
+                      ? `Q${i + 1} ` : "";
+                    return (
+                      <span key={i} className="flex items-center gap-1">
+                        <button
+                          data-testid={`export-csv-btn-${message.id}-${i}`}
+                          className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
+                          style={{ color: "var(--color-accent)" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadCsv(exec.columns!, exec.rows!, `query_${i + 1}.csv`);
+                          }}
+                        >
+                          {label}CSV
+                        </button>
+                        <button
+                          data-testid={`export-xlsx-btn-${message.id}-${i}`}
+                          className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
+                          style={{ color: "var(--color-accent)" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadExcel(exec.columns!, exec.rows!, `query_${i + 1}`);
+                          }}
+                        >
+                          {label}XLSX
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}

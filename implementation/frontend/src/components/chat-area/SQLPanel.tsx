@@ -82,7 +82,12 @@ function SQLQueryBlock({
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
   const isDark = document.documentElement.classList.contains("dark");
+
+  const conversationId = useChatStore((s) => s.activeConversationId);
+  const datasets = useDatasetStore((s) => s.datasets);
 
   useCodeMirror(editorRef, execution.query, isDark);
 
@@ -115,6 +120,28 @@ function SQLQueryBlock({
       setSaving(false);
     }
   }, [execution.query, execution.columns, execution.rows, execution.total_rows, execution.execution_time_ms]);
+
+  const handleExplain = useCallback(async () => {
+    if (!conversationId || explaining) return;
+    setExplaining(true);
+    try {
+      // Build schema context from loaded datasets
+      const schemaJson = JSON.stringify(
+        Object.fromEntries(
+          Array.from(datasets.values()).map(ds => [
+            ds.name,
+            ds.schema?.map(c => ({ name: c.name, type: c.type })) ?? []
+          ])
+        )
+      );
+      const result = await explainSql(conversationId, execution.query, schemaJson);
+      setExplanation(result.explanation);
+    } catch {
+      setExplanation("Failed to generate explanation.");
+    } finally {
+      setExplaining(false);
+    }
+  }, [conversationId, execution.query, explaining, datasets]);
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
   const hasChartData = useMemo(
@@ -154,6 +181,15 @@ function SQLQueryBlock({
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={handleExplain}
+            disabled={explaining || !conversationId}
+            data-testid={`explain-sql-btn-${index}`}
+            className="text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            {explaining ? "Explaining..." : explanation ? "Re-explain" : "Explain"}
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={saving || saved}
             data-testid={`save-query-btn-${index}`}
@@ -173,6 +209,29 @@ function SQLQueryBlock({
 
       {/* CodeMirror editor */}
       <div ref={editorRef} className="max-h-[200px] overflow-y-auto" />
+
+      {/* SQL explanation */}
+      {explanation && (
+        <div
+          data-testid={`sql-explanation-${index}`}
+          className="px-3 py-2 text-xs border-t"
+          style={{
+            borderColor: "var(--color-border)",
+            backgroundColor: "color-mix(in srgb, var(--color-accent) 5%, var(--color-bg))",
+            color: "var(--color-text)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 mb-1 opacity-60 font-medium">
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Explanation
+          </div>
+          <p className="leading-relaxed">{explanation}</p>
+        </div>
+      )}
 
       {/* Error / View Output footer */}
       {(execution.error || hasOutput) && (

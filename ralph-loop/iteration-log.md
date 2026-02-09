@@ -89,3 +89,4 @@ Track each improvement cycle: what was done, what was learned.
 | 82 | 2026-02-09 | Search count badge, copy dataset URL, copy animation, active glow | U118, U119, U120, U121 | 873/880 frontend (+17 new tests, 7 pre-existing failures), 64/65 backend | b841cbc |
 | 84 | 2026-02-09 | Dataset stats tooltip, message density toggle | U122, U123 | 901/908 frontend (+28 new tests, 7 pre-existing failures), 64/65 backend | 51e989b |
 | 85 | 2026-02-09 | Missing CSS vars, theme consistency, resize glow, chart fade-in | U124, U126, U127, U128 | 901/908 frontend (0 new failures, 7 pre-existing), 64/65 backend | 79967b0 |
+| 86 | 2026-02-09 | Send spinner, DataGrid row fade-in, action button animation, success pulse | U129, U130, U131, U132 | 901/908 frontend (0 new failures, 7 pre-existing), 64/65 backend | f61d534 |

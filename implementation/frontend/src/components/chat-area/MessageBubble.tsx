@@ -317,12 +317,12 @@ function MessageBubbleComponent({
 
         {/* Action buttons row */}
         {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0) && (
-          <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
+          <div className="mt-2 flex flex-wrap gap-2">
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
-                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': 0 } as React.CSSProperties}
                 onClick={() => onShowReasoning(reasoningContent)}
               >
                 Show Reasoning
@@ -332,8 +332,8 @@ function MessageBubbleComponent({
             {/* Show SQL button */}
             {message.sql_executions.length > 0 && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
-                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': reasoningContent ? 1 : 0 } as React.CSSProperties}
                 onClick={() => onShowSQL(message.sql_executions)}
               >
                 Show SQL ({message.sql_executions.length})
@@ -344,12 +344,13 @@ function MessageBubbleComponent({
             {visualizableIndex >= 0 && (
               <button
                 data-testid={`visualize-btn-${message.id}`}
-                className="text-xs px-3 py-1 rounded border font-medium hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
+                className="action-btn-stagger text-xs px-3 py-1 rounded border font-medium hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
                 style={{
                   borderColor: "var(--color-success)",
                   color: "var(--color-success)",
                   backgroundColor: "color-mix(in srgb, var(--color-success) 10%, transparent)",
-                }}
+                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0),
+                } as React.CSSProperties}
                 onClick={() => onVisualize(message.sql_executions, visualizableIndex)}
                 aria-label="Visualize query results"
               >

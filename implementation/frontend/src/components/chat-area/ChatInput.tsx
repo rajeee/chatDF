@@ -35,6 +35,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const charCount = inputValue.length;
     const trimmedEmpty = inputValue.trim().length === 0;
     const isSending = loadingPhase === "thinking" && !isStreaming;
+    const isReady = !trimmedEmpty && !dailyLimitReached && !isSending;
 
     // Auto-focus on mount
     useEffect(() => {
@@ -189,7 +190,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               aria-label="Send message"
               title="Send message (⏎)"
-              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-accent)]/10 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-accent)]/10 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isReady ? "send-btn-glow" : ""}`}
               onClick={handleSend}
               disabled={trimmedEmpty || dailyLimitReached || isSending}
               data-sending={isSending}

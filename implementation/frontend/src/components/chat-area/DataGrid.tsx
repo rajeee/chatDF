@@ -242,8 +242,18 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                         onMouseDown={header.getResizeHandler()}
                         onTouchStart={header.getResizeHandler()}
                         onDoubleClick={() => header.column.resetSize()}
-                        className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none hover:bg-blue-400"
-                        style={{ userSelect: "none" }}
+                        className={`absolute right-0 top-0 h-full cursor-col-resize select-none touch-none transition-all duration-150 ${
+                          header.column.getIsResizing()
+                            ? "w-1 opacity-100"
+                            : "w-1 opacity-0 hover:opacity-100"
+                        }`}
+                        style={{
+                          userSelect: "none",
+                          backgroundColor: "var(--color-accent)",
+                          boxShadow: header.column.getIsResizing()
+                            ? "0 0 6px color-mix(in srgb, var(--color-accent) 50%, transparent)"
+                            : undefined,
+                        }}
                       />
                     </th>
                   );

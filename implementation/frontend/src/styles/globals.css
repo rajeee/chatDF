@@ -599,6 +599,27 @@ select:focus-visible {
   animation: successPulse 0.6s ease-out;
 }
 
+/* Send button ready-state glow — subtle breathing pulse when input has text */
+@keyframes sendGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+}
+
+.send-btn-glow {
+  animation: sendGlow 2s ease-in-out infinite;
+}
+
+/* Action button staggered entrance — per-button delay within message action row */
+.action-btn-stagger {
+  opacity: 0;
+  animation: fadeInUp 0.25s ease-out forwards;
+  animation-delay: calc(var(--btn-index, 0) * 60ms);
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
@@ -623,7 +644,8 @@ select:focus-visible {
   .copy-check-enter,
   .chart-fade-in,
   .datagrid-row-enter,
-  .success-pulse {
+  .success-pulse,
+  .action-btn-stagger {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }
@@ -634,6 +656,10 @@ select:focus-visible {
   }
 
   .empty-state-float {
+    animation: none !important;
+  }
+
+  .send-btn-glow {
     animation: none !important;
   }
 

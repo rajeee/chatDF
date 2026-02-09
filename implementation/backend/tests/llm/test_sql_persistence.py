@@ -100,7 +100,7 @@ class TestExecuteSqlFullRows:
         )
 
         messages = [{"role": "user", "content": "Show data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query_large)
 
         assert len(result.sql_executions) == 1
         ex = result.sql_executions[0]
@@ -133,7 +133,7 @@ class TestExecuteSqlFullRows:
             )
 
             messages = [{"role": "user", "content": "query"}]
-            result = await stream_chat(messages, sample_datasets, mock_ws_send)
+            result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_wp)
 
         ex = result.sql_executions[0]
         assert len(ex.rows) == 50
@@ -162,7 +162,7 @@ class TestExecuteSqlFullRows:
             )
 
             messages = [{"role": "user", "content": "query"}]
-            result = await stream_chat(messages, sample_datasets, mock_ws_send)
+            result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_wp)
 
         ex = result.sql_executions[0]
         assert ex.error is not None

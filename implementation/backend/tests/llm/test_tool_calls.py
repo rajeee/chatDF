@@ -61,12 +61,12 @@ class TestExecuteSqlToolCall:
         # Second call: final text response after tool result
         text_stream = make_text_stream(["Here are the results."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream, text_stream]
         )
 
         messages = [{"role": "user", "content": "Show me the data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         mock_run_query.run_query.assert_awaited_once()
         call_args = mock_run_query.run_query.call_args
@@ -82,15 +82,15 @@ class TestExecuteSqlToolCall:
         )
         text_stream = make_text_stream(["The results show one row."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream, text_stream]
         )
 
         messages = [{"role": "user", "content": "Show me data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         # Gemini should have been called twice: initial + after tool result
-        assert mock_gemini_client.models.generate_content_stream.call_count == 2
+        assert mock_gemini_client.aio.models.generate_content_stream.call_count == 2
 
     @pytest.mark.asyncio
     async def test_tool_call_start_event_sent(
@@ -102,18 +102,18 @@ class TestExecuteSqlToolCall:
         )
         text_stream = make_text_stream(["Done."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream, text_stream]
         )
 
         messages = [{"role": "user", "content": "test"}]
-        await stream_chat(messages, sample_datasets, mock_ws_send)
+        await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         tool_start_events = [
-            m for m in mock_ws_send.messages if m["type"] == "tool_call_start"
+            m for m in mock_ws_send.messages if m["type"] == "tcs"
         ]
         assert len(tool_start_events) >= 1
-        assert tool_start_events[0]["tool"] == "execute_sql"
+        assert tool_start_events[0]["tl"] == "execute_sql"
 
 
 class TestLoadDatasetToolCall:
@@ -134,12 +134,12 @@ class TestLoadDatasetToolCall:
         )
         text_stream = make_text_stream(["Dataset loaded successfully."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream, text_stream]
         )
 
         messages = [{"role": "user", "content": "Load this data"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         mock_dataset_service.add_dataset.assert_awaited_once()
         call_args = mock_dataset_service.add_dataset.call_args
@@ -160,14 +160,14 @@ class TestLoadDatasetToolCall:
         )
         text_stream = make_text_stream(["I loaded the dataset."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=[tool_stream, text_stream]
         )
 
         messages = [{"role": "user", "content": "Load this"}]
-        await stream_chat(messages, sample_datasets, mock_ws_send)
+        await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
-        assert mock_gemini_client.models.generate_content_stream.call_count == 2
+        assert mock_gemini_client.aio.models.generate_content_stream.call_count == 2
 
 
 class TestMaxToolCalls:
@@ -187,12 +187,12 @@ class TestMaxToolCalls:
 
         # After 5 tool calls, the 6th should not be dispatched;
         # instead the LLM should be forced to respond
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=tool_streams + [final_text]
         )
 
         messages = [{"role": "user", "content": "Run many queries"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         # run_query should have been called at most 5 times
         assert mock_run_query.run_query.await_count <= 5
@@ -208,12 +208,12 @@ class TestMaxToolCalls:
         ]
         final_text = make_text_stream(["Summary after 5 calls."])
 
-        mock_gemini_client.models.generate_content_stream = MagicMock(
+        mock_gemini_client.aio.models.generate_content_stream = AsyncMock(
             side_effect=tool_streams + [final_text]
         )
 
         messages = [{"role": "user", "content": "Run queries"}]
-        result = await stream_chat(messages, sample_datasets, mock_ws_send)
+        result = await stream_chat(messages, sample_datasets, mock_ws_send, pool=mock_run_query)
 
         assert result.assistant_message is not None
         assert len(result.assistant_message) > 0

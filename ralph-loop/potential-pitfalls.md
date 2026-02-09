@@ -7,7 +7,6 @@
 ## Frontend
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
-- **Plotly.js is heavy (~1MB)**: Always lazy-load via `React.lazy()`. Mock with `vi.mock("react-plotly.js", ...)` in tests.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 
 ## Testing

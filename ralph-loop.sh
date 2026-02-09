@@ -193,9 +193,21 @@ echo ""
 
 iteration=0
 
+STOP_FILE="$LOOP_DIR/stop_condition.md"
+
 while true; do
   iter_num=$(get_iteration_number)
   iteration=$((iteration + 1))
+
+  # Check stop condition file
+  if [[ -f "$STOP_FILE" ]] && [[ -s "$STOP_FILE" ]]; then
+    reason=$(cat "$STOP_FILE")
+    > "$STOP_FILE"  # Clear immediately so next start isn't blocked
+    echo ""
+    ok "Stop condition found: ${BOLD}$reason${NC}"
+    ok "Stopped gracefully. File cleared — next start will run normally."
+    break
+  fi
 
   # Check max iterations
   if [[ $MAX_ITERATIONS -gt 0 && $iteration -gt $MAX_ITERATIONS ]]; then
@@ -251,6 +263,13 @@ while true; do
 
   # Stop watchdog
   stop_watchdog
+
+  # Kill orphaned tinypool workers from vitest runs
+  orphaned=$(pgrep -f "tinypool.*process\.js" 2>/dev/null | wc -l)
+  if [[ $orphaned -gt 0 ]]; then
+    pkill -f "tinypool.*process\.js" 2>/dev/null || true
+    warn "Killed $orphaned orphaned tinypool worker(s)"
+  fi
 
   echo ""
   if [[ $exit_code -eq 0 ]]; then

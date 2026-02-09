@@ -53,3 +53,4 @@ uploads/
 
 # Ralph-loop logs
 ralph-loop/logs/*.pid
+ralph-loop/stop_condition.md

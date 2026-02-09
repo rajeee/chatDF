@@ -5,6 +5,7 @@ const SHORTCUTS = [
   { keys: ["/"], description: "Focus chat input" },
   { keys: ["Ctrl", "K"], description: "Focus chat input" },
   { keys: ["Ctrl", "B"], description: "Toggle left sidebar" },
+  { keys: ["Ctrl", "E"], description: "Toggle dataset panel" },
   { keys: ["Ctrl", "P"], description: "Toggle pin on conversation" },
   { keys: ["Ctrl", "Enter"], description: "Send message" },
   { keys: ["Ctrl", "Shift", "F"], description: "Search messages" },

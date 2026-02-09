@@ -3,7 +3,7 @@
 // TanStack Table integration with sorting, resizing, pagination,
 // null cell display, numeric alignment, copy as TSV.
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -73,6 +73,7 @@ interface DataGridProps {
 export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [copied, setCopied] = useState(false);
+  const [pageTransitioning, setPageTransitioning] = useState(false);
 
   // Detect which columns are numeric by checking the first non-null value
   const numericColumns = useMemo(() => {
@@ -142,6 +143,17 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
   // Sync input value when current page changes (e.g. via Previous/Next buttons)
   useEffect(() => {
     setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  // Brief fade transition on page change
+  const prevPageRef = useRef(currentPage);
+  useEffect(() => {
+    if (prevPageRef.current !== currentPage) {
+      prevPageRef.current = currentPage;
+      setPageTransitioning(true);
+      const timer = setTimeout(() => setPageTransitioning(false), 150);
+      return () => clearTimeout(timer);
+    }
   }, [currentPage]);
 
   const goToPage = useCallback(() => {
@@ -239,7 +251,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               </tr>
             ))}
           </thead>
-          <tbody data-testid="data-grid-body">
+          <tbody data-testid="data-grid-body" className={`transition-opacity duration-150${pageTransitioning ? " opacity-30" : ""}`}>
             {rows.length === 0 ? (
               <tr>
                 <td

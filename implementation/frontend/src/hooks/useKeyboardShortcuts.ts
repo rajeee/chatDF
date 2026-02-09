@@ -2,6 +2,7 @@
 // - "/" - Focus chat input (like Discord/Slack)
 // - "Ctrl/Cmd+K" - Focus chat input (industry standard like Linear, Notion, GitHub)
 // - "Ctrl/Cmd+B" - Toggle left sidebar
+// - "Ctrl/Cmd+E" - Toggle right (dataset) panel
 // - "Ctrl/Cmd+P" - Toggle pin on active conversation
 // - "Ctrl/Cmd+Shift+F" - Toggle message search
 // - "Ctrl/Cmd+Enter" - Send message (when chat input is focused)
@@ -27,6 +28,7 @@ interface UseKeyboardShortcutsOptions {
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
   const { chatInputRef } = options;
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
+  const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -62,6 +64,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
       if ((e.ctrlKey || e.metaKey) && e.key === "b") {
         e.preventDefault();
         toggleLeftPanel();
+        return;
+      }
+
+      // Ctrl/Cmd+E - Toggle right (dataset) panel
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+        e.preventDefault();
+        toggleRightPanel();
         return;
       }
 
@@ -122,5 +131,5 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
       document.removeEventListener("keydown", handleKeyDown);
       themeController.destroy();
     };
-  }, [chatInputRef, toggleLeftPanel, queryClient]);
+  }, [chatInputRef, toggleLeftPanel, toggleRightPanel, queryClient]);
 }

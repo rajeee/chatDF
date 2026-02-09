@@ -12,7 +12,9 @@ Endpoints (all under /conversations/{conversation_id}/datasets):
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import math
 import os
 from datetime import datetime
@@ -36,6 +38,8 @@ from app.models import (
 )
 from app.services import dataset_service
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -46,6 +50,25 @@ router = APIRouter()
 
 def _get_worker_pool(request: Request) -> object:
     return request.app.state.worker_pool
+
+
+async def _auto_profile_dataset(
+    worker_pool, connection_manager, user_id: str, dataset_id: str, url: str
+) -> None:
+    """Background task: profile columns after dataset load, send results via WS."""
+    try:
+        profile_result = await worker_pool.profile_columns(url)
+        if connection_manager is not None and profile_result.get("profiles"):
+            await connection_manager.send_to_user(
+                user_id,
+                {
+                    "type": "dataset_profiled",
+                    "dataset_id": dataset_id,
+                    "profiles": profile_result["profiles"],
+                },
+            )
+    except Exception:
+        logger.warning("Auto-profile failed for dataset %s", dataset_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +156,13 @@ async def add_dataset(
                 },
             },
         )
+
+    # Fire-and-forget: auto-profile columns in the background
+    asyncio.create_task(
+        _auto_profile_dataset(
+            worker_pool, connection_manager, user["id"], result["id"], result["url"]
+        )
+    )
 
     return DatasetAckResponse(dataset_id=result["id"], status="loading")
 

@@ -44,6 +44,7 @@ interface DatasetActions {
   setConversationDatasets: (conversationId: string, datasets: Dataset[]) => void;
   getLoadingStartTime: (id: string) => number | undefined;
   profileDataset: (conversationId: string, datasetId: string) => Promise<void>;
+  setColumnProfiles: (datasetId: string, profiles: ColumnProfile[]) => void;
   reset: () => void;
 }
 
@@ -118,6 +119,10 @@ export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => 
   getLoadingStartTime: (id) => useDatasetStore.getState().loadingStartTimes[id],
 
   profileDataset: async (conversationId, datasetId) => {
+    // Skip if already profiled (e.g., via auto-profile on load)
+    const existing = useDatasetStore.getState().columnProfiles[datasetId];
+    if (existing && existing.length > 0) return;
+
     set((state) => ({
       isProfiling: { ...state.isProfiling, [datasetId]: true },
     }));
@@ -135,6 +140,12 @@ export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => 
       }));
     }
   },
+
+  setColumnProfiles: (datasetId, profiles) =>
+    set((state) => ({
+      columnProfiles: { ...state.columnProfiles, [datasetId]: profiles },
+      isProfiling: { ...state.isProfiling, [datasetId]: false },
+    })),
 
   reset: () =>
     set({

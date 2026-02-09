@@ -81,3 +81,5 @@ Track each improvement cycle: what was done, what was learned.
 | 75 | 2026-02-08 | LLM-driven chart visualization Phase 1 MVP | work.md Phase 1 | 803/811 frontend (8 pre-existing failures), 64/65 backend | 95534f3 |
 | 76 | 2026-02-09 | Heatmap & choropleth charts + user chart controls (Phase 2 & 3) | work.md Phase 2 & 3 | 807/815 frontend (+4 new detection tests, 8 pre-existing failures), 64/65 backend | f8abc25 |
 | 77 | 2026-02-09 | Thinking indicator, DataGrid sort polish, message cascade | U96, U97, U98 | 824/832 frontend (+17 new tests, 8 pre-existing failures), 64/65 backend | e54cb90 |
+| 78 | 2026-02-09 | Dropdown animation, resize handles, scroll throttle, sort polish | U99, U100, U101, U102 | 824/832 frontend (0 new failures, 8 pre-existing), 64/65 backend | f17df44 |
+| 79 | 2026-02-09 | Optimistic pin, deferred search, query progress, mobile backdrop | U93, U103, U104, U105 | 824/832 frontend (0 new failures, 8 pre-existing), 64/65 backend | 75c8982 |

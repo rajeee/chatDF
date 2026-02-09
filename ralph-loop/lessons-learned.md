@@ -8,3 +8,5 @@
 - **WS events during streaming need pending queues**: Chart specs arrive via WS before `chat_complete` finalizes the message. Store them as pending and merge when `chat_complete` arrives.
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **rAF throttle breaks sync test assertions**: When adding `requestAnimationFrame` throttling, tests need `await act(async () => { ... await new Promise(r => requestAnimationFrame(r)); })` to flush the frame.
+- **useDeferredValue > debounce for search filters**: React's `useDeferredValue` is simpler and more framework-aligned than manual debounce for filtering lists. The deferred value lets React skip intermediate renders naturally, while the input stays responsive.
+- **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates (`onMutate` → `setQueryData`), always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.

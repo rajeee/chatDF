@@ -21,6 +21,7 @@ from app.models import (
     AddDatasetRequest,
     DatasetAckResponse,
     DatasetDetailResponse,
+    DatasetPreviewResponse,
     RenameDatasetRequest,
     SuccessResponse,
 )
@@ -224,6 +225,48 @@ async def profile_dataset(
         raise HTTPException(status_code=500, detail=result.get("message", "Profiling failed"))
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/datasets/{dataset_id}/preview
+# Quick-preview: return up to 10 sample rows from the dataset
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{dataset_id}/preview", response_model=DatasetPreviewResponse)
+async def preview_dataset(
+    request: Request,
+    dataset_id: str,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> DatasetPreviewResponse:
+    """Return up to 10 sample rows from a dataset for quick preview."""
+    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    worker_pool = _get_worker_pool(request)
+    table_name = ds["name"]
+    sql = f'SELECT * FROM "{table_name}" LIMIT 10'
+    datasets = [{"url": ds["url"], "table_name": table_name}]
+
+    result = await worker_pool.run_query(sql, datasets)
+
+    if "error_type" in result:
+        raise HTTPException(
+            status_code=500,
+            detail=result.get("message", "Preview query failed"),
+        )
+
+    # Convert row dicts to list-of-lists for the response
+    columns = result.get("columns", [])
+    row_dicts = result.get("rows", [])
+    rows = [[row.get(col) for col in columns] for row in row_dicts]
+
+    return DatasetPreviewResponse(
+        columns=columns,
+        rows=rows,
+        total_rows=ds["row_count"],
+    )
 
 
 # ---------------------------------------------------------------------------

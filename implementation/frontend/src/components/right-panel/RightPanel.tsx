@@ -13,6 +13,7 @@ import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
 import { SchemaModal } from "./SchemaModal";
+import { PreviewModal } from "./PreviewModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
 
 export function RightPanel() {
@@ -167,6 +168,7 @@ export function RightPanel() {
         </div>
       </div>
       <SchemaModal />
+      <PreviewModal />
       <PresetSourcesModal />
     </aside>
   );

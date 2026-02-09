@@ -15,6 +15,7 @@ interface UiState {
   sqlResultViewMode: "table" | "chart";
   chartModalExecution: SqlExecution | null;
   schemaModalDatasetId: string | null;
+  previewModalDatasetId: string | null;
   presetModalOpen: boolean;
   reasoningModalOpen: boolean;
   activeReasoning: string;
@@ -36,6 +37,8 @@ interface UiActions {
   closeChartModal: () => void;
   openSchemaModal: (datasetId: string) => void;
   closeSchemaModal: () => void;
+  openPreviewModal: (datasetId: string) => void;
+  closePreviewModal: () => void;
   openPresetModal: () => void;
   closePresetModal: () => void;
   openReasoningModal: (reasoning: string) => void;
@@ -58,6 +61,7 @@ export const useUiStore = create<UiState & UiActions>()(
       sqlResultViewMode: "table" as const,
       chartModalExecution: null,
       schemaModalDatasetId: null,
+      previewModalDatasetId: null,
       presetModalOpen: false,
       reasoningModalOpen: false,
       activeReasoning: "",
@@ -103,6 +107,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeSchemaModal: () =>
         set({ schemaModalDatasetId: null }),
+
+      openPreviewModal: (datasetId) =>
+        set({ previewModalDatasetId: datasetId }),
+
+      closePreviewModal: () =>
+        set({ previewModalDatasetId: null }),
 
       openPresetModal: () =>
         set({ presetModalOpen: true }),

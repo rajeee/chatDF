@@ -147,6 +147,14 @@ class DatasetDetailResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class DatasetPreviewResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/datasets/{dataset_id}/preview``."""
+
+    columns: list[str]
+    rows: list[list[Any]]
+    total_rows: int
+
+
 class UsageResponse(BaseModel):
     """Response for ``GET /usage``."""
 

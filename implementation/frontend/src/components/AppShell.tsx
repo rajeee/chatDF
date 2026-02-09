@@ -6,6 +6,8 @@
 // Contains Header + main grid with LeftPanel, ChatArea, RightPanel.
 // Below 1024px: left and right panels as fixed overlays with backdrop.
 
+import { useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useUiStore } from "@/stores/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -23,12 +25,34 @@ export function AppShell() {
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
 
   const { isAuthenticated } = useAuth();
+  const { conversationId: urlConversationId } = useParams<{ conversationId: string }>();
+  const navigate = useNavigate();
 
   // Establish WebSocket connection when authenticated
   useWebSocket(isAuthenticated);
 
   // Load conversation data when active conversation changes
-  useConversation();
+  const { activeConversationId, switchConversation } = useConversation();
+
+  // On mount: if URL has a conversationId, switch to it
+  const initialSyncDone = useRef(false);
+  useEffect(() => {
+    if (initialSyncDone.current) return;
+    initialSyncDone.current = true;
+    if (urlConversationId && urlConversationId !== activeConversationId) {
+      switchConversation(urlConversationId);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync URL when activeConversationId changes (user clicks sidebar, creates conversation, etc.)
+  useEffect(() => {
+    const currentUrlId = urlConversationId ?? null;
+    if (activeConversationId && activeConversationId !== currentUrlId) {
+      navigate(`/c/${activeConversationId}`, { replace: true });
+    } else if (!activeConversationId && currentUrlId) {
+      navigate("/", { replace: true });
+    }
+  }, [activeConversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

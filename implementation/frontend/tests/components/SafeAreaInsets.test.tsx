@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 // Mock all dependencies needed by AppShell
 vi.mock("@/stores/uiStore", () => ({
@@ -12,7 +13,7 @@ vi.mock("@/hooks/useWebSocket", () => ({
   useWebSocket: vi.fn(),
 }));
 vi.mock("@/hooks/useConversation", () => ({
-  useConversation: vi.fn(),
+  useConversation: () => ({ activeConversationId: null, switchConversation: vi.fn() }),
 }));
 vi.mock("@/components/Header", () => ({
   Header: () => <div data-testid="header">Header</div>,
@@ -31,7 +32,7 @@ import { AppShell } from "@/components/AppShell";
 
 describe("Safe-area insets", () => {
   it("applies safe-area classes to AppShell", () => {
-    render(<AppShell />);
+    render(<MemoryRouter><AppShell /></MemoryRouter>);
     const shell = screen.getByTestId("app-shell");
     expect(shell.className).toContain("safe-area-top");
     expect(shell.className).toContain("safe-area-left");

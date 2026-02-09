@@ -14,6 +14,7 @@ import multiprocessing
 import multiprocessing.pool
 from concurrent.futures import ProcessPoolExecutor
 
+from app.services.query_cache import QueryCache
 from app.workers.data_worker import (
     execute_query as _execute_query,
     extract_schema as _extract_schema,
@@ -36,6 +37,7 @@ class WorkerPool:
 
     def __init__(self, pool: multiprocessing.pool.Pool) -> None:
         self._pool = pool
+        self._query_cache = QueryCache()
 
     async def validate_url(self, url: str) -> dict:
         return await _validate_url(self._pool, url)
@@ -44,7 +46,15 @@ class WorkerPool:
         return await _get_schema(self._pool, url)
 
     async def run_query(self, sql: str, datasets: list[dict]) -> dict:
-        return await _run_query(self._pool, sql, datasets)
+        # Check cache first
+        cached = self._query_cache.get(sql, datasets)
+        if cached is not None:
+            return {**cached, "cached": True}
+        # Execute query in worker process
+        result = await _run_query(self._pool, sql, datasets)
+        # Cache successful results
+        self._query_cache.put(sql, datasets, result)
+        return result
 
     async def profile_columns(self, url: str) -> dict:
         return await _profile_columns(self._pool, url)

@@ -369,6 +369,94 @@ async def test_refresh_nonexistent_dataset_returns_404(
 
 
 # ---------------------------------------------------------------------------
+# DS-EP-11: POST /conversations/:id/datasets/:dataset_id/preview - Success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_dataset_returns_columns_and_rows(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview returns 200 with columns, rows (list-of-lists), and total_rows."""
+    from app.main import app
+
+    mock_worker_pool.run_query.return_value = {
+        "columns": ["id", "value"],
+        "rows": [{"id": 1, "value": "a"}, {"id": 2, "value": "b"}],
+        "total_rows": 2,
+    }
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview",
+    )
+
+    body = assert_success_response(response, status_code=200)
+    assert body["columns"] == ["id", "value"]
+    assert body["rows"] == [[1, "a"], [2, "b"]]
+    assert body["total_rows"] == dataset_in_conversation["row_count"]
+
+    # Verify the SQL query passed to run_query
+    call_args = mock_worker_pool.run_query.call_args
+    sql_arg = call_args[0][0]
+    assert "LIMIT 10" in sql_arg
+    datasets_arg = call_args[0][1]
+    assert datasets_arg[0]["url"] == dataset_in_conversation["url"]
+    assert datasets_arg[0]["table_name"] == dataset_in_conversation["name"]
+
+
+# ---------------------------------------------------------------------------
+# DS-EP-12: POST /conversations/:id/datasets/:dataset_id/preview - Not Found (404)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_nonexistent_dataset_returns_404(
+    authed_client, fresh_db, conversation_owned, mock_worker_pool
+):
+    """POST preview for nonexistent dataset returns 404."""
+    from app.main import app
+
+    app.state.worker_pool = mock_worker_pool
+
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/nonexistent-id/preview",
+    )
+
+    assert_error_response(response, 404)
+
+
+# ---------------------------------------------------------------------------
+# DS-EP-13: POST /conversations/:id/datasets/:dataset_id/preview - Worker Error (500)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_dataset_worker_error_returns_500(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview returns 500 when worker pool returns an error."""
+    from app.main import app
+
+    mock_worker_pool.run_query.return_value = {
+        "error_type": "internal",
+        "message": "Failed to read parquet file",
+    }
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview",
+    )
+
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
 # Unauthenticated returns 401
 # ---------------------------------------------------------------------------
 

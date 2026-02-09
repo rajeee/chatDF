@@ -161,6 +161,28 @@ export async function apiDelete<T>(path: string, timeoutMs?: number): Promise<T>
   return handleResponse<T>(response);
 }
 
+// ---------------------------------------------------------------------------
+// Domain-specific API helpers
+// ---------------------------------------------------------------------------
+
+export interface PreviewResponse {
+  columns: string[];
+  rows: unknown[][];
+  total_rows: number;
+}
+
+/**
+ * Fetch up to 10 sample rows from a dataset for quick preview.
+ */
+export async function previewDataset(
+  conversationId: string,
+  datasetId: string
+): Promise<PreviewResponse> {
+  return apiPost<PreviewResponse>(
+    `/conversations/${conversationId}/datasets/${datasetId}/preview`
+  );
+}
+
 /**
  * Send a GET request without credentials (for public/unauthenticated endpoints).
  */

@@ -65,6 +65,7 @@ export function getColumnTypeSummary(schemaJson: string): string {
 function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const removeDataset = useDatasetStore((s) => s.removeDataset);
   const openSchemaModal = useUiStore((s) => s.openSchemaModal);
+  const openPreviewModal = useUiStore((s) => s.openPreviewModal);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -176,6 +177,29 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
           <span className="text-xs opacity-40 truncate block" title={dataset.url}>
             {getHostname(dataset.url)}
           </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openPreviewModal(dataset.id);
+            }}
+            aria-label="Preview dataset"
+            title="Preview sample rows"
+            data-testid="preview-button"
+            className="touch-action-btn absolute top-1 right-[3.25rem] p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-150 active:scale-90"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

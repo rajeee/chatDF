@@ -77,6 +77,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const templatesRef = useRef<HTMLDivElement>(null);
   const pendingSql = useUiStore((s) => s.pendingSql);
   const setPendingSql = useUiStore((s) => s.setPendingSql);
+  const openQueryResultComparison = useUiStore((s) => s.openQueryResultComparison);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
   const autocomplete = useSqlAutocomplete();
 
@@ -1333,6 +1334,40 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                       {showChart ? "Hide" : "Chart"}
                     </button>
                   )}
+                  {/* Compare button */}
+                  <button
+                    data-testid="run-sql-compare"
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                      backgroundColor: "transparent",
+                    }}
+                    onClick={() =>
+                      openQueryResultComparison({
+                        query: sql,
+                        columns: result.columns,
+                        rows: result.rows,
+                        total_rows: result.total_rows,
+                      })
+                    }
+                    title="Compare with another query result"
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    Compare
+                  </button>
                 </div>
               </div>
 

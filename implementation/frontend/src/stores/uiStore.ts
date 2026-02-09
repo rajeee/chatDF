@@ -25,6 +25,8 @@ interface UiState {
   activeReasoning: string;
   shortcutsModalOpen: boolean;
   pendingSql: string | null;
+  queryResultComparisonOpen: boolean;
+  comparisonCurrentResult: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null;
 }
 
 interface UiActions {
@@ -54,6 +56,8 @@ interface UiActions {
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
   setPendingSql: (sql: string | null) => void;
+  openQueryResultComparison: (currentResult?: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null) => void;
+  closeQueryResultComparison: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()(
@@ -78,6 +82,8 @@ export const useUiStore = create<UiState & UiActions>()(
       activeReasoning: "",
       shortcutsModalOpen: false,
       pendingSql: null,
+      queryResultComparisonOpen: false,
+      comparisonCurrentResult: null,
 
       toggleLeftPanel: () =>
         set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -153,6 +159,12 @@ export const useUiStore = create<UiState & UiActions>()(
         set({ shortcutsModalOpen: false }),
 
       setPendingSql: (sql) => set({ pendingSql: sql }),
+
+      openQueryResultComparison: (currentResult) =>
+        set({ queryResultComparisonOpen: true, comparisonCurrentResult: currentResult ?? null }),
+
+      closeQueryResultComparison: () =>
+        set({ queryResultComparisonOpen: false, comparisonCurrentResult: null }),
     }),
     {
       name: "chatdf-ui-preferences",

@@ -15,9 +15,11 @@ import { apiPost } from "@/api/client";
 import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
 import { DatasetSearch } from "./DatasetSearch";
+import { DatasetCatalog } from "./DatasetCatalog";
 import { SchemaModal } from "./SchemaModal";
 import { PreviewModal } from "./PreviewModal";
 import { ComparisonModal } from "./ComparisonModal";
+import { QueryResultComparisonModal } from "./QueryResultComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
 import { RunSqlPanel } from "./RunSqlPanel";
 import { QueryHistoryPanel } from "./QueryHistoryPanel";
@@ -307,6 +309,10 @@ export function RightPanel() {
                 onLoad={handleLoadFromSearch}
                 loading={searchLoading}
               />
+              <DatasetCatalog
+                onLoad={handleLoadFromSearch}
+                loading={searchLoading}
+              />
               {datasets.length > 0 && conversationId && (
                 <RunSqlPanel conversationId={conversationId} />
               )}
@@ -321,6 +327,7 @@ export function RightPanel() {
       <SchemaModal />
       <PreviewModal />
       <ComparisonModal />
+      <QueryResultComparisonModal />
       <PresetSourcesModal />
     </aside>
   );

@@ -79,7 +79,8 @@ CREATE TABLE IF NOT EXISTS datasets (
     schema_json     TEXT NOT NULL DEFAULT '[]',
     status          TEXT NOT NULL DEFAULT 'loading' CHECK(status IN ('loading', 'ready', 'error')),
     error_message   TEXT,
-    loaded_at       TEXT NOT NULL
+    loaded_at       TEXT NOT NULL,
+    file_size_bytes INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS token_usage (
@@ -98,6 +99,8 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name            TEXT NOT NULL,
     query           TEXT NOT NULL,
+    result_json     TEXT,
+    execution_time_ms REAL,
     created_at      TEXT NOT NULL
 );
 
@@ -230,6 +233,24 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     try:
         await conn.execute(
             "ALTER TABLE saved_queries ADD COLUMN result_json TEXT"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add file_size_bytes column to datasets
+    try:
+        await conn.execute(
+            "ALTER TABLE datasets ADD COLUMN file_size_bytes INTEGER"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add execution_time_ms column to saved_queries
+    try:
+        await conn.execute(
+            "ALTER TABLE saved_queries ADD COLUMN execution_time_ms REAL"
         )
         await conn.commit()
     except Exception:

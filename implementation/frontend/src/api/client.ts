@@ -233,6 +233,26 @@ export async function deleteMessage(
 }
 
 // ---------------------------------------------------------------------------
+// Token usage
+// ---------------------------------------------------------------------------
+
+export interface TokenUsageResponse {
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_tokens: number;
+  total_cost: number;
+  request_count: number;
+}
+
+export async function fetchTokenUsage(
+  conversationId: string
+): Promise<TokenUsageResponse> {
+  return apiGet<TokenUsageResponse>(
+    `/conversations/${conversationId}/token-usage`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Conversation fork
 // ---------------------------------------------------------------------------
 

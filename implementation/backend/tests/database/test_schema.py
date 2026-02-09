@@ -156,7 +156,7 @@ async def test_messages_table_structure(fresh_db):
 async def test_datasets_table_structure(fresh_db):
     """SCHEMA-7: Datasets table has correct columns."""
     cols = await _get_columns(fresh_db, "datasets")
-    assert len(cols) == 10
+    assert len(cols) == 11
     _assert_column(cols, "id", "TEXT", notnull=0, pk=1)
     _assert_column(cols, "conversation_id", "TEXT", notnull=1)
     _assert_column(cols, "url", "TEXT", notnull=1)
@@ -167,6 +167,7 @@ async def test_datasets_table_structure(fresh_db):
     _assert_column(cols, "status", "TEXT", notnull=1)
     _assert_column(cols, "error_message", "TEXT", notnull=0)
     _assert_column(cols, "loaded_at", "TEXT", notnull=1)
+    _assert_column(cols, "file_size_bytes", "INTEGER", notnull=0)
 
 
 # ---------------------------------------------------------------------------

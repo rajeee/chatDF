@@ -50,7 +50,7 @@ async def _get_dataset_or_404(
     """Fetch a dataset by ID scoped to conversation_id. Raise 404 if not found."""
     cursor = await db.execute(
         "SELECT id, conversation_id, url, name, row_count, column_count, "
-        "schema_json, status, error_message, loaded_at "
+        "schema_json, status, error_message, loaded_at, file_size_bytes "
         "FROM datasets WHERE id = ? AND conversation_id = ?",
         (dataset_id, conversation_id),
     )
@@ -120,6 +120,7 @@ async def add_dataset(
                     "schema_json": result["schema_json"],
                     "status": "ready",
                     "error_message": None,
+                    "file_size_bytes": result.get("file_size_bytes"),
                 },
             },
         )

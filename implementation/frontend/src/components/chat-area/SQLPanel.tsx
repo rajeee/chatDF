@@ -102,7 +102,7 @@ function SQLQueryBlock({
               total_rows: execution.total_rows ?? execution.rows.length,
             }
           : undefined;
-      await useSavedQueryStore.getState().saveQuery(defaultName, execution.query, resultData);
+      await useSavedQueryStore.getState().saveQuery(defaultName, execution.query, resultData, execution.execution_time_ms);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -110,7 +110,7 @@ function SQLQueryBlock({
     } finally {
       setSaving(false);
     }
-  }, [execution.query, execution.columns, execution.rows, execution.total_rows]);
+  }, [execution.query, execution.columns, execution.rows, execution.total_rows, execution.execution_time_ms]);
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
   const hasChartData = useMemo(

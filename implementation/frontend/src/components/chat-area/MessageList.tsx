@@ -14,6 +14,7 @@ import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
 import { deleteMessage, forkConversation } from "@/api/client";
+import { TokenUsage } from "./TokenUsage";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
 
@@ -292,7 +293,8 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       {searchOpen && <SearchBar />}
 
       {messages.length > 0 && (
-        <div className="flex justify-end px-2 sm:px-4 pt-2">
+        <div className="flex items-center justify-end gap-2 px-2 sm:px-4 pt-2">
+          <TokenUsage />
           <div className="relative" ref={exportDropdownRef}>
             <button
               data-testid="export-btn"

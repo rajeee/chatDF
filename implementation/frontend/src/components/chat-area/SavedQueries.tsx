@@ -6,6 +6,12 @@ import type { SqlExecution } from "@/stores/chatStore";
 /** Max rows shown in the inline preview table. */
 const INLINE_PREVIEW_ROWS = 5;
 
+/** Format execution time for display: <1000ms as "Xms", >=1000ms as "X.Xs". */
+function formatExecTime(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 /** Compact inline table preview for bookmarked query results. */
 function InlineResultPreview({ resultData, queryId }: { resultData: SavedQueryResultData; queryId: string }) {
   const [copiedCsv, setCopiedCsv] = useState(false);
@@ -175,6 +181,19 @@ export function SavedQueries({ onRunQuery }: SavedQueriesProps) {
                         }}
                       >
                         {q.result_data.total_rows} rows
+                      </span>
+                    )}
+                    {q.execution_time_ms != null && (
+                      <span
+                        data-testid={`exec-time-${q.id}`}
+                        className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-normal"
+                        style={{
+                          backgroundColor: "var(--color-bg-secondary, rgba(0,0,0,0.06))",
+                          color: "var(--color-text-secondary, var(--color-text))",
+                          opacity: 0.7,
+                        }}
+                      >
+                        {formatExecTime(q.execution_time_ms)}
                       </span>
                     )}
                   </div>

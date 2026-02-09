@@ -13,6 +13,7 @@ export interface SavedQuery {
   query: string;
   created_at: string;
   result_data?: SavedQueryResultData;
+  execution_time_ms?: number | null;
 }
 
 interface SavedQueryState {
@@ -22,7 +23,7 @@ interface SavedQueryState {
 
 interface SavedQueryActions {
   fetchQueries: () => Promise<void>;
-  saveQuery: (name: string, query: string, resultData?: SavedQueryResultData) => Promise<SavedQuery>;
+  saveQuery: (name: string, query: string, resultData?: SavedQueryResultData, executionTimeMs?: number | null) => Promise<SavedQuery>;
   deleteQuery: (id: string) => Promise<void>;
 }
 
@@ -31,7 +32,7 @@ const MAX_BOOKMARK_ROWS = 100;
 
 /** Parse a raw API response (with result_json string) into a SavedQuery with result_data. */
 function parseRawSavedQuery(raw: RawSavedQuery): SavedQuery {
-  const { result_json, ...rest } = raw;
+  const { result_json, execution_time_ms, ...rest } = raw;
   let result_data: SavedQueryResultData | undefined;
   if (result_json) {
     try {
@@ -40,7 +41,7 @@ function parseRawSavedQuery(raw: RawSavedQuery): SavedQuery {
       // Ignore malformed JSON
     }
   }
-  return { ...rest, result_data };
+  return { ...rest, result_data, execution_time_ms };
 }
 
 /** Raw API shape (result_json is a JSON string from the backend). */
@@ -50,6 +51,7 @@ interface RawSavedQuery {
   query: string;
   created_at: string;
   result_json?: string | null;
+  execution_time_ms?: number | null;
 }
 
 export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()((set) => ({
@@ -67,7 +69,7 @@ export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()(
     }
   },
 
-  saveQuery: async (name: string, query: string, resultData?: SavedQueryResultData) => {
+  saveQuery: async (name: string, query: string, resultData?: SavedQueryResultData, executionTimeMs?: number | null) => {
     // Cap rows at MAX_BOOKMARK_ROWS to keep storage reasonable
     let result_json: string | undefined;
     if (resultData) {
@@ -78,7 +80,12 @@ export const useSavedQueryStore = create<SavedQueryState & SavedQueryActions>()(
       };
       result_json = JSON.stringify(capped);
     }
-    const raw = await apiPost<RawSavedQuery>("/saved-queries", { name, query, result_json });
+    const raw = await apiPost<RawSavedQuery>("/saved-queries", {
+      name,
+      query,
+      result_json,
+      execution_time_ms: executionTimeMs ?? undefined,
+    });
     const saved = parseRawSavedQuery(raw);
     set((state) => ({ queries: [saved, ...state.queries] }));
     return saved;

@@ -29,7 +29,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
   },
   server: {
-    allowedHosts: ["datachatdata.com"],
+    allowedHosts: ["datachatdata.com", "chatdf.daddaops.com"],
     proxy: {
       "/auth": {
         target: API_TARGET,

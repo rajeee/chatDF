@@ -140,13 +140,13 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     if (!trimmed) return;
     const defaultName = trimmed.replace(/\s+/g, " ").slice(0, 50);
     try {
-      await useSavedQueryStore.getState().saveQuery(defaultName, trimmed);
+      await useSavedQueryStore.getState().saveQuery(defaultName, trimmed, undefined, result?.execution_time_ms);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
       // silently fail
     }
-  }, [sql]);
+  }, [sql, result]);
 
   // Format execution time for display
   const formatTime = (ms: number): string => {

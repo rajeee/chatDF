@@ -12,6 +12,7 @@ export interface Dataset {
   schema_json: string;
   status: "loading" | "ready" | "error";
   error_message: string | null;
+  file_size_bytes?: number | null;
 }
 
 export interface ColumnProfile {

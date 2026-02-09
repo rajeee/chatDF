@@ -118,6 +118,9 @@ async def add_dataset(
         error_msg = validate_result.get("error", "Could not access URL")
         raise ValueError(error_msg)
 
+    # Capture file_size_bytes from validation result
+    file_size_bytes = validate_result.get("file_size_bytes")
+
     # Step 5: Schema extraction
     schema_result = await worker_pool.get_schema(url)
     if "error" in schema_result:
@@ -136,9 +139,9 @@ async def add_dataset(
 
     await db.execute(
         "INSERT INTO datasets "
-        "(id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (dataset_id, conversation_id, url, name, row_count, column_count, schema_json, "ready", None, now),
+        "(id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (dataset_id, conversation_id, url, name, row_count, column_count, schema_json, "ready", None, now, file_size_bytes),
     )
     await db.commit()
 
@@ -153,6 +156,7 @@ async def add_dataset(
         "status": "ready",
         "error_message": None,
         "loaded_at": now,
+        "file_size_bytes": file_size_bytes,
     }
 
 
@@ -222,7 +226,7 @@ async def refresh_schema(
     # Return the updated dataset
     cursor = await db.execute(
         "SELECT id, conversation_id, url, name, row_count, column_count, "
-        "schema_json, status, error_message, loaded_at FROM datasets WHERE id = ?",
+        "schema_json, status, error_message, loaded_at, file_size_bytes FROM datasets WHERE id = ?",
         (dataset_id,),
     )
     updated_row = await cursor.fetchone()
@@ -241,7 +245,7 @@ async def get_datasets(
     """Return all datasets for *conversation_id*, ordered by loaded_at."""
     cursor = await db.execute(
         "SELECT id, conversation_id, url, name, row_count, column_count, "
-        "schema_json, status, error_message, loaded_at "
+        "schema_json, status, error_message, loaded_at, file_size_bytes "
         "FROM datasets WHERE conversation_id = ? ORDER BY loaded_at",
         (conversation_id,),
     )

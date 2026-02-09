@@ -79,7 +79,8 @@ CREATE TABLE IF NOT EXISTS datasets (
     schema_json     TEXT NOT NULL DEFAULT '[]',
     status          TEXT NOT NULL DEFAULT 'loading' CHECK(status IN ('loading', 'ready', 'error')),
     error_message   TEXT,
-    loaded_at       TEXT NOT NULL
+    loaded_at       TEXT NOT NULL,
+    file_size_bytes INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS token_usage (
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     name            TEXT NOT NULL,
     query           TEXT NOT NULL,
     result_json     TEXT,
+    execution_time_ms REAL,
     created_at      TEXT NOT NULL
 );
 

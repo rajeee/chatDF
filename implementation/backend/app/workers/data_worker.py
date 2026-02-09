@@ -53,10 +53,13 @@ def fetch_and_validate(url: str) -> dict:
         {"valid": True} on success.
         {"valid": False, "error": str, "error_type": str} on failure.
     """
+    file_size_bytes = None
     try:
         # Step 1: HEAD request to check accessibility
         req = urllib.request.Request(url, method="HEAD")
-        urllib.request.urlopen(req, timeout=HEAD_REQUEST_TIMEOUT)
+        resp = urllib.request.urlopen(req, timeout=HEAD_REQUEST_TIMEOUT)
+        content_length = resp.headers.get("Content-Length")
+        file_size_bytes = int(content_length) if content_length else None
     except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError) as exc:
         error_msg = str(exc)
         if isinstance(exc, urllib.error.HTTPError):
@@ -91,7 +94,7 @@ def fetch_and_validate(url: str) -> dict:
                 "error_type": "validation",
             }
 
-        return {"valid": True}
+        return {"valid": True, "file_size_bytes": file_size_bytes}
 
     except Exception as exc:
         return {

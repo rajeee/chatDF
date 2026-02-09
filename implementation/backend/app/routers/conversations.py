@@ -12,6 +12,7 @@ Endpoints:
 - POST /conversations/{conversation_id}/messages -> send_message
 - DELETE /conversations/{conversation_id}/messages/{message_id} -> delete_message
 - POST /conversations/{conversation_id}/stop     -> stop_generation
+- GET  /conversations/{conversation_id}/token-usage -> get_token_usage
 """
 
 from __future__ import annotations
@@ -244,7 +245,7 @@ async def get_conversation_detail(
 
     # Fetch datasets
     cursor = await db.execute(
-        "SELECT id, name, url, row_count, column_count, status, schema_json "
+        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes "
         "FROM datasets WHERE conversation_id = ?",
         (conv_id,),
     )
@@ -258,6 +259,7 @@ async def get_conversation_detail(
             column_count=row["column_count"],
             status=row["status"] or "ready",
             schema_json=row["schema_json"] or "{}",
+            file_size_bytes=row["file_size_bytes"],
         )
         for row in dataset_rows
     ]
@@ -498,6 +500,36 @@ async def stop_generation(
 
 
 # ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}/token-usage
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{conversation_id}/token-usage")
+async def get_token_usage(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Get aggregated token usage for a conversation."""
+    conv_id = conversation["id"]
+    cursor = await db.execute(
+        "SELECT COALESCE(SUM(input_tokens), 0) AS total_input, "
+        "       COALESCE(SUM(output_tokens), 0) AS total_output, "
+        "       COALESCE(SUM(cost), 0) AS total_cost, "
+        "       COUNT(*) AS request_count "
+        "FROM token_usage WHERE conversation_id = ?",
+        (conv_id,),
+    )
+    row = await cursor.fetchone()
+    return {
+        "total_input_tokens": row["total_input"],
+        "total_output_tokens": row["total_output"],
+        "total_tokens": row["total_input"] + row["total_output"],
+        "total_cost": round(row["total_cost"], 6),
+        "request_count": row["request_count"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # POST /conversations/{conversation_id}/fork
 # ---------------------------------------------------------------------------
 
@@ -569,7 +601,7 @@ async def fork_conversation(
 
     # Copy all datasets from source conversation
     cursor = await db.execute(
-        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at "
+        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes "
         "FROM datasets WHERE conversation_id = ?",
         (conv_id,),
     )
@@ -578,8 +610,8 @@ async def fork_conversation(
     for ds in datasets_to_copy:
         new_ds_id = str(uuid4())
         await db.execute(
-            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 new_ds_id,
                 fork_id,
@@ -591,6 +623,7 @@ async def fork_conversation(
                 ds["status"],
                 ds["error_message"],
                 ds["loaded_at"],
+                ds["file_size_bytes"],
             ),
         )
 
@@ -793,7 +826,7 @@ async def get_public_conversation(
 
     # Fetch datasets
     cursor = await db.execute(
-        "SELECT id, name, url, row_count, column_count, status, schema_json "
+        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes "
         "FROM datasets WHERE conversation_id = ?",
         (conversation["id"],),
     )
@@ -807,6 +840,7 @@ async def get_public_conversation(
             column_count=r["column_count"],
             status=r["status"] or "ready",
             schema_json=r["schema_json"] or "{}",
+            file_size_bytes=r["file_size_bytes"],
         )
         for r in dataset_rows
     ]

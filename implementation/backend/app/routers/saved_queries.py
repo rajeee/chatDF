@@ -34,12 +34,13 @@ async def save_query(
     query_id = str(uuid4())
     now = datetime.utcnow().isoformat()
     await db.execute(
-        "INSERT INTO saved_queries (id, user_id, name, query, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (query_id, user["id"], body.name, body.query, body.result_json, now),
+        "INSERT INTO saved_queries (id, user_id, name, query, result_json, execution_time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (query_id, user["id"], body.name, body.query, body.result_json, body.execution_time_ms, now),
     )
     await db.commit()
     return SavedQueryResponse(
         id=query_id, name=body.name, query=body.query, result_json=body.result_json,
+        execution_time_ms=body.execution_time_ms,
         created_at=datetime.fromisoformat(now),
     )
 
@@ -50,7 +51,7 @@ async def list_saved_queries(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> SavedQueryListResponse:
     cursor = await db.execute(
-        "SELECT id, name, query, result_json, created_at FROM saved_queries WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT id, name, query, result_json, execution_time_ms, created_at FROM saved_queries WHERE user_id = ? ORDER BY created_at DESC",
         (user["id"],),
     )
     rows = await cursor.fetchall()
@@ -60,6 +61,7 @@ async def list_saved_queries(
             name=row["name"],
             query=row["query"],
             result_json=row["result_json"],
+            execution_time_ms=row["execution_time_ms"],
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in rows

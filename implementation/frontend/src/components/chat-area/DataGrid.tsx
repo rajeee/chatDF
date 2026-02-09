@@ -252,7 +252,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               </tr>
             ) : (
               table.getRowModel().rows.map((row, rowIndex) => (
-                <tr key={row.id} role="row" className={`border-b transition-colors duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]${rowIndex % 2 === 1 ? " bg-black/[0.02] dark:bg-white/[0.02]" : ""}`} style={{ borderColor: "var(--color-border)" }}>
+                <tr key={row.id} role="row" className={`border-b transition-colors duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] datagrid-row-enter${rowIndex % 2 === 1 ? " bg-black/[0.02] dark:bg-white/[0.02]" : ""}`} style={{ borderColor: "var(--color-border)", ...(rowIndex < 10 && { animationDelay: `calc(${rowIndex} * 20ms)` }) }}>
                   {row.getVisibleCells().map((cell) => {
                     const isNumeric = numericColumns.has(cell.column.id);
                     return (

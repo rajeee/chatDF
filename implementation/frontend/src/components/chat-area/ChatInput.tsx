@@ -189,21 +189,34 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               aria-label="Send message"
               title="Send message (⏎)"
-              className={`flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-accent)]/10 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isSending ? "animate-pulse" : ""}`}
+              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-accent)]/10 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleSend}
               disabled={trimmedEmpty || dailyLimitReached || isSending}
               data-sending={isSending}
             >
-              {/* Arrow send icon */}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M3.105 2.289a.75.75 0 0 1 .814.073l13 10a.75.75 0 0 1 0 1.176l-13 10A.75.75 0 0 1 2.75 23V1a.75.75 0 0 1 .355-.711Z" />
-              </svg>
+              {isSending ? (
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="animate-spin"
+                  aria-hidden="true"
+                >
+                  <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                  <path d="M17 10a7 7 0 0 0-7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M3.105 2.289a.75.75 0 0 1 .814.073l13 10a.75.75 0 0 1 0 1.176l-13 10A.75.75 0 0 1 2.75 23V1a.75.75 0 0 1 .355-.711Z" />
+                </svg>
+              )}
             </button>
           )}
         </div>

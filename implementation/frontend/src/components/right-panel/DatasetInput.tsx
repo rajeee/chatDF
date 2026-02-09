@@ -212,7 +212,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             onPaste={handlePaste}
             placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
             disabled={atLimit || isSubmitting}
-            className="w-full rounded border px-2 py-1 text-sm disabled:opacity-50"
+            className={`w-full rounded border px-2 py-1 text-sm disabled:opacity-50${showSuccess ? " success-pulse" : ""}`}
             style={{
               backgroundColor: "var(--color-surface)",
               borderColor: showSuccess

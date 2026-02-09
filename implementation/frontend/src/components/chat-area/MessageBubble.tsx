@@ -317,7 +317,7 @@ function MessageBubbleComponent({
 
         {/* Action buttons row */}
         {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0) && (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button

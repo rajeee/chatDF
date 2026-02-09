@@ -164,7 +164,7 @@ describe("ChatInput", () => {
     expect(counter.className).toContain("duration-300");
   });
 
-  it("send button shows pulse animation during sending state", () => {
+  it("send button shows spinner during sending state", () => {
     const ref = createRef<ChatInputHandle>();
     const onSend = vi.fn();
     const onStop = vi.fn();
@@ -178,7 +178,9 @@ describe("ChatInput", () => {
     useChatStore.setState({ loadingPhase: "thinking", isStreaming: false });
 
     const sendButton = screen.getByLabelText("Send message");
-    expect(sendButton.className).toContain("animate-pulse");
+    // Should show spinner SVG (circle element indicates spinner, not arrow)
+    const circle = sendButton.querySelector("circle");
+    expect(circle).toBeTruthy();
     expect(sendButton).toHaveAttribute("data-sending", "true");
   });
 
@@ -212,9 +214,9 @@ describe("ChatInput", () => {
     // Set loadingPhase to "thinking" first
     useChatStore.setState({ loadingPhase: "thinking", isStreaming: false });
 
-    // Verify it's showing pulse animation
+    // Verify it's showing spinner (circle element indicates spinner)
     let sendButton = screen.getByLabelText("Send message");
-    expect(sendButton.className).toContain("animate-pulse");
+    expect(sendButton.querySelector("circle")).toBeTruthy();
 
     // Now simulate streaming starting
     useChatStore.setState({ loadingPhase: "thinking", isStreaming: true });

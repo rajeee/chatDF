@@ -899,7 +899,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     }}
                   >
                     <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
-                      {(["basic", "aggregation", "exploration"] as const).map((category) => {
+                      {(["basic", "aggregation", "exploration", "join"] as const).map((category) => {
                         const catTemplates = templates.filter((t) => t.category === category);
                         if (catTemplates.length === 0) return null;
                         const categoryLabel =
@@ -907,7 +907,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                             ? "Basic"
                             : category === "aggregation"
                               ? "Aggregation"
-                              : "Exploration";
+                              : category === "join"
+                                ? "Cross-Table"
+                                : "Exploration";
                         return (
                           <div key={category}>
                             <div

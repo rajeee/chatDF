@@ -28,6 +28,7 @@ import { SkeletonMessages } from "./SkeletonMessages";
 import { FollowupSuggestions } from "./FollowupSuggestions";
 import { ShareDialog } from "./ShareDialog";
 import { SavedQueries } from "./SavedQueries";
+import { ConversationTemplates } from "./ConversationTemplates";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -300,6 +301,10 @@ export function ChatArea() {
               <SuggestedPrompts
                 datasets={datasets}
                 onSendPrompt={handleSend}
+              />
+              <ConversationTemplates
+                onSendMessage={handleSend}
+                datasetCount={datasets.filter((d) => d.status === "ready").length}
               />
             </div>
           )}

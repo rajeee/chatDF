@@ -256,13 +256,27 @@ def build_system_prompt(datasets: list[dict]) -> str:
             else:
                 columns = schema_raw
 
+            # Parse column descriptions
+            column_descriptions_raw = ds.get("column_descriptions", "{}")
+            if isinstance(column_descriptions_raw, str):
+                try:
+                    column_descriptions = json.loads(column_descriptions_raw)
+                except (json.JSONDecodeError, TypeError):
+                    column_descriptions = {}
+            else:
+                column_descriptions = column_descriptions_raw or {}
+
             parts.append(f"### Table: {name}")
             parts.append(f"Row count: {row_count}")
             parts.append("Columns:")
             for col in columns:
                 col_name = col.get("name", "unknown")
                 col_type = col.get("type", "unknown")
-                parts.append(f"  - {col_name}: {col_type}")
+                col_desc = column_descriptions.get(col_name, "")
+                if col_desc:
+                    parts.append(f"  - {col_name}: {col_type} -- {col_desc}")
+                else:
+                    parts.append(f"  - {col_name}: {col_type}")
             parts.append("")
 
         parts.append("## Instructions")

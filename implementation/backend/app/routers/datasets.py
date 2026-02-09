@@ -50,7 +50,7 @@ async def _get_dataset_or_404(
     """Fetch a dataset by ID scoped to conversation_id. Raise 404 if not found."""
     cursor = await db.execute(
         "SELECT id, conversation_id, url, name, row_count, column_count, "
-        "schema_json, status, error_message, loaded_at, file_size_bytes "
+        "schema_json, status, error_message, loaded_at, file_size_bytes, column_descriptions "
         "FROM datasets WHERE id = ? AND conversation_id = ?",
         (dataset_id, conversation_id),
     )
@@ -288,3 +288,64 @@ async def remove_dataset(
     await dataset_service.remove_dataset(db, dataset_id)
 
     return SuccessResponse(success=True)
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}/datasets/{dataset_id}/column-descriptions
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{dataset_id}/column-descriptions")
+async def get_column_descriptions(
+    dataset_id: str,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Get column descriptions for a dataset."""
+    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    raw = ds.get("column_descriptions", "{}")
+    try:
+        descriptions = json.loads(raw) if raw else {}
+    except (json.JSONDecodeError, TypeError):
+        descriptions = {}
+
+    return {"descriptions": descriptions}
+
+
+# ---------------------------------------------------------------------------
+# PATCH /conversations/{conversation_id}/datasets/{dataset_id}/column-descriptions
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/{dataset_id}/column-descriptions")
+async def update_column_descriptions(
+    dataset_id: str,
+    body: dict,
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Update column descriptions for a dataset.
+
+    Body: {"descriptions": {"column_name": "description text", ...}}
+    """
+    await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    descriptions = body.get("descriptions", {})
+    if not isinstance(descriptions, dict):
+        raise HTTPException(status_code=400, detail="descriptions must be a dict")
+
+    # Validate all keys are strings and values are strings
+    for k, v in descriptions.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            raise HTTPException(status_code=400, detail="All keys and values must be strings")
+        if len(v) > 500:
+            raise HTTPException(status_code=400, detail=f"Description for '{k}' exceeds 500 chars")
+
+    await db.execute(
+        "UPDATE datasets SET column_descriptions = ? WHERE id = ?",
+        (json.dumps(descriptions), dataset_id),
+    )
+    await db.commit()
+
+    return {"success": True, "descriptions": descriptions}

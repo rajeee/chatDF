@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import secrets
 from datetime import datetime
 from uuid import uuid4
@@ -247,7 +248,7 @@ async def get_conversation_detail(
 
     # Fetch datasets
     cursor = await db.execute(
-        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes "
+        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes, column_descriptions "
         "FROM datasets WHERE conversation_id = ?",
         (conv_id,),
     )
@@ -262,6 +263,7 @@ async def get_conversation_detail(
             status=row["status"] or "ready",
             schema_json=row["schema_json"] or "{}",
             file_size_bytes=row["file_size_bytes"],
+            column_descriptions=row["column_descriptions"] or "{}",
         )
         for row in dataset_rows
     ]
@@ -603,7 +605,7 @@ async def fork_conversation(
 
     # Copy all datasets from source conversation
     cursor = await db.execute(
-        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes "
+        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes, column_descriptions "
         "FROM datasets WHERE conversation_id = ?",
         (conv_id,),
     )
@@ -612,8 +614,8 @@ async def fork_conversation(
     for ds in datasets_to_copy:
         new_ds_id = str(uuid4())
         await db.execute(
-            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes, column_descriptions) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 new_ds_id,
                 fork_id,
@@ -626,6 +628,7 @@ async def fork_conversation(
                 ds["error_message"],
                 ds["loaded_at"],
                 ds["file_size_bytes"],
+                ds["column_descriptions"] or "{}",
             ),
         )
 
@@ -777,11 +780,22 @@ async def run_query(
     result_rows = [[row.get(col) for col in columns] for row in row_dicts]
     total_rows = result.get("total_rows", len(result_rows))
 
+    # Apply server-side pagination
+    page = body.page
+    page_size = body.page_size
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    paginated_rows = result_rows[start_idx:end_idx]
+    total_pages = math.ceil(len(result_rows) / page_size) if result_rows else 1
+
     return RunQueryResponse(
         columns=columns,
-        rows=result_rows,
+        rows=paginated_rows,
         total_rows=total_rows,
         execution_time_ms=round(elapsed_ms, 2),
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
     )
 
 
@@ -865,7 +879,7 @@ async def get_public_conversation(
 
     # Fetch datasets
     cursor = await db.execute(
-        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes "
+        "SELECT id, name, url, row_count, column_count, status, schema_json, file_size_bytes, column_descriptions "
         "FROM datasets WHERE conversation_id = ?",
         (conversation["id"],),
     )
@@ -880,6 +894,7 @@ async def get_public_conversation(
             status=r["status"] or "ready",
             schema_json=r["schema_json"] or "{}",
             file_size_bytes=r["file_size_bytes"],
+            column_descriptions=r["column_descriptions"] or "{}",
         )
         for r in dataset_rows
     ]

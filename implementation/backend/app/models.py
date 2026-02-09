@@ -68,6 +68,8 @@ class RunQueryRequest(BaseModel):
     """Body for ``POST /conversations/{id}/query``."""
 
     sql: str = Field(..., min_length=1, max_length=50000)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=100, ge=1, le=1000)
 
 
 class RunQueryResponse(BaseModel):
@@ -77,6 +79,9 @@ class RunQueryResponse(BaseModel):
     rows: list[list[Any]]
     total_rows: int
     execution_time_ms: float
+    page: int = 1
+    page_size: int = 100
+    total_pages: int = 1
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +147,7 @@ class DatasetResponse(BaseModel):
     status: str = "ready"
     schema_json: str = "{}"
     file_size_bytes: int | None = None
+    column_descriptions: str = "{}"
 
 
 class ConversationDetailResponse(BaseModel):

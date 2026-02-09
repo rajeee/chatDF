@@ -14,6 +14,9 @@ interface RunQueryResponse {
   rows: unknown[][];
   total_rows: number;
   execution_time_ms: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 interface RunSqlPanelProps {
@@ -27,6 +30,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [result, setResult] = useState<RunQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
@@ -39,14 +43,16 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setIsExecuting(true);
     setError(null);
     setResult(null);
+    setCurrentPage(1);
 
     try {
       const response = await apiPost<RunQueryResponse>(
         `/conversations/${conversationId}/query`,
-        { sql: trimmed },
+        { sql: trimmed, page: 1, page_size: 100 },
         60_000 // 60s timeout for potentially long queries
       );
       setResult(response);
+      setCurrentPage(response.page);
       addQuery(trimmed);
     } catch (err: unknown) {
       const message =
@@ -56,6 +62,30 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
       setIsExecuting(false);
     }
   }, [sql, isExecuting, conversationId, addQuery]);
+
+  const fetchPage = useCallback(async (page: number) => {
+    const trimmed = sql.trim();
+    if (!trimmed || isExecuting || !result) return;
+
+    setIsExecuting(true);
+    setError(null);
+
+    try {
+      const response = await apiPost<RunQueryResponse>(
+        `/conversations/${conversationId}/query`,
+        { sql: trimmed, page, page_size: result.page_size },
+        60_000
+      );
+      setResult(response);
+      setCurrentPage(response.page);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Query execution failed";
+      setError(message);
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [sql, isExecuting, conversationId, result]);
 
   // Accept an autocomplete suggestion: update sql + cursor position
   const acceptSuggestion = useCallback(
@@ -408,7 +438,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.rows.slice(0, 100).map((row, ri) => (
+                    {result.rows.map((row, ri) => (
                       <tr
                         key={ri}
                         className="hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
@@ -432,13 +462,43 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </table>
               </div>
 
-              {/* Truncation notice */}
-              {result.rows.length > 100 && (
+              {/* Pagination controls */}
+              {result.total_pages > 1 && (
                 <div
-                  className="px-2 py-1 text-[10px] opacity-50 border-t"
+                  className="flex items-center justify-between px-2 py-1 border-t"
                   style={{ borderColor: "var(--color-border)" }}
                 >
-                  Showing 100 of {result.rows.length} returned rows
+                  <button
+                    data-testid="pagination-prev"
+                    className="text-[10px] px-1.5 py-0.5 rounded border disabled:opacity-30"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                    disabled={currentPage <= 1 || isExecuting}
+                    onClick={() => fetchPage(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span
+                    data-testid="pagination-info"
+                    className="text-[10px]"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    Page {currentPage} of {result.total_pages}
+                  </span>
+                  <button
+                    data-testid="pagination-next"
+                    className="text-[10px] px-1.5 py-0.5 rounded border disabled:opacity-30"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                    disabled={currentPage >= result.total_pages || isExecuting}
+                    onClick={() => fetchPage(currentPage + 1)}
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </div>

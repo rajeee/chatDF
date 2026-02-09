@@ -21,6 +21,7 @@ EXPECTED_TABLES = {
     "datasets",
     "token_usage",
     "saved_queries",
+    "query_history",
 }
 
 
@@ -156,7 +157,7 @@ async def test_messages_table_structure(fresh_db):
 async def test_datasets_table_structure(fresh_db):
     """SCHEMA-7: Datasets table has correct columns."""
     cols = await _get_columns(fresh_db, "datasets")
-    assert len(cols) == 11
+    assert len(cols) == 12
     _assert_column(cols, "id", "TEXT", notnull=0, pk=1)
     _assert_column(cols, "conversation_id", "TEXT", notnull=1)
     _assert_column(cols, "url", "TEXT", notnull=1)
@@ -168,6 +169,7 @@ async def test_datasets_table_structure(fresh_db):
     _assert_column(cols, "error_message", "TEXT", notnull=0)
     _assert_column(cols, "loaded_at", "TEXT", notnull=1)
     _assert_column(cols, "file_size_bytes", "INTEGER", notnull=0)
+    _assert_column(cols, "column_descriptions", "TEXT", notnull=1)
 
 
 # ---------------------------------------------------------------------------

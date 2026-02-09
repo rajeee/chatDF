@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS datasets (
     status          TEXT NOT NULL DEFAULT 'loading' CHECK(status IN ('loading', 'ready', 'error')),
     error_message   TEXT,
     loaded_at       TEXT NOT NULL,
-    file_size_bytes INTEGER
+    file_size_bytes INTEGER,
+    column_descriptions TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS token_usage (
@@ -104,6 +105,19 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     created_at      TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS query_history (
+    id              TEXT PRIMARY KEY,
+    user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+    query           TEXT NOT NULL,
+    execution_time_ms REAL,
+    row_count       INTEGER,
+    status          TEXT NOT NULL DEFAULT 'success' CHECK(status IN ('success', 'error')),
+    error_message   TEXT,
+    source          TEXT NOT NULL DEFAULT 'sql_panel' CHECK(source IN ('sql_panel', 'llm', 'api')),
+    created_at      TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_referral_keys_used_by ON referral_keys(used_by);
@@ -112,6 +126,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation
 CREATE INDEX IF NOT EXISTS idx_datasets_conversation_id ON datasets(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_token_usage_user_timestamp ON token_usage(user_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
+CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id, created_at);
 """
 
 # ---------------------------------------------------------------------------

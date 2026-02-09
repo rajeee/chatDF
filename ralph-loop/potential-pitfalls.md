@@ -1,7 +1,5 @@
 # Potential Pitfalls
 
-Risks and traps to watch for during improvement iterations.
-
 ## Architecture
 - **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
@@ -16,4 +14,3 @@ Risks and traps to watch for during improvement iterations.
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.
 - **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
-- **CSS variables don't resolve in jsdom**: Assert the variable string (e.g., `"var(--color-success)"`) instead of computed RGB values.

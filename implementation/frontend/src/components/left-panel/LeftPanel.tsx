@@ -74,12 +74,12 @@ export function LeftPanel() {
     [leftPanelWidth, setLeftPanelWidth]
   );
 
-  // Collapsed state: 48px strip with hamburger only
+  // Collapsed state: 48px strip with hamburger only (hidden on mobile)
   if (!leftPanelOpen) {
     return (
       <aside
         data-testid="left-panel"
-        className="flex flex-col items-center pt-3 sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
+        className="hidden lg:flex flex-col items-center pt-3 sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
         style={{
           width: 48,
           minWidth: 48,
@@ -102,11 +102,16 @@ export function LeftPanel() {
   }
 
   // Expanded state: full sidebar with hamburger + content + resize handle
+  // On mobile: fixed overlay from left side with slide animation
+  // On desktop (lg+): inline sticky panel
+  const mobileClasses = "fixed top-12 left-0 bottom-0 z-40 animate-slide-in-left";
+  const desktopClasses = "lg:relative lg:sticky lg:top-12 lg:self-start lg:z-auto lg:animate-none";
+
   return (
     <aside
       ref={swipeRef as React.RefObject<HTMLElement>}
       data-testid="left-panel"
-      className="flex flex-col relative sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
+      className={`flex flex-col border-r transition-all duration-300 ease-in-out ${mobileClasses} ${desktopClasses}`}
       style={{
         width: leftPanelWidth,
         minWidth: leftPanelWidth,

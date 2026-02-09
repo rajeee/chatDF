@@ -140,6 +140,12 @@ export function useWebSocket(isAuthenticated: boolean): void {
           chatStore.addPendingChartSpec(executionIndex, spec);
           break;
         }
+        case "qp": // query_progress (compressed)
+        case "query_progress": {
+          const chatStore = useChatStore.getState();
+          chatStore.setQueryProgress((msg.n ?? msg.query_number) as number);
+          break;
+        }
         case "ce": // chat_error (compressed)
         case "chat_error": {
           const chatStore = useChatStore.getState();

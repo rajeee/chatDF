@@ -5,7 +5,7 @@
 // Supports pinning conversations to the top of the sidebar.
 // Virtualizes the list when 40+ conversations for scroll performance.
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, useDeferredValue } from "react";
 import {
   useQuery,
   useMutation,
@@ -161,10 +161,12 @@ export function ChatHistory() {
   const conversations = data?.conversations ?? [];
 
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const isSearchStale = searchQuery !== deferredSearchQuery;
 
-  const filteredConversations = searchQuery.trim()
+  const filteredConversations = deferredSearchQuery.trim()
     ? conversations.filter((conv) => {
-        const query = searchQuery.toLowerCase();
+        const query = deferredSearchQuery.toLowerCase();
         return (
           conv.title.toLowerCase().includes(query) ||
           (conv.last_message_preview?.toLowerCase().includes(query) ?? false)
@@ -381,13 +383,36 @@ export function ChatHistory() {
   const pinMutation = useMutation({
     mutationFn: ({ id, is_pinned }: { id: string; is_pinned: boolean }) =>
       apiPatch(`/conversations/${id}/pin`, { is_pinned }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    onMutate: async ({ id, is_pinned }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData<ConversationsResponse>(["conversations"]);
+
+      // Optimistically update
+      queryClient.setQueryData<ConversationsResponse>(["conversations"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          conversations: old.conversations.map((c) =>
+            c.id === id ? { ...c, is_pinned } : c
+          ),
+        };
+      });
+
+      return { previousData };
     },
-    onError: (err: unknown) => {
-      const message =
-        err instanceof Error ? err.message : "Failed to update pin";
-      showError(message);
+    onError: (_err, _vars, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["conversations"], context.previousData);
+      }
+      showError("Failed to update pin");
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 
@@ -544,7 +569,7 @@ export function ChatHistory() {
           No matches
         </div>
       ) : (
-        <ul ref={listRef} className="flex-1 overflow-y-auto outline-none" role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={handleListKeyDown} onFocus={handleListFocus}>
+        <ul ref={listRef} className={`flex-1 overflow-y-auto outline-none transition-opacity duration-150${isSearchStale ? " opacity-70" : ""}`} role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={handleListKeyDown} onFocus={handleListFocus}>
           {topPadding > 0 && <li aria-hidden="true" style={{ height: topPadding }} />}
           {flatItems.slice(startIndex, endIndex).map((item) => {
             if (item.type === "header") {

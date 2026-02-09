@@ -91,6 +91,7 @@ interface ChatState {
   dailyLimitReached: boolean;
   isLoadingMessages: boolean;
   pendingChartSpecs: Array<{ executionIndex: number; spec: ChartSpec }>;
+  queryProgress: number | null;
 }
 
 interface ChatActions {
@@ -108,6 +109,7 @@ interface ChatActions {
   removeMessage: (messageId: string) => void;
   setChartSpec: (executionIndex: number, spec: ChartSpec) => void;
   addPendingChartSpec: (executionIndex: number, spec: ChartSpec) => void;
+  setQueryProgress: (queryNumber: number | null) => void;
   reset: () => void;
 }
 
@@ -123,6 +125,7 @@ const initialState: ChatState = {
   dailyLimitReached: false,
   isLoadingMessages: false,
   pendingChartSpecs: [],
+  queryProgress: null,
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -140,6 +143,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       loadingPhase: "idle",
       isLoadingMessages: id !== null,
       pendingChartSpecs: [],
+      queryProgress: null,
     }),
 
   addMessage: (message) =>
@@ -161,7 +165,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set(
       isStreaming
         ? { isStreaming: true, streamingMessageId: messageId ?? null }
-        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false, pendingChartSpecs: [] }
+        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false, pendingChartSpecs: [], queryProgress: null }
     ),
 
   setReasoning: (isReasoning) =>
@@ -220,6 +224,9 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set((state) => ({
       pendingChartSpecs: [...state.pendingChartSpecs, { executionIndex, spec }],
     })),
+
+  setQueryProgress: (queryNumber) =>
+    set({ queryProgress: queryNumber }),
 
   reset: () => set(initialState),
 }));

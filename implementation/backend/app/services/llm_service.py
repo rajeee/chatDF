@@ -395,6 +395,7 @@ async def stream_chat(
     )
 
     tool_call_count = 0
+    sql_query_count = 0
     sql_retry_count = 0
     collected_text = ""
     collected_reasoning = ""
@@ -508,6 +509,8 @@ async def stream_chat(
             else:
                 query = tool_call_args.get("query", "")
                 result.sql_queries.append(query)
+                sql_query_count += 1
+                await ws_send(ws_messages.query_progress(query_number=sql_query_count))
                 # Map dataset dicts to worker format (execute_query expects "table_name")
                 worker_datasets = [
                     {"url": ds["url"], "table_name": ds["name"]}

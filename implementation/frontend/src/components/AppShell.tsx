@@ -52,7 +52,8 @@ export function AppShell() {
       {leftPanelOpen && (
         <div
           data-testid="left-panel-backdrop"
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden animate-fade-in"
+          className="fixed inset-0 z-30 lg:hidden animate-fade-in"
+          style={{ backgroundColor: "var(--color-backdrop)" }}
           onClick={toggleLeftPanel}
         />
       )}
@@ -61,7 +62,8 @@ export function AppShell() {
       {rightPanelOpen && (
         <div
           data-testid="right-panel-backdrop"
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden animate-fade-in"
+          className="fixed inset-0 z-30 lg:hidden animate-fade-in"
+          style={{ backgroundColor: "var(--color-backdrop)" }}
           onClick={toggleRightPanel}
         />
       )}

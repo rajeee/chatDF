@@ -169,6 +169,14 @@ def usage_update() -> dict:
     return {"type": "uu"}
 
 
+def query_progress(*, query_number: int) -> dict:
+    """Progress update for multi-query tool call execution.
+
+    Compressed format: type=qp, query_number=n
+    """
+    return {"type": "qp", "n": query_number}
+
+
 def chart_spec(*, execution_index: int, spec: dict) -> dict:
     """LLM-requested chart visualization spec.
 

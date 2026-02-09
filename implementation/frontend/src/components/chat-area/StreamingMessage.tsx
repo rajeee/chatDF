@@ -60,6 +60,7 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
   const streamingTokens = useChatStore((s) => s.streamingTokens);
   const isReasoning = useChatStore((s) => s.isReasoning);
   const streamingReasoning = useChatStore((s) => s.streamingReasoning);
+  const queryProgress = useChatStore((s) => s.queryProgress);
 
   const [reasoningCollapsed, setReasoningCollapsed] = useState(false);
 
@@ -76,6 +77,29 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
     <>
       {/* Thinking indicator — shown before any tokens or reasoning arrive */}
       {showThinkingIndicator && <ThinkingIndicator />}
+
+      {/* Multi-query progress indicator */}
+      {queryProgress !== null && queryProgress > 1 && (
+        <div
+          className="flex items-center gap-1.5 px-3 py-1"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
+          <svg
+            className="w-3 h-3 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+            <path d="M12 2a10 10 0 0 1 10 10" strokeOpacity="0.75" />
+          </svg>
+          <span className="text-xs" style={{ opacity: 0.75 }}>
+            Running query {queryProgress}...
+          </span>
+        </div>
+      )}
 
       {/* Streaming reasoning display */}
       {streamingReasoning && (

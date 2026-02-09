@@ -107,3 +107,5 @@ Track each improvement cycle: what was done, what was learned.
 | 100 | 2026-02-09 | Inline saved query result preview with Copy as CSV | U173 | 5 new tests pass, backend 198/199 (1 pre-existing) | 94d622f |
 | 101 | 2026-02-09 | Enhanced shared conversation view (rich formatting, SQL preview, schema) | U175 | 1099/1107 frontend (8 pre-existing), 198/199 backend (1 pre-existing) | bfbdee9 |
 | 102 | 2026-02-09 | Excel (.xlsx) export for query results | U174 | 1099/1107 frontend (+6 new, 8 pre-existing), 202/203 backend (+4 new, 1 pre-existing) | 415b378 |
+| 103 | 2026-02-09 | SQL explain endpoint, CSV backend export, search tests | prior session | 1099/1107 frontend (8 pre-existing), 204/205 backend (1 pre-existing) | bd6837f |
+| 104 | 2026-02-09 | Gemini 429 retry with exponential backoff | work.md task | 1099/1107 frontend (8 pre-existing), 210/211 backend (+6 new, 1 pre-existing) | ac244bf |

@@ -13,11 +13,6 @@
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.
 - **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
-- **Mock at the source, not the consumer**: When a function does `from module_a import thing` locally, patch `module_a.thing`, not the calling module.
-- **Vitest `include` patterns**: Colocated `__tests__` directories need explicit glob patterns (e.g., `src/**/__tests__/**/*.test.{ts,tsx}`).
 
 ## Naming Conflicts
 - **`settings` module vs `settings` variable**: In `main.py`, `from app.routers import settings` gets shadowed by `settings = get_settings()`. Always alias router imports.
-
-## Dependencies
-- **Polars write_excel needs xlsxwriter**: `df.write_excel()` requires `xlsxwriter` installed separately.

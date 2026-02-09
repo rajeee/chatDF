@@ -10,5 +10,4 @@
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
 - **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse` with proper Content-Disposition headers, rather than adding heavy JS libraries to the frontend bundle.
 - **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. The SDK's built-in retry isn't surfaced through exceptions — implement your own retry loop.
-- **"Last mile" integrations are high ROI**: When backend endpoints exist but lack frontend UI (explain, export, cache), wiring them up is low-effort/high-impact. Always check for unused backend capabilities before building new ones.
-- **Expose cache stats via health endpoints**: Cache management endpoints (stats, clear) are useful for debugging and don't need auth — put them alongside the health check.
+- **"Last mile" integrations are high ROI**: When backend endpoints exist but lack frontend UI, wiring them up is low-effort/high-impact. Always check for unused backend capabilities before building new ones.

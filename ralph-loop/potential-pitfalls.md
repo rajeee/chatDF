@@ -8,7 +8,6 @@
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
-- **Textarea onBlur vs dropdown mouseDown timing**: When a textarea blur dismisses a dropdown, use `mouseDown` (not `click`) on dropdown items, or delay blur dismiss with setTimeout.
 
 ## Testing
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.

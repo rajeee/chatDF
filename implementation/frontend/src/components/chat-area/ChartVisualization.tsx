@@ -10,6 +10,7 @@
 
 import { useState, useMemo, lazy, Suspense } from "react";
 import { cellValueRaw } from "@/utils/tableUtils";
+import type { ChartSpec } from "@/stores/chatStore";
 import {
   detectChartTypes,
   type ChartType,
@@ -73,6 +74,164 @@ function extractColumn(
   columns: string[],
 ): (string | number | Date | null)[] {
   return rows.map((row) => cellValueRaw(row, colIdx, columns) as string | number | Date | null);
+}
+
+/** Build Plotly trace(s) and layout from an LLM-provided chart spec */
+function buildPlotlyConfigFromSpec(
+  spec: ChartSpec,
+  columns: string[],
+  rows: unknown[][],
+  isDark: boolean,
+): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  const textColor = isDark ? "#f9fafb" : "#111827";
+  const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const accentColors = [
+    "#60a5fa", "#f472b6", "#34d399", "#fbbf24", "#a78bfa",
+    "#fb923c", "#22d3ee", "#e879f9",
+  ];
+
+  // Helper: find column index by name (case-insensitive)
+  const colIndex = (name?: string): number => {
+    if (!name) return -1;
+    const lower = name.toLowerCase();
+    const idx = columns.findIndex((c) => c.toLowerCase() === lower);
+    return idx;
+  };
+
+  // Helper: extract column data by name
+  const extractByName = (name?: string): (string | number | Date | null)[] => {
+    const idx = colIndex(name);
+    if (idx < 0) return [];
+    return rows.map((row) => cellValueRaw(row, idx, columns) as string | number | Date | null);
+  };
+
+  const baseLayout: Partial<Plotly.Layout> = {
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: { color: textColor, size: 12 },
+    margin: { t: 40, r: 24, b: 48, l: 56 },
+    autosize: true,
+    title: { text: spec.title, font: { size: 14, color: textColor } },
+    xaxis: {
+      gridcolor: gridColor,
+      zerolinecolor: gridColor,
+      title: spec.x_label ? { text: spec.x_label } : undefined,
+    },
+    yaxis: {
+      gridcolor: gridColor,
+      zerolinecolor: gridColor,
+      title: spec.y_label ? { text: spec.y_label } : undefined,
+    },
+    showlegend: (spec.y_columns?.length ?? 0) > 1,
+    legend: { bgcolor: "rgba(0,0,0,0)", font: { color: textColor } },
+  };
+
+  const xValues = extractByName(spec.x_column);
+  const isHorizontal = spec.orientation === "horizontal" || spec.chart_type === "horizontal_bar";
+  const yColumnNames = spec.y_columns ?? [];
+
+  // If no y_columns specified, try to auto-detect: first numeric column that isn't x_column
+  const effectiveYColumns = yColumnNames.length > 0
+    ? yColumnNames
+    : columns.filter((c) => c !== spec.x_column).slice(0, 1);
+
+  switch (spec.chart_type) {
+    case "bar":
+    case "horizontal_bar": {
+      const data: Plotly.Data[] = effectiveYColumns.map((yName, i) => {
+        const yValues = extractByName(yName);
+        return {
+          type: "bar" as const,
+          x: isHorizontal ? yValues : xValues,
+          y: isHorizontal ? xValues : yValues,
+          orientation: isHorizontal ? ("h" as const) : ("v" as const),
+          name: yName,
+          marker: { color: accentColors[i % accentColors.length] },
+          text: spec.show_values ? yValues.map(String) : undefined,
+          textposition: spec.show_values ? ("auto" as const) : undefined,
+        };
+      });
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          barmode: (spec.bar_mode as "group" | "stack" | "relative") ?? (effectiveYColumns.length > 1 ? "group" : undefined),
+        },
+      };
+    }
+
+    case "line": {
+      const data: Plotly.Data[] = effectiveYColumns.map((yName, i) => ({
+        type: "scatter" as const,
+        mode: "lines+markers" as const,
+        x: xValues,
+        y: extractByName(yName),
+        name: yName,
+        line: { color: accentColors[i % accentColors.length], width: 2 },
+        marker: { size: 4 },
+      }));
+      return { data, layout: baseLayout };
+    }
+
+    case "scatter": {
+      const yName = effectiveYColumns[0] ?? columns[1];
+      const data: Plotly.Data[] = [{
+        type: "scatter" as const,
+        mode: "markers" as const,
+        x: xValues,
+        y: extractByName(yName),
+        name: `${spec.x_column} vs ${yName}`,
+        marker: { color: accentColors[0], size: 6, opacity: 0.7 },
+      }];
+      return { data, layout: baseLayout };
+    }
+
+    case "histogram": {
+      const histCol = spec.x_column ?? columns[0];
+      const data: Plotly.Data[] = [{
+        type: "histogram" as const,
+        x: extractByName(histCol),
+        name: histCol,
+        marker: { color: accentColors[0] },
+      }];
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          yaxis: { ...baseLayout.yaxis, title: { text: "Count" } },
+        },
+      };
+    }
+
+    case "pie": {
+      const yName = effectiveYColumns[0] ?? columns[1];
+      const data: Plotly.Data[] = [{
+        type: "pie" as const,
+        labels: xValues as string[],
+        values: extractByName(yName) as number[],
+        marker: { colors: accentColors },
+        textfont: { color: textColor },
+      }];
+      return {
+        data,
+        layout: { ...baseLayout, xaxis: undefined, yaxis: undefined },
+      };
+    }
+
+    case "box": {
+      const data: Plotly.Data[] = effectiveYColumns.map((yName, i) => ({
+        type: "box" as const,
+        y: extractByName(yName),
+        name: yName,
+        marker: { color: accentColors[i % accentColors.length] },
+        boxmean: true,
+      }));
+      return { data, layout: baseLayout };
+    }
+
+    default:
+      return { data: [], layout: baseLayout };
+  }
 }
 
 /** Build Plotly trace(s) and layout for a given chart recommendation */
@@ -236,9 +395,11 @@ function buildPlotlyConfig(
 export function ChartVisualization({
   columns,
   rows,
+  llmSpec,
 }: {
   columns: string[];
   rows: unknown[][];
+  llmSpec?: ChartSpec;
 }) {
   const recommendations = useMemo(
     () => detectChartTypes(columns, rows),
@@ -259,11 +420,28 @@ export function ChartVisualization({
   const isDark = document.documentElement.classList.contains("dark");
 
   const plotConfig = useMemo(() => {
+    if (llmSpec) {
+      return buildPlotlyConfigFromSpec(llmSpec, columns, rows, isDark);
+    }
     if (!activeRec) return null;
     return buildPlotlyConfig(activeRec, columns, rows, isDark);
-  }, [activeRec, columns, rows, isDark]);
+  }, [activeRec, columns, rows, isDark, llmSpec]);
 
-  if (!recommendations.length || !plotConfig) {
+  if (!llmSpec && !recommendations.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-2 opacity-50">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="12" width="4" height="9" rx="1" />
+          <rect x="10" y="6" width="4" height="15" rx="1" />
+          <rect x="17" y="9" width="4" height="12" rx="1" />
+          <line x1="2" y1="3" x2="22" y2="21" strokeWidth="2" />
+        </svg>
+        <span className="text-xs">No visualizable data detected</span>
+      </div>
+    );
+  }
+
+  if (!plotConfig) {
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-2 opacity-50">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

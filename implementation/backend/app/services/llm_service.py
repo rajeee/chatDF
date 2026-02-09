@@ -71,7 +71,72 @@ _load_dataset_decl = types.FunctionDeclaration(
     ),
 )
 
-TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl])]
+_create_chart_decl = types.FunctionDeclaration(
+    name="create_chart",
+    description="Create an interactive chart visualization from the most recent query results. Call this after executing a SQL query when the results would benefit from visual representation.",
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "chart_type": types.Schema(
+                type="STRING",
+                enum=["bar", "horizontal_bar", "line", "scatter", "histogram", "pie", "box"],
+                description="The type of chart to create",
+            ),
+            "title": types.Schema(
+                type="STRING",
+                description="Chart title",
+            ),
+            "x_column": types.Schema(
+                type="STRING",
+                description="Column name for x-axis (or categories for bar/pie charts)",
+            ),
+            "y_columns": types.Schema(
+                type="ARRAY",
+                items=types.Schema(type="STRING"),
+                description="Column name(s) for y-axis values. Multiple columns create grouped/multi-series charts.",
+            ),
+            "color_column": types.Schema(
+                type="STRING",
+                description="Optional column for color grouping (creates separate traces per unique value)",
+            ),
+            "orientation": types.Schema(
+                type="STRING",
+                enum=["vertical", "horizontal"],
+                description="Bar/box chart orientation. Default: vertical.",
+            ),
+            "aggregation": types.Schema(
+                type="STRING",
+                enum=["none", "sum", "avg", "count", "min", "max"],
+                description="Aggregation to apply if data needs grouping. Default: none.",
+            ),
+            "bar_mode": types.Schema(
+                type="STRING",
+                enum=["group", "stack", "relative"],
+                description="Bar chart grouping mode. Default: group.",
+            ),
+            "color_scale": types.Schema(
+                type="STRING",
+                enum=["default", "diverging", "sequential", "categorical"],
+                description="Color scale type. 'diverging' centers at zero. Default: default.",
+            ),
+            "x_label": types.Schema(
+                type="STRING",
+                description="Custom x-axis label",
+            ),
+            "y_label": types.Schema(
+                type="STRING",
+                description="Custom y-axis label",
+            ),
+            "show_values": types.Schema(
+                type="BOOLEAN",
+                description="Show value labels on bars/points. Default: false.",
+            ),
+        },
+        required=["chart_type", "title"],
+    ),
+)
+
+TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl, _create_chart_decl])]
 
 # ---------------------------------------------------------------------------
 # StreamResult
@@ -162,6 +227,33 @@ def build_system_prompt(datasets: list[dict]) -> str:
         parts.append(
             "- Use the execute_sql tool to run SQL queries against the datasets."
         )
+        parts.append("")
+        parts.append("## Visualization Guidelines")
+        parts.append("")
+        parts.append("After executing a SQL query, consider whether the results would benefit from a chart.")
+        parts.append("Call create_chart when:")
+        parts.append("- Comparing values across categories (use bar chart)")
+        parts.append("- Showing trends over time (use line chart)")
+        parts.append("- Showing relationships between two numeric variables (use scatter plot)")
+        parts.append("- Showing distributions (use histogram or box plot)")
+        parts.append("- Showing proportions of a whole (use pie chart, only for <=8 categories)")
+        parts.append("")
+        parts.append("Do NOT call create_chart when:")
+        parts.append("- The result is a single value or a very small table (1-2 rows)")
+        parts.append("- The user explicitly asked for just the data/table")
+        parts.append("- The query returned an error")
+        parts.append("")
+        parts.append("Chart type selection:")
+        parts.append("- bar: categorical comparison (use horizontal_bar for long labels)")
+        parts.append("- line: time series or ordered sequences")
+        parts.append("- scatter: correlation between two numeric columns")
+        parts.append("- histogram: distribution of a single numeric column")
+        parts.append("- box: comparing distributions across groups")
+        parts.append("- pie: proportions (only <=8 categories)")
+        parts.append("")
+        parts.append("Use diverging color_scale when data represents change, savings, or difference from a baseline.")
+        parts.append("Set show_values to true for bar charts with <=15 bars.")
+        parts.append("Set orientation to 'horizontal' when category labels are long strings.")
     else:
         parts.append("\n## No Datasets Loaded\n")
         parts.append(
@@ -459,6 +551,20 @@ async def stream_chat(
                 )
             except ValueError as exc:
                 tool_result_str = f"Error loading dataset: {exc}"
+        elif tool_call_name == "create_chart":
+            chart_spec = tool_call_args
+            # Find the most recent successful SQL execution to link the chart to
+            latest_exec_id = None
+            if result.sql_executions:
+                for i in range(len(result.sql_executions) - 1, -1, -1):
+                    if result.sql_executions[i].error is None:
+                        latest_exec_id = i
+                        break
+            await ws_send(ws_messages.chart_spec(
+                execution_index=latest_exec_id if latest_exec_id is not None else len(result.sql_executions) - 1,
+                spec=chart_spec,
+            ))
+            tool_result_str = f"Chart created successfully. Type: {chart_spec.get('chart_type', 'unknown')}, Title: {chart_spec.get('title', 'Untitled')}"
         else:
             tool_result_str = f"Unknown tool: {tool_call_name}"
 

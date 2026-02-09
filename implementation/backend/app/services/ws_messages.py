@@ -167,3 +167,11 @@ def usage_update() -> dict:
     Compressed format: type=uu
     """
     return {"type": "uu"}
+
+
+def chart_spec(*, execution_index: int, spec: dict) -> dict:
+    """LLM-requested chart visualization spec.
+
+    Compressed format: type=cs, execution_index=ei, spec=sp
+    """
+    return {"type": "cs", "ei": execution_index, "sp": spec}

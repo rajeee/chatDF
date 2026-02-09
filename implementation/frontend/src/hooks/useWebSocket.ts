@@ -10,7 +10,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatDFSocket } from "@/lib/websocket";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
@@ -96,7 +96,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
           // Attach sql_query and structured sql_executions from the backend.
           // Support both compressed (se) and uncompressed (sql_executions) field names
           const sqlExecsRaw = msg.se || msg.sql_executions;
-          const sqlExecs = Array.isArray(sqlExecsRaw)
+          const sqlExecs: SqlExecution[] = Array.isArray(sqlExecsRaw)
             ? (sqlExecsRaw as Array<Record<string, unknown>>).map((ex) => ({
                 query: (ex.query as string) || "",
                 columns: (ex.columns as string[] | null) ?? null,
@@ -106,6 +106,13 @@ export function useWebSocket(isAuthenticated: boolean): void {
                 execution_time_ms: (ex.execution_time_ms as number | null) ?? null,
               }))
             : [];
+          // Merge any pending chart specs from create_chart tool calls
+          const pendingSpecs = chatStore.pendingChartSpecs;
+          for (const pending of pendingSpecs) {
+            if (pending.executionIndex >= 0 && pending.executionIndex < sqlExecs.length) {
+              sqlExecs[pending.executionIndex].chartSpec = pending.spec;
+            }
+          }
           chatStore.finalizeStreamingMessage({
             sql_query: ((msg.sq || msg.sql_query) as string) ?? null,
             sql_executions: sqlExecs,
@@ -121,6 +128,16 @@ export function useWebSocket(isAuthenticated: boolean): void {
               queryHistoryStore.addQuery(exec.query);
             }
           });
+          break;
+        }
+        case "cs": // chart_spec (compressed)
+        case "chart_spec": {
+          const chatStore = useChatStore.getState();
+          const executionIndex = (msg.ei ?? msg.execution_index) as number;
+          const spec = (msg.sp ?? msg.spec) as import("@/stores/chatStore").ChartSpec;
+          // During streaming, the execution may not exist on the message yet
+          // (chat_complete hasn't arrived). Store as pending and attach later.
+          chatStore.addPendingChartSpec(executionIndex, spec);
           break;
         }
         case "ce": // chat_error (compressed)

@@ -1,6 +1,21 @@
 // Implements: spec/frontend/plan.md#state-management-architecture (chatStore)
 import { create } from "zustand";
 
+export interface ChartSpec {
+  chart_type: string;
+  title: string;
+  x_column?: string;
+  y_columns?: string[];
+  color_column?: string;
+  orientation?: "vertical" | "horizontal";
+  aggregation?: string;
+  bar_mode?: string;
+  color_scale?: string;
+  x_label?: string;
+  y_label?: string;
+  show_values?: boolean;
+}
+
 export interface SqlExecution {
   query: string;
   columns: string[] | null;
@@ -8,6 +23,7 @@ export interface SqlExecution {
   total_rows: number | null;
   error: string | null;
   execution_time_ms: number | null;
+  chartSpec?: ChartSpec;   // LLM-requested chart visualization
 }
 
 export interface Message {
@@ -71,6 +87,7 @@ interface ChatState {
   loadingPhase: LoadingPhase;
   dailyLimitReached: boolean;
   isLoadingMessages: boolean;
+  pendingChartSpecs: Array<{ executionIndex: number; spec: ChartSpec }>;
 }
 
 interface ChatActions {
@@ -86,6 +103,8 @@ interface ChatActions {
   setLoadingMessages: (loading: boolean) => void;
   markMessageFailed: (messageId: string) => void;
   removeMessage: (messageId: string) => void;
+  setChartSpec: (executionIndex: number, spec: ChartSpec) => void;
+  addPendingChartSpec: (executionIndex: number, spec: ChartSpec) => void;
   reset: () => void;
 }
 
@@ -100,6 +119,7 @@ const initialState: ChatState = {
   loadingPhase: "idle",
   dailyLimitReached: false,
   isLoadingMessages: false,
+  pendingChartSpecs: [],
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -116,6 +136,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       streamingMessageId: null,
       loadingPhase: "idle",
       isLoadingMessages: id !== null,
+      pendingChartSpecs: [],
     }),
 
   addMessage: (message) =>
@@ -137,7 +158,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set(
       isStreaming
         ? { isStreaming: true, streamingMessageId: messageId ?? null }
-        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false }
+        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false, pendingChartSpecs: [] }
     ),
 
   setReasoning: (isReasoning) =>
@@ -171,6 +192,30 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
   removeMessage: (messageId) =>
     set((state) => ({
       messages: state.messages.filter((m) => m.id !== messageId),
+    })),
+
+  setChartSpec: (executionIndex, spec) =>
+    set((state) => {
+      // Find the streaming message (currently being built) and attach the chart spec
+      // to the specified execution. If message doesn't have that execution yet,
+      // store it for later attachment in the chat_complete handler.
+      const msgId = state.streamingMessageId;
+      if (!msgId) return state;
+      return {
+        messages: state.messages.map((m) => {
+          if (m.id !== msgId) return m;
+          const execs = [...m.sql_executions];
+          if (executionIndex >= 0 && executionIndex < execs.length) {
+            execs[executionIndex] = { ...execs[executionIndex], chartSpec: spec };
+          }
+          return { ...m, sql_executions: execs };
+        }),
+      };
+    }),
+
+  addPendingChartSpec: (executionIndex, spec) =>
+    set((state) => ({
+      pendingChartSpecs: [...state.pendingChartSpecs, { executionIndex, spec }],
     })),
 
   reset: () => set(initialState),

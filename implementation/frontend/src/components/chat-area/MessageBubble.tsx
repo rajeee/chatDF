@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 import type { Message, SqlExecution } from "@/stores/chatStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
+import { ChartVisualization } from "./ChartVisualization";
 import { detectChartTypes } from "@/utils/chartDetection";
 
 interface MessageBubbleProps {
@@ -219,6 +220,30 @@ function MessageBubbleComponent({
                 </span>
               ))}
             </span>
+          </div>
+        )}
+
+        {/* Inline LLM-requested chart */}
+        {!isUser && !isCurrentlyStreaming && message.sql_executions.some(e => e.chartSpec && e.columns && e.rows) && (
+          <div
+            data-testid={`inline-chart-${message.id}`}
+            className="mt-3 rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--color-bg)",
+              height: "280px",
+            }}
+          >
+            {message.sql_executions
+              .filter(e => e.chartSpec && e.columns && e.rows)
+              .map((exec, i) => (
+                <ChartVisualization
+                  key={i}
+                  columns={exec.columns!}
+                  rows={exec.rows!}
+                  llmSpec={exec.chartSpec}
+                />
+              ))}
           </div>
         )}
 

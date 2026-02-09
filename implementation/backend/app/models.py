@@ -184,6 +184,28 @@ class SuccessResponse(BaseModel):
     success: bool
 
 
+class SaveQueryRequest(BaseModel):
+    """Body for ``POST /saved-queries``."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    query: str = Field(..., min_length=1, max_length=10000)
+
+
+class SavedQueryResponse(BaseModel):
+    """A saved query."""
+
+    id: str
+    name: str
+    query: str
+    created_at: datetime
+
+
+class SavedQueryListResponse(BaseModel):
+    """Response for ``GET /saved-queries``."""
+
+    queries: list[SavedQueryResponse]
+
+
 class ErrorResponse(BaseModel):
     """Standardized error response format."""
 

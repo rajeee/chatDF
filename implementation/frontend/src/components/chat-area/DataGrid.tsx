@@ -13,6 +13,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
+import { downloadCsv } from "@/utils/csvExport";
 
 /* ---------- Sort indicator SVG icons ---------- */
 function SortAscIcon() {
@@ -185,12 +186,35 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
     }, 1500);
   }, [columns, table]);
 
+  const handleDownloadCsv = useCallback(() => {
+    downloadCsv(columns, rows, "query-results.csv");
+  }, [columns, rows]);
+
   return (
     <div data-testid="data-grid" className="border rounded">
-      {/* Copy button */}
-      <div className="flex items-center justify-end px-3 py-1 border-b"
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-1 px-3 py-1 border-b"
         style={{ borderColor: "var(--color-border)" }}
       >
+        <button
+          type="button"
+          aria-label="Download CSV"
+          onClick={handleDownloadCsv}
+          className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 flex items-center gap-1"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+            className="inline-block shrink-0"
+          >
+            <path d="M6 1v7M6 8L3 5M6 8l3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M2 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          Download CSV
+        </button>
         <button
           type="button"
           aria-label="Copy table"

@@ -91,6 +91,14 @@ CREATE TABLE IF NOT EXISTS token_usage (
     timestamp       TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS saved_queries (
+    id              TEXT PRIMARY KEY,
+    user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    query           TEXT NOT NULL,
+    created_at      TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_referral_keys_used_by ON referral_keys(used_by);
@@ -98,6 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_datasets_conversation_id ON datasets(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_token_usage_user_timestamp ON token_usage(user_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
 """
 
 

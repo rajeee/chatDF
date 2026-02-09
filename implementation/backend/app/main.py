@@ -21,7 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import get_settings
 from app.database import DatabasePool
 from app.exceptions import ConflictError, ForbiddenError, NotFoundError, RateLimitError
-from app.routers import auth, conversations, datasets, usage
+from app.routers import auth, conversations, datasets, saved_queries, usage
 from app.routers.websocket import router as ws_router
 from app.services import worker_pool
 from app.services.connection_manager import ConnectionManager
@@ -198,4 +198,5 @@ app.include_router(
     prefix="/conversations/{conversation_id}/datasets",
     tags=["datasets"],
 )
+app.include_router(saved_queries.router, prefix="/saved-queries", tags=["saved-queries"])
 app.include_router(ws_router)

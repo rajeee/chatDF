@@ -294,8 +294,8 @@ class TestAppLifecycleDb:
                 os.unlink(p)
 
     @pytest.mark.asyncio
-    async def test_all_seven_tables_exist(self, fresh_db):
-        """init_db creates all 7 tables."""
+    async def test_all_tables_exist(self, fresh_db):
+        """init_db creates all 8 tables."""
         cursor = await fresh_db.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
         )
@@ -305,6 +305,7 @@ class TestAppLifecycleDb:
             "datasets",
             "messages",
             "referral_keys",
+            "saved_queries",
             "sessions",
             "token_usage",
             "users",

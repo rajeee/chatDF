@@ -183,3 +183,11 @@ def chart_spec(*, execution_index: int, spec: dict) -> dict:
     Compressed format: type=cs, execution_index=ei, spec=sp
     """
     return {"type": "cs", "ei": execution_index, "sp": spec}
+
+
+def followup_suggestions(*, suggestions: list[str]) -> dict:
+    """Follow-up question suggestions from the LLM.
+
+    Compressed format: type=fs, suggestions=sg
+    """
+    return {"type": "fs", "sg": suggestions}

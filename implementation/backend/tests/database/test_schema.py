@@ -20,6 +20,7 @@ EXPECTED_TABLES = {
     "messages",
     "datasets",
     "token_usage",
+    "saved_queries",
 }
 
 

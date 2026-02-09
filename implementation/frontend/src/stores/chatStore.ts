@@ -94,6 +94,7 @@ interface ChatState {
   queryProgress: number | null;
   searchQuery: string;
   searchOpen: boolean;
+  followupSuggestions: string[];
 }
 
 interface ChatActions {
@@ -114,6 +115,7 @@ interface ChatActions {
   setQueryProgress: (queryNumber: number | null) => void;
   setSearchQuery: (query: string) => void;
   setSearchOpen: (open: boolean) => void;
+  setFollowupSuggestions: (suggestions: string[]) => void;
   reset: () => void;
 }
 
@@ -132,6 +134,7 @@ const initialState: ChatState = {
   queryProgress: null,
   searchQuery: "",
   searchOpen: false,
+  followupSuggestions: [],
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -152,6 +155,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       queryProgress: null,
       searchQuery: "",
       searchOpen: false,
+      followupSuggestions: [],
     }),
 
   addMessage: (message) =>
@@ -241,6 +245,8 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
 
   setSearchOpen: (open) =>
     set(open ? { searchOpen: true } : { searchOpen: false, searchQuery: "" }),
+
+  setFollowupSuggestions: (suggestions) => set({ followupSuggestions: suggestions }),
 
   reset: () => set(initialState),
 }));

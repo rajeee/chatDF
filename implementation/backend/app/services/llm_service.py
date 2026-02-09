@@ -149,7 +149,23 @@ _create_chart_decl = types.FunctionDeclaration(
     ),
 )
 
-TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl, _create_chart_decl])]
+_suggest_followups_decl = types.FunctionDeclaration(
+    name="suggest_followups",
+    description="After answering a user's question, suggest 2-3 natural follow-up questions they might want to ask next. Only call this after you've fully answered the user's question.",
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "suggestions": types.Schema(
+                type="ARRAY",
+                items=types.Schema(type="STRING"),
+                description="List of 2-3 short follow-up questions (max 80 chars each)",
+            ),
+        },
+        required=["suggestions"],
+    ),
+)
+
+TOOLS = [types.Tool(function_declarations=[_execute_sql_decl, _load_dataset_decl, _create_chart_decl, _suggest_followups_decl])]
 
 # ---------------------------------------------------------------------------
 # StreamResult
@@ -180,6 +196,7 @@ class StreamResult:
     tool_calls_made: int = 0
     sql_queries: list[str] = field(default_factory=list)
     sql_executions: list[SqlExecution] = field(default_factory=list)
+    followup_suggestions: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +288,11 @@ def build_system_prompt(datasets: list[dict]) -> str:
         parts.append("Set orientation to 'horizontal' when category labels are long strings.")
         parts.append("For heatmap charts: set x_column to the column dimension, y_columns to [row_dimension_column], and z_column to the value column.")
         parts.append("For choropleth charts: set location_column to the column with geographic names/codes, y_columns to [value_column], and title descriptively. Use color_scale='diverging' when showing change/difference.")
+        parts.append("")
+        parts.append("## Follow-up Suggestions")
+        parts.append("After answering a question, call suggest_followups with 2-3 natural follow-up questions.")
+        parts.append("Make suggestions specific to the data and the user's current line of inquiry.")
+        parts.append("Do NOT suggest follow-ups if the user just loaded a dataset or if you encountered an error.")
     else:
         parts.append("\n## No Datasets Loaded\n")
         parts.append(
@@ -585,6 +607,13 @@ async def stream_chat(
                 spec=chart_spec,
             ))
             tool_result_str = f"Chart created successfully. Type: {chart_spec.get('chart_type', 'unknown')}, Title: {chart_spec.get('title', 'Untitled')}"
+        elif tool_call_name == "suggest_followups":
+            suggestions = tool_call_args.get("suggestions", [])
+            # Limit to 3 suggestions, max 80 chars each
+            suggestions = [s[:80] for s in suggestions[:3]]
+            result.followup_suggestions = suggestions
+            await ws_send(ws_messages.followup_suggestions(suggestions=suggestions))
+            tool_result_str = "Follow-up suggestions displayed to user."
         else:
             tool_result_str = f"Unknown tool: {tool_call_name}"
 

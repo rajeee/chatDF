@@ -146,6 +146,11 @@ export function useWebSocket(isAuthenticated: boolean): void {
           chatStore.setQueryProgress((msg.n ?? msg.query_number) as number);
           break;
         }
+        case "fs": // followup_suggestions (compressed)
+        case "followup_suggestions": {
+          useChatStore.getState().setFollowupSuggestions(((msg.sg ?? msg.suggestions) as string[]) || []);
+          break;
+        }
         case "ce": // chat_error (compressed)
         case "chat_error": {
           const chatStore = useChatStore.getState();

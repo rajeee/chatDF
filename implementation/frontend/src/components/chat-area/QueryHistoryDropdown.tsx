@@ -1,6 +1,7 @@
 // Query history dropdown showing recent SQL queries with quick re-run
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
+import { useSavedQueryStore } from "@/stores/savedQueryStore";
 
 interface QueryHistoryDropdownProps {
   onSelectQuery: (query: string) => void;
@@ -51,6 +52,15 @@ export function QueryHistoryDropdown({ onSelectQuery, disabled }: QueryHistoryDr
     clearHistory();
     setIsOpen(false);
   };
+
+  const handleSaveQuery = useCallback(async (query: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const defaultName = query.slice(0, 30).trim();
+    const name = window.prompt("Name for saved query:", defaultName);
+    if (name) {
+      await useSavedQueryStore.getState().saveQuery(name, query);
+    }
+  }, []);
 
   const hasQueries = queries.length > 0;
 
@@ -116,21 +126,47 @@ export function QueryHistoryDropdown({ onSelectQuery, disabled }: QueryHistoryDr
               </div>
             ) : (
               queries.map((entry, index) => (
-                <button
+                <div
                   key={`${entry.timestamp}-${index}`}
-                  type="button"
-                  onClick={() => handleSelectQuery(entry.query)}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b last:border-b-0"
+                  className="flex items-center border-b last:border-b-0"
                   style={{ borderColor: "var(--color-border)" }}
-                  data-testid={`query-history-item-${index}`}
                 >
-                  <div className="font-mono text-xs truncate" title={entry.query}>
-                    {entry.query}
-                  </div>
-                  <div className="text-[10px] opacity-50 mt-0.5">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectQuery(entry.query)}
+                    className="flex-1 min-w-0 text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    data-testid={`query-history-item-${index}`}
+                  >
+                    <div className="font-mono text-xs truncate" title={entry.query}>
+                      {entry.query}
+                    </div>
+                    <div className="text-[10px] opacity-50 mt-0.5">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSaveQuery(entry.query, e)}
+                    className="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    aria-label="Save query"
+                    title="Save query"
+                    data-testid={`save-query-btn-${index}`}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                  </button>
+                </div>
               ))
             )}
           </div>

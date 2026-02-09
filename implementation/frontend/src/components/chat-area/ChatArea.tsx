@@ -25,6 +25,7 @@ import { ReasoningModal } from "./ReasoningModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { LiveRegion } from "./LiveRegion";
 import { SkeletonMessages } from "./SkeletonMessages";
+import { FollowupSuggestions } from "./FollowupSuggestions";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -78,6 +79,9 @@ export function ChatArea() {
     async (text: string) => {
       // Check if this is the first message BEFORE adding it to the store
       const isFirstMessage = messages.length === 0;
+
+      // Clear any follow-up suggestions when user sends a new message
+      useChatStore.getState().setFollowupSuggestions([]);
 
       // Optimistic: show user message immediately
       const userMessage = {
@@ -230,6 +234,9 @@ export function ChatArea() {
 
           {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} onRetry={handleRetry} />}
         </div>
+
+        {/* Follow-up suggestion chips */}
+        <FollowupSuggestions onSendPrompt={handleSend} />
 
         {/* Chat input - sticky at bottom */}
         <div

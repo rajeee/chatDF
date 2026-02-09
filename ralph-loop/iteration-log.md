@@ -87,3 +87,5 @@ Track each improvement cycle: what was done, what was learned.
 | 81 | 2026-02-09 | Optimistic delete, accent focus ring, dataset hostname, scroll progress | U110, U111, U112, U113 | 824/831 frontend (0 new failures, 7 pre-existing), 64/65 backend | 41d5b34 |
 | 81b | 2026-02-09 | Theme toggle shortcut, loading ETA, message search (committed from prior session) | U115, U116, U117 | 856/863 frontend (0 new failures, 7 pre-existing), 64/65 backend | 29437c5 |
 | 82 | 2026-02-09 | Search count badge, copy dataset URL, copy animation, active glow | U118, U119, U120, U121 | 873/880 frontend (+17 new tests, 7 pre-existing failures), 64/65 backend | b841cbc |
+| 84 | 2026-02-09 | Dataset stats tooltip, message density toggle | U122, U123 | 901/908 frontend (+28 new tests, 7 pre-existing failures), 64/65 backend | 51e989b |
+| 85 | 2026-02-09 | Missing CSS vars, theme consistency, resize glow, chart fade-in | U124, U126, U127, U128 | 901/908 frontend (0 new failures, 7 pre-existing), 64/65 backend | 79967b0 |

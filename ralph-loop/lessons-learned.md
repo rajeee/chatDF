@@ -8,3 +8,4 @@
 - **WS events during streaming need pending queues**: Chart specs arrive via WS before `chat_complete` finalizes the message. Store them as pending and merge when `chat_complete` arrives.
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
+- **CSS variables don't resolve in jsdom**: When replacing hardcoded hex colors with CSS variables, tests that assert `style.borderColor === "rgb(...)"` will break because jsdom doesn't resolve CSS custom properties. Update assertions to check for the variable string (e.g., `"var(--color-success)"`).

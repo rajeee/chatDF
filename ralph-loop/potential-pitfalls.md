@@ -16,4 +16,4 @@ Risks and traps to watch for during improvement iterations.
 - **Fake timers and userEvent don't mix**: `vi.useFakeTimers()` with `userEvent.setup()` causes 5-second timeouts.
 - **jsdom ignores layout**: `offsetParent` is always null; responsive classes always hidden. Test class/attribute presence, not computed styles.
 - **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
-- **CSS variables don't resolve in jsdom**: Tests asserting `style.borderColor === "rgb(...)"` break with CSS custom properties. Assert the variable string (e.g., `"var(--color-success)"`) instead.
+- **CSS variables don't resolve in jsdom**: Assert the variable string (e.g., `"var(--color-success)"`) instead of computed RGB values.

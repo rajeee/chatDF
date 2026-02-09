@@ -8,5 +8,3 @@
 - **WS events during streaming need pending queues**: Chart specs arrive via WS before `chat_complete` finalizes the message. Store them as pending and merge when `chat_complete` arrives.
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
-- **Subagents may commit independently**: When using Task subagents, they can create their own commits. Squash with `git reset --soft` before pushing for a clean history.
-- **ChatInput tests have 7 pre-existing failures**: The `setInputValue` ref method doesn't trigger synchronous re-renders in jsdom. These are known failures.

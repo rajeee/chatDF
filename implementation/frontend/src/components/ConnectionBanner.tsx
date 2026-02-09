@@ -13,7 +13,7 @@ export function ConnectionBanner() {
   return (
     <div
       data-testid="connection-banner"
-      className="flex items-center justify-center gap-3 px-4 py-2 text-sm font-medium animate-fade-in"
+      className="flex items-center justify-center gap-3 px-4 py-2 text-sm font-medium banner-slide-down"
       style={{
         backgroundColor: isReconnecting
           ? "var(--color-warning)"

@@ -51,7 +51,7 @@ export function CodeBlock({ inline, className, children, ...props }: CodeBlockPr
         <span className="font-mono opacity-60">{language || "code"}</span>
         <button
           onClick={handleCopy}
-          className="touch-action-btn px-2 py-1 rounded text-xs opacity-0 group-hover/code:opacity-100 focus-visible:opacity-100 transition-all duration-150 flex items-center gap-1.5 hover:bg-white/10 active:scale-95"
+          className="touch-action-btn px-2 py-1 rounded text-xs opacity-0 translate-x-2 group-hover/code:opacity-100 group-hover/code:translate-x-0 focus-visible:opacity-100 focus-visible:translate-x-0 transition-all duration-150 flex items-center gap-1.5 hover:bg-white/10 active:scale-95"
           style={{ color: "var(--color-text)" }}
           aria-label="Copy code to clipboard"
         >

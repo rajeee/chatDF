@@ -245,7 +245,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         className="sticky top-0 z-10 h-0.5 transition-all duration-100"
         style={{
           width: `${scrollProgress}%`,
-          backgroundColor: "var(--color-accent)",
+          background: "linear-gradient(90deg, var(--color-accent), var(--color-success))",
           opacity: scrollProgress > 0 && scrollProgress < 100 ? 0.6 : 0,
         }}
       />

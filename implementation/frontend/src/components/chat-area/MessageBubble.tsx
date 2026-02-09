@@ -321,7 +321,7 @@ function MessageBubbleComponent({
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:bg-accent/10 active:scale-95 transition-all duration-150"
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                 onClick={() => onShowReasoning(reasoningContent)}
               >
@@ -332,7 +332,7 @@ function MessageBubbleComponent({
             {/* Show SQL button */}
             {message.sql_executions.length > 0 && (
               <button
-                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:bg-accent/10 active:scale-95 transition-all duration-150"
+                className="text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 hover:shadow-sm active:scale-95 transition-all duration-150"
                 style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}
                 onClick={() => onShowSQL(message.sql_executions)}
               >

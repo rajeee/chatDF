@@ -93,3 +93,4 @@ Track each improvement cycle: what was done, what was learned.
 | 87 | 2026-02-09 | Dataset panel shortcut, DataGrid pagination animation | U133, U134 | 907/914 frontend (+6 new tests, 7 pre-existing failures), 64/65 backend | 0bba441 |
 | 88 | 2026-02-09 | Scroll gradient, copy slide-in, banner slide-down, action glow | U135, U136, U137, U138 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | 636d838 |
 | 89 | 2026-02-09 | Theme-consistent colors, settings animation, transition timing | U139, U140, U141, U142 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | ee71623 |
+| 90 | 2026-02-09 | Send glow, resize handle feedback, action button stagger | U143, U144, U145 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | d2c2d10 |

@@ -8,5 +8,4 @@
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
-- **WS message compression breaks test assertions**: Backend uses compressed event type names (`tcs` not `tool_call_start`, `qs` not `query_status`). Tests must match the compressed field names.
-- **AsyncMock vs MagicMock for awaitables**: When mocking `async` functions, use `AsyncMock(side_effect=...)` not `MagicMock(side_effect=...)` — the latter can't be `await`ed.
+- **Textarea onBlur vs dropdown mouseDown timing**: When a textarea blur dismisses a dropdown, use `mouseDown` (not `click`) on dropdown items, or delay blur dismiss with setTimeout to let the click fire first.

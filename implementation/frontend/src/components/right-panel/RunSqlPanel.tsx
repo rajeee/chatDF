@@ -4,7 +4,7 @@
 // Includes SQL autocomplete for keywords, table names, and column names.
 // Uses CodeMirror 6 for the SQL editor with syntax highlighting.
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 import { apiPost, explainSql, generateSql } from "@/api/client";
 import { useUiStore } from "@/stores/uiStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
@@ -15,6 +15,13 @@ import {
 } from "@/hooks/useSqlAutocomplete";
 import { useToastStore } from "@/stores/toastStore";
 import { formatSql } from "@/utils/sqlFormatter";
+import { detectChartTypes } from "@/utils/chartDetection";
+
+const ChartVisualization = lazy(() =>
+  import("@/components/chat-area/ChartVisualization").then((m) => ({
+    default: m.ChartVisualization,
+  }))
+);
 import { useEditableCodeMirror } from "@/hooks/useEditableCodeMirror";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -49,6 +56,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [explanationExpanded, setExplanationExpanded] = useState(true);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [showChart, setShowChart] = useState(false);
   const [sortColumn, setSortColumn] = useState<number | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -106,6 +114,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setCurrentPage(1);
     setSortColumn(null);
     setSortDirection("asc");
+    setShowChart(false);
 
     try {
       const response = await apiPost<RunQueryResponse>(
@@ -963,8 +972,56 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   >
                     {saved ? "Saved!" : "Save Query"}
                   </button>
+                  {/* Visualize toggle button */}
+                  {detectChartTypes(result.columns, result.rows).length > 0 && (
+                    <button
+                      data-testid="run-sql-visualize"
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity"
+                      style={{
+                        borderColor: showChart ? "var(--color-accent)" : "var(--color-border)",
+                        color: showChart ? "var(--color-accent)" : "var(--color-text)",
+                        backgroundColor: "transparent",
+                      }}
+                      onClick={() => setShowChart((v) => !v)}
+                      title={showChart ? "Hide chart" : "Visualize results"}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                      >
+                        <rect x="1" y="6" width="3" height="7" rx="0.5" />
+                        <rect x="5.5" y="2" width="3" height="11" rx="0.5" />
+                        <rect x="10" y="4" width="3" height="9" rx="0.5" />
+                      </svg>
+                      {showChart ? "Hide" : "Chart"}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Chart visualization (when toggled) */}
+              {showChart && (
+                <div className="border-b" style={{ borderColor: "var(--color-border)" }}>
+                  <Suspense
+                    fallback={
+                      <div
+                        className="flex items-center justify-center py-8 text-xs opacity-50"
+                        style={{ color: "var(--color-text)" }}
+                      >
+                        Loading chart...
+                      </div>
+                    }
+                  >
+                    <ChartVisualization
+                      columns={result.columns}
+                      rows={result.rows}
+                    />
+                  </Suspense>
+                </div>
+              )}
 
               {/* Results table */}
               <div className="overflow-auto" style={{ maxHeight: "12rem" }}>

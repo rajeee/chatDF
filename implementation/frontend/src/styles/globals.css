@@ -482,6 +482,22 @@ select:focus-visible {
   transform-origin: top right;
 }
 
+/* Search bar slide-down entrance */
+@keyframes searchBarSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-bar-enter {
+  animation: searchBarSlideDown 0.15s ease-out forwards;
+}
+
 /* List item enter animation — subtle fade+slide for search filtering */
 @keyframes listItemEnter {
   from {
@@ -516,7 +532,8 @@ select:focus-visible {
   .dataset-card-exit,
   .animate-fade-in,
   .dropdown-enter,
-  .list-item-enter {
+  .list-item-enter,
+  .search-bar-enter {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }

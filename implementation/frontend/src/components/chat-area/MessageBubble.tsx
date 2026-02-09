@@ -11,6 +11,20 @@ import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
 import { detectChartTypes } from "@/utils/chartDetection";
+import { highlightText } from "@/utils/highlightText";
+
+/** Recursively highlight text nodes within React children */
+function highlightChildren(children: React.ReactNode, query: string): React.ReactNode {
+  if (!children) return children;
+  if (typeof children === "string") return highlightText(children, query);
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      if (typeof child === "string") return <span key={i}>{highlightText(child, query)}</span>;
+      return child;
+    });
+  }
+  return children;
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -21,6 +35,7 @@ interface MessageBubbleProps {
   onCopy: (content: string) => void;
   onVisualize: (executions: SqlExecution[], index: number) => void;
   onRetry?: (messageId: string, content: string) => void;
+  searchQuery?: string;
 }
 
 function formatTimestamp(isoString: string): string {
@@ -44,6 +59,7 @@ function MessageBubbleComponent({
   onCopy,
   onVisualize,
   onRetry,
+  searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const reasoningContent = message.reasoning;
@@ -92,7 +108,9 @@ function MessageBubbleComponent({
       >
         {/* Message content - use StreamingMessage component for active streaming, otherwise show finalized content */}
         {isUser ? (
-          <span className="break-words">{message.content}</span>
+          <span className="break-words">
+            {searchQuery ? highlightText(message.content, searchQuery) : message.content}
+          </span>
         ) : isCurrentlyStreaming ? (
           <StreamingMessage messageId={message.id} />
         ) : (
@@ -111,7 +129,30 @@ function MessageBubbleComponent({
                   ) {
                     return <>{children}</>;
                   }
+                  // Highlight search matches within paragraph text nodes
+                  if (searchQuery) {
+                    return <p>{highlightChildren(children, searchQuery)}</p>;
+                  }
                   return <p>{children}</p>;
+                },
+                // Highlight in list items, headings, etc.
+                li: ({ children }) => {
+                  if (searchQuery) {
+                    return <li>{highlightChildren(children, searchQuery)}</li>;
+                  }
+                  return <li>{children}</li>;
+                },
+                strong: ({ children }) => {
+                  if (searchQuery) {
+                    return <strong>{highlightChildren(children, searchQuery)}</strong>;
+                  }
+                  return <strong>{children}</strong>;
+                },
+                em: ({ children }) => {
+                  if (searchQuery) {
+                    return <em>{highlightChildren(children, searchQuery)}</em>;
+                  }
+                  return <em>{children}</em>;
                 },
               }}
             >

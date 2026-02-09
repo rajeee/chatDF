@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
 import { useUiStore } from "@/stores/uiStore";
@@ -10,12 +10,32 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
+// Mock matchMedia for theme controller support
+const originalMatchMedia = window.matchMedia;
+
+function installMatchMediaMock() {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn((_query: string) => ({
+      matches: false,
+      media: _query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("useKeyboardShortcuts", () => {
   let mockChatInputRef: React.RefObject<ChatInputHandle>;
   let mockFocus: ReturnType<typeof vi.fn>;
   let mockSendMessage: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    installMatchMediaMock();
     mockFocus = vi.fn();
     mockSendMessage = vi.fn();
     mockChatInputRef = createRef<ChatInputHandle>();
@@ -26,6 +46,16 @@ describe("useKeyboardShortcuts", () => {
     };
     // Reset UI store state
     useUiStore.setState({ leftPanelOpen: true });
+    // Clear theme localStorage
+    localStorage.removeItem("theme");
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: originalMatchMedia,
+    });
+    document.documentElement.classList.remove("dark", "theme-transitioning");
   });
 
   it("focuses chat input when / is pressed (not in an input)", () => {
@@ -158,5 +188,45 @@ describe("useKeyboardShortcuts", () => {
 
     // Should not throw, just do nothing
     expect(mockFocus).not.toHaveBeenCalled();
+  });
+
+  it("toggles theme when Ctrl+Shift+L is pressed", () => {
+    // Start with "system" (default)
+    localStorage.removeItem("theme");
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
+
+    const event = new KeyboardEvent("keydown", { key: "L", ctrlKey: true, shiftKey: true });
+    document.dispatchEvent(event);
+
+    // system -> light (next in cycle: light -> dark -> system)
+    // Actually system is index 2, next is index 0 = light
+    expect(localStorage.getItem("theme")).toBe("light");
+  });
+
+  it("toggles theme when Cmd+Shift+L is pressed (Mac)", () => {
+    localStorage.removeItem("theme");
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
+
+    const event = new KeyboardEvent("keydown", { key: "L", metaKey: true, shiftKey: true });
+    document.dispatchEvent(event);
+
+    expect(localStorage.getItem("theme")).toBe("light");
+  });
+
+  it("cycles theme through light -> dark -> system on repeated Ctrl+Shift+L", () => {
+    localStorage.removeItem("theme");
+    renderHook(() => useKeyboardShortcuts({ chatInputRef: mockChatInputRef }), { wrapper });
+
+    // system -> light
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "L", ctrlKey: true, shiftKey: true }));
+    expect(localStorage.getItem("theme")).toBe("light");
+
+    // light -> dark
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "L", ctrlKey: true, shiftKey: true }));
+    expect(localStorage.getItem("theme")).toBe("dark");
+
+    // dark -> system
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "L", ctrlKey: true, shiftKey: true }));
+    expect(localStorage.getItem("theme")).toBe("system");
   });
 });

@@ -92,6 +92,8 @@ interface ChatState {
   isLoadingMessages: boolean;
   pendingChartSpecs: Array<{ executionIndex: number; spec: ChartSpec }>;
   queryProgress: number | null;
+  searchQuery: string;
+  searchOpen: boolean;
 }
 
 interface ChatActions {
@@ -110,6 +112,8 @@ interface ChatActions {
   setChartSpec: (executionIndex: number, spec: ChartSpec) => void;
   addPendingChartSpec: (executionIndex: number, spec: ChartSpec) => void;
   setQueryProgress: (queryNumber: number | null) => void;
+  setSearchQuery: (query: string) => void;
+  setSearchOpen: (open: boolean) => void;
   reset: () => void;
 }
 
@@ -126,6 +130,8 @@ const initialState: ChatState = {
   isLoadingMessages: false,
   pendingChartSpecs: [],
   queryProgress: null,
+  searchQuery: "",
+  searchOpen: false,
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -144,6 +150,8 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       isLoadingMessages: id !== null,
       pendingChartSpecs: [],
       queryProgress: null,
+      searchQuery: "",
+      searchOpen: false,
     }),
 
   addMessage: (message) =>
@@ -227,6 +235,12 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
 
   setQueryProgress: (queryNumber) =>
     set({ queryProgress: queryNumber }),
+
+  setSearchQuery: (query) =>
+    set({ searchQuery: query }),
+
+  setSearchOpen: (open) =>
+    set(open ? { searchOpen: true } : { searchOpen: false, searchQuery: "" }),
 
   reset: () => set(initialState),
 }));

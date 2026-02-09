@@ -4,11 +4,12 @@
 // Maps over chatStore.messages to render MessageBubble components.
 // Handles streaming display by merging streamingTokens into the active message.
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { MessageBubble } from "./MessageBubble";
+import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
 
@@ -28,6 +29,8 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   // This prevents MessageList from re-rendering on every token during streaming
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
+  const searchQuery = useChatStore((s) => s.searchQuery);
+  const searchOpen = useChatStore((s) => s.searchOpen);
   const openSqlModal = useUiStore((s) => s.openSqlModal);
   const openChartModal = useUiStore((s) => s.openChartModal);
   const openReasoningModal = useUiStore((s) => s.openReasoningModal);
@@ -227,6 +230,13 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
     setExportDropdownOpen(false);
   }, [messages, getExportTitle]);
 
+  // Filter messages by search query (case-insensitive content match)
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery) return messages;
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q));
+  }, [messages, searchQuery]);
+
   return (
     <div className="flex flex-col">
       <div
@@ -238,6 +248,8 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
           opacity: scrollProgress > 0 && scrollProgress < 100 ? 0.6 : 0,
         }}
       />
+      {searchOpen && <SearchBar />}
+
       {messages.length > 0 && (
         <div className="flex justify-end px-2 sm:px-4 pt-2">
           <div className="relative" ref={exportDropdownRef}>
@@ -345,7 +357,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         aria-live="polite"
         aria-label="Chat messages"
       >
-        {messages.map((message, index) => {
+        {filteredMessages.map((message, index) => {
           const isStreamingMessage =
             isStreaming && message.id === streamingMessageId;
           // Only stagger the initial batch of messages, cap at 10 to keep it snappy
@@ -367,6 +379,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onCopy={handleCopy}
               onVisualize={handleVisualize}
               onRetry={onRetry}
+              searchQuery={searchQuery}
             />
           );
         })}

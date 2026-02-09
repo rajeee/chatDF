@@ -3,13 +3,16 @@
 // - "Ctrl/Cmd+K" - Focus chat input (industry standard like Linear, Notion, GitHub)
 // - "Ctrl/Cmd+B" - Toggle left sidebar
 // - "Ctrl/Cmd+P" - Toggle pin on active conversation
+// - "Ctrl/Cmd+Shift+F" - Toggle message search
 // - "Ctrl/Cmd+Enter" - Send message (when chat input is focused)
+// - "Ctrl/Cmd+Shift+L" - Toggle theme (light/dark/system)
 
 import { useEffect } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiPatch } from "@/api/client";
+import { useTheme } from "@/hooks/useTheme";
 
 export interface ChatInputHandle {
   focus: () => void;
@@ -27,6 +30,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const themeController = useTheme();
+    try {
+      themeController.init();
+    } catch {
+      // In test environments, matchMedia may not be available.
+    }
+
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
       const isInputFocused =
@@ -81,6 +91,21 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
         return;
       }
 
+      // Ctrl/Cmd+Shift+F - Toggle message search
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "F") {
+        e.preventDefault();
+        const { searchOpen, setSearchOpen } = useChatStore.getState();
+        setSearchOpen(!searchOpen);
+        return;
+      }
+
+      // Ctrl/Cmd+Shift+L - Toggle theme (light/dark/system)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "L") {
+        e.preventDefault();
+        themeController.toggleTheme();
+        return;
+      }
+
       // Ctrl/Cmd+Enter - Send message (from chat input)
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && isInputFocused) {
         const isChatInput = target.getAttribute("aria-label") === "Message input";
@@ -93,6 +118,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     }
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      themeController.destroy();
+    };
   }, [chatInputRef, toggleLeftPanel, queryClient]);
 }

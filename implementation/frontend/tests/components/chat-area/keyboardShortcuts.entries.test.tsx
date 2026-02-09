@@ -47,4 +47,22 @@ describe("KeyboardShortcutsModal new entries", () => {
     // The arrows are rendered as unicode characters
     expect(arrowRow?.textContent).toMatch(/[↑↓]/);
   });
+
+  it("shows Toggle theme shortcut entry", () => {
+    useUiStore.setState({ shortcutsModalOpen: true });
+    render(<KeyboardShortcutsModal />);
+
+    expect(screen.getByText(/Toggle theme/i)).toBeInTheDocument();
+  });
+
+  it("displays Ctrl+Shift+L keys in Toggle theme shortcut row", () => {
+    useUiStore.setState({ shortcutsModalOpen: true });
+    render(<KeyboardShortcutsModal />);
+
+    const rows = screen.getAllByTestId("shortcut-row");
+    const themeRow = rows.find(row => row.textContent?.includes("Toggle theme"));
+    expect(themeRow).toBeDefined();
+    expect(themeRow?.textContent).toMatch(/Shift/);
+    expect(themeRow?.textContent).toMatch(/L/);
+  });
 });

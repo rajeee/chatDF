@@ -7,6 +7,7 @@ import { memo, useState } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useUiStore } from "@/stores/uiStore";
+import { LoadingETA } from "./LoadingETA";
 
 interface DatasetCardProps {
   dataset: Dataset;
@@ -103,6 +104,7 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               style={{ backgroundColor: "var(--color-accent)" }}
             />
           </div>
+          <LoadingETA datasetId={dataset.id} />
         </div>
       )}
 

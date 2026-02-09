@@ -6,8 +6,6 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 
 | ID | Idea | Impact | Effort | Priority | Status |
 |----|------|--------|--------|----------|--------|
-| U160 | Multi-dataset JOIN queries | 5 | 5 | 1.0 | done (iter 118) |
-| U194 | Conversation templates (pre-built analysis workflows) | 4 | 4 | 1.0 | done (iter 118) |
 | U198 | Dataset schema diff view (side-by-side column comparison) | 4 | 3 | 1.3 | pending |
 | U199 | Query result bookmarking with tags and search | 4 | 3 | 1.3 | pending |
 | U200 | Conversation branching from any message (not just fork) | 4 | 4 | 1.0 | pending |

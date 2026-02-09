@@ -121,3 +121,5 @@ Track each improvement cycle: what was done, what was learned.
 | 115a | 2026-02-09 | Persistent query cache, draft persistence, bulk conversation ops | prior session | 1259 frontend pass, 64/65 backend (1 pre-existing) | e642ea0 |
 | 115 | 2026-02-09 | Auto-profile datasets on load via WebSocket | U193 | stores pass, 662/677 backend (15 pre-existing) | e63f946 |
 | 117 | 2026-02-09 | Query result comparison modal, popular dataset catalog | U176, U195 | 1287 frontend pass, 64/65 backend (1 pre-existing) | 49b275e |
+| 117b | 2026-02-09 | Dataset discovery panel, saved query pinning | prior session | 1292 frontend pass, 64/65 backend (1 pre-existing) | 14c487e |
+| 118 | 2026-02-09 | Multi-dataset JOIN templates, conversation analysis templates | U160, U194 | 42 new tests pass, 64/65 backend (1 pre-existing) | 96f0380 |

@@ -262,6 +262,42 @@ export async function searchConversations(query: string, limit = 20): Promise<Se
 }
 
 // ---------------------------------------------------------------------------
+// Dataset search (Hugging Face Hub)
+// ---------------------------------------------------------------------------
+
+export interface DatasetSearchResult {
+  id: string;
+  description: string | null;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  last_modified: string | null;
+  parquet_url: string;
+}
+
+export interface DatasetSearchResponse {
+  results: DatasetSearchResult[];
+  total: number;
+}
+
+/**
+ * Search for public datasets on Hugging Face Hub.
+ */
+export async function searchDatasets(
+  query: string,
+  limit: number = 10
+): Promise<DatasetSearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+  });
+  const response = await apiGet<DatasetSearchResponse>(
+    `/api/dataset-search?${params.toString()}`
+  );
+  return response.results;
+}
+
+// ---------------------------------------------------------------------------
 // Message deletion
 // ---------------------------------------------------------------------------
 
@@ -357,6 +393,27 @@ export async function generateSql(
   return apiPost<GenerateSqlResponse>(
     `/conversations/${conversationId}/generate-sql`,
     { question }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Correlation matrix
+// ---------------------------------------------------------------------------
+
+export interface CorrelationResponse {
+  columns: string[];
+  matrix: (number | null)[][];
+}
+
+/**
+ * Fetch the pairwise Pearson correlation matrix for numeric columns in a dataset.
+ */
+export async function getCorrelations(
+  conversationId: string,
+  datasetId: string
+): Promise<CorrelationResponse> {
+  return apiGet<CorrelationResponse>(
+    `/conversations/${conversationId}/datasets/${datasetId}/correlations`
   );
 }
 

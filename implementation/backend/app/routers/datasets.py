@@ -26,6 +26,7 @@ from app.config import get_settings
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
     AddDatasetRequest,
+    CorrelationResponse,
     DatasetAckResponse,
     DatasetDetailResponse,
     DatasetPreviewResponse,
@@ -375,6 +376,37 @@ async def profile_single_column(
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}/datasets/{dataset_id}/correlations
+# Pairwise Pearson correlation matrix for numeric columns
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{dataset_id}/correlations", response_model=CorrelationResponse)
+async def get_correlations(
+    request: Request,
+    dataset_id: str,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> CorrelationResponse:
+    """Compute pairwise Pearson correlation matrix for numeric columns in a dataset."""
+    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
+
+    worker_pool = _get_worker_pool(request)
+    result = await worker_pool.compute_correlations(ds["url"])
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    if "error_type" in result:
+        raise HTTPException(status_code=500, detail=result.get("message", "Correlation computation failed"))
+
+    return CorrelationResponse(
+        columns=result["columns"],
+        matrix=result["matrix"],
+    )
 
 
 # ---------------------------------------------------------------------------

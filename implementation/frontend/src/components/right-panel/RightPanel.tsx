@@ -5,13 +5,16 @@
 // Below 1024px (lg): renders as fixed overlay from right side, toggled via Header button.
 // On desktop (>=1024px): always visible inline panel with resize handle.
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useUiStore, type RightPanelTab } from "@/stores/uiStore";
+import { useToastStore } from "@/stores/toastStore";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
+import { apiPost } from "@/api/client";
 import { DatasetInput } from "./DatasetInput";
 import { DatasetCard } from "./DatasetCard";
+import { DatasetSearch } from "./DatasetSearch";
 import { SchemaModal } from "./SchemaModal";
 import { PreviewModal } from "./PreviewModal";
 import { ComparisonModal } from "./ComparisonModal";
@@ -52,6 +55,56 @@ export function RightPanel() {
       setRightPanelTab("datasets");
     },
     [setPendingSql, setRightPanelTab]
+  );
+
+  const addDataset = useDatasetStore((s) => s.addDataset);
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const { success: toastSuccess, error: toastError } = useToastStore();
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const handleLoadFromSearch = useCallback(
+    async (url: string) => {
+      if (searchLoading) return;
+      setSearchLoading(true);
+      try {
+        let convId = conversationId;
+        if (!convId) {
+          const newConv = await apiPost<{ id: string }>("/conversations");
+          convId = newConv.id;
+          setActiveConversation(convId);
+        }
+
+        const response = await apiPost<{ dataset_id: string; status: string }>(
+          `/conversations/${convId}/datasets`,
+          { url }
+        );
+
+        const alreadyExists = useDatasetStore
+          .getState()
+          .datasets.some((d) => d.id === response.dataset_id);
+        if (!alreadyExists) {
+          addDataset({
+            id: response.dataset_id,
+            conversation_id: convId!,
+            url,
+            name: "",
+            row_count: 0,
+            column_count: 0,
+            schema_json: "{}",
+            status: "loading",
+            error_message: null,
+          });
+        }
+        toastSuccess("Dataset added from Hugging Face");
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load dataset";
+        toastError(message);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [conversationId, searchLoading, addDataset, setActiveConversation, toastSuccess, toastError]
   );
 
   const handleMouseDown = useCallback(
@@ -250,6 +303,10 @@ export function RightPanel() {
                   Compare Datasets
                 </button>
               )}
+              <DatasetSearch
+                onLoad={handleLoadFromSearch}
+                loading={searchLoading}
+              />
               {datasets.length > 0 && conversationId && (
                 <RunSqlPanel conversationId={conversationId} />
               )}

@@ -476,6 +476,78 @@ def profile_column(url: str, table_name: str, column_name: str, column_type: str
             os.unlink(tmp_path)
 
 
+def compute_correlations(url: str) -> dict:
+    """Compute pairwise Pearson correlation matrix for numeric columns.
+
+    Loads the dataset, selects only numeric columns (Int*, UInt*, Float*),
+    and computes the Pearson correlation matrix using Polars.
+
+    Args:
+        url: Parquet file URL or file:// path.
+
+    Returns:
+        {"columns": list[str], "matrix": list[list[float|None]]}
+        On error: {"error": str}
+    """
+    tmp_path = None
+    try:
+        import json
+        import math
+
+        import polars as pl
+
+        resolved, is_local = _resolve_url(url)
+
+        if is_local:
+            df = pl.read_parquet(resolved)
+        else:
+            try:
+                df = pl.read_parquet(url)
+            except Exception:
+                tmp_path = _download_to_tempfile(url)
+                df = pl.read_parquet(tmp_path)
+
+        # Select only numeric columns
+        numeric_dtypes = (
+            pl.Int8, pl.Int16, pl.Int32, pl.Int64,
+            pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64,
+            pl.Float32, pl.Float64,
+        )
+        numeric_cols = [
+            name for name, dtype in df.schema.items()
+            if isinstance(dtype, numeric_dtypes)
+        ]
+
+        if len(numeric_cols) < 2:
+            return {"error": "Need at least 2 numeric columns for correlation matrix"}
+
+        # Compute Pearson correlation matrix
+        corr_df = df.select(numeric_cols).pearson_corr()
+
+        # Convert to nested list, replacing NaN with None
+        matrix = []
+        for row in corr_df.to_dicts():
+            matrix_row = []
+            for col in numeric_cols:
+                val = row[col]
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    matrix_row.append(None)
+                else:
+                    matrix_row.append(round(val, 4))
+            matrix.append(matrix_row)
+
+        return json.loads(json.dumps(
+            {"columns": numeric_cols, "matrix": matrix},
+            default=str,
+        ))
+
+    except Exception as exc:
+        return {"error": str(exc)}
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 def execute_query(sql: str, datasets: list[dict]) -> dict:
     """Execute SQL query against parquet datasets.
 

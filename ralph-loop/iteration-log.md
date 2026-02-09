@@ -116,3 +116,4 @@ Track each improvement cycle: what was done, what was learned.
 | 109 | 2026-02-09 | Query History panel + fix NL-to-SQL tests | U180, U181 fix | 1123/1131 frontend (+24 new, 8 pre-existing), 72/73 backend (+8 fixed, 1 pre-existing) | f14efc6 |
 | 111 | 2026-02-09 | Query history re-run + favorite/star queries | U183, U184 | 1132/1140 frontend (+9 new, 8 pre-existing), 64/65 backend (+9 new star tests, 1 pre-existing) | 66f88b0 |
 | 112 | 2026-02-09 | SQL formatter, format button, copy-to-clipboard TSV | U185, U186 | 1171/1179 frontend (+17 new, 8 pre-existing), 64/65 backend (1 pre-existing) | ed2e7d1 |
+| 113 | 2026-02-09 | CodeMirror SQL editor, column sorting, chart in RunSqlPanel | U187, U188, U189 | 1185/1193 frontend (8 pre-existing), 64/65 backend (1 pre-existing) | 04cce20, 3a0e7bd |

@@ -8,3 +8,5 @@
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
 - **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse`, rather than adding heavy JS libraries to the frontend bundle.
 - **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. Implement your own retry loop — the SDK's built-in retry isn't surfaced through exceptions.
+- **CodeMirror in tests**: Mock `useEditableCodeMirror` hook in jsdom tests — CodeMirror needs real DOM. Capture `onChange` callback to simulate typing: `act(() => { mockOnChange?.("sql", pos); })`.
+- **Lazy-load named exports**: For `lazy(() => import("./Foo").then(m => ({ default: m.Foo })))` when the component is a named export, not the default.

@@ -38,6 +38,7 @@ interface RunQueryResponse {
   page: number;
   page_size: number;
   total_pages: number;
+  limit_applied?: boolean;
 }
 
 interface RunSqlPanelProps {
@@ -64,6 +65,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [sortColumn, setSortColumn] = useState<number | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showTemplates, setShowTemplates] = useState(false);
+  const [resultFilter, setResultFilter] = useState("");
+  const [debouncedFilter, setDebouncedFilter] = useState("");
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const templatesRef = useRef<HTMLDivElement>(null);
@@ -106,6 +109,14 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showTemplates]);
 
+  // Debounce the result filter input (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilter(resultFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [resultFilter]);
+
   // Theme detection (same approach as SQLPanel.tsx)
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -128,6 +139,16 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
       return String(va).localeCompare(String(vb)) * dir;
     });
   }, [result, sortColumn, sortDirection]);
+
+  const filteredRows = useMemo(() => {
+    if (!debouncedFilter) return sortedRows;
+    const lowerFilter = debouncedFilter.toLowerCase();
+    return sortedRows.filter((row) =>
+      row.some((cell) =>
+        String(cell ?? "").toLowerCase().includes(lowerFilter)
+      )
+    );
+  }, [sortedRows, debouncedFilter]);
 
   const handleSortClick = useCallback((colIndex: number) => {
     if (sortColumn === colIndex) {
@@ -155,6 +176,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setSortColumn(null);
     setSortDirection("asc");
     setShowChart(false);
+    setResultFilter("");
+    setDebouncedFilter("");
 
     try {
       const response = await apiPost<RunQueryResponse>(
@@ -1140,6 +1163,32 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </div>
               </div>
 
+              {/* Auto-LIMIT info banner */}
+              {result.limit_applied && (
+                <div
+                  data-testid="limit-applied-banner"
+                  className="flex items-center gap-1.5 px-2 py-1.5 text-xs border-b bg-blue-50 dark:bg-blue-900/20"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <svg
+                    className="w-3.5 h-3.5 shrink-0 text-blue-500 dark:text-blue-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span className="text-blue-700 dark:text-blue-300">
+                    Results limited to 10,000 rows. Add your own LIMIT clause to control this.
+                  </span>
+                </div>
+              )}
+
               {/* Chart visualization (when toggled) */}
               {showChart && (
                 <div className="border-b" style={{ borderColor: "var(--color-border)" }}>
@@ -1160,6 +1209,48 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   </Suspense>
                 </div>
               )}
+
+              {/* Search / filter input */}
+              <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--color-border)" }}>
+                <div className="relative">
+                  <input
+                    data-testid="result-filter-input"
+                    type="text"
+                    className="w-full px-3 py-1.5 text-sm rounded border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      backgroundColor: "var(--color-bg)",
+                      color: "var(--color-text)",
+                    }}
+                    placeholder="Search results..."
+                    value={resultFilter}
+                    onChange={(e) => setResultFilter(e.target.value)}
+                  />
+                  {resultFilter && (
+                    <button
+                      data-testid="result-filter-clear"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0.5 rounded hover:opacity-70 transition-opacity"
+                      style={{ color: "var(--color-text-muted)" }}
+                      onClick={() => {
+                        setResultFilter("");
+                        setDebouncedFilter("");
+                      }}
+                      aria-label="Clear search"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+                {debouncedFilter && (
+                  <div
+                    data-testid="result-filter-count"
+                    className="mt-1 text-[10px]"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    Showing {filteredRows.length} of {sortedRows.length} rows
+                  </div>
+                )}
+              </div>
 
               {/* Results table */}
               <div className="overflow-auto" style={{ maxHeight: "12rem" }}>
@@ -1206,7 +1297,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedRows.map((row, ri) => (
+                    {filteredRows.map((row, ri) => (
                       <tr
                         key={ri}
                         className="hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"

@@ -10,14 +10,36 @@ the process boundary. No imports from ``app/`` -- fully self-contained.
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 import time
 import urllib.error
 import urllib.request
 
 MAX_RESULT_ROWS = 1000
+MAX_QUERY_ROWS = 10000  # Auto-LIMIT cap for SELECT queries without LIMIT
 HEAD_REQUEST_TIMEOUT = 10  # seconds
 DOWNLOAD_TIMEOUT = 300  # seconds for full file downloads
+
+
+def _has_limit(sql: str) -> bool:
+    """Check if SQL already contains a LIMIT clause.
+
+    Strips string literals, double-quoted identifiers, single-line comments
+    (``--``), and block comments (``/* */``) before checking so that a LIMIT
+    inside a comment or string literal is not treated as a real clause.
+    """
+    cleaned = re.sub(r"'[^']*'", "", sql)
+    cleaned = re.sub(r'"[^"]*"', "", cleaned)
+    cleaned = re.sub(r"--.*$", "", cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.DOTALL)
+    return bool(re.search(r"\bLIMIT\b", cleaned, re.IGNORECASE))
+
+
+def _is_select(sql: str) -> bool:
+    """Check if the SQL statement is a SELECT (not DDL/DML like CREATE, INSERT, etc.)."""
+    stripped = sql.strip().lstrip("(")
+    return stripped.upper().startswith("SELECT") or stripped.upper().startswith("WITH")
 
 
 def _resolve_url(url: str) -> tuple[str, bool]:
@@ -323,6 +345,137 @@ def profile_columns(url: str) -> dict:
             os.unlink(tmp_path)
 
 
+def profile_column(url: str, table_name: str, column_name: str, column_type: str) -> dict:
+    """Compute profiling statistics for a single column of a parquet dataset.
+
+    Args:
+        url: Parquet file URL or file:// path.
+        table_name: Not used for scanning, but kept for consistency.
+        column_name: The column to profile.
+        column_type: The Polars dtype string (e.g. "Int64", "Utf8", "Float64", "Date").
+
+    Returns:
+        {"stats": {...}} with type-appropriate statistics.
+        On error: {"error": str}
+    """
+    tmp_path = None
+    try:
+        import polars as pl
+
+        resolved, is_local = _resolve_url(url)
+
+        if is_local:
+            lf = pl.scan_parquet(resolved)
+        else:
+            try:
+                lf = pl.scan_parquet(url)
+                lf.collect_schema()  # verify access
+            except Exception:
+                tmp_path = _download_to_tempfile(url)
+                lf = pl.scan_parquet(tmp_path)
+
+        col = pl.col(column_name)
+        dtype_str = column_type
+
+        # Determine the category of the column type
+        is_numeric = dtype_str.startswith(("Int", "UInt", "Float"))
+        is_string = dtype_str in ("Utf8", "String")
+        is_datetime = dtype_str in ("Date", "Datetime", "Time") or dtype_str.startswith("Datetime")
+
+        stats: dict = {}
+
+        if is_numeric:
+            result = lf.select(
+                col.min().alias("min"),
+                col.max().alias("max"),
+                col.mean().alias("mean"),
+                col.median().alias("median"),
+                col.null_count().alias("null_count"),
+                col.n_unique().alias("distinct_count"),
+            ).collect()
+            row = result.to_dicts()[0]
+            stats = {
+                "min": row["min"],
+                "max": row["max"],
+                "mean": round(row["mean"], 4) if row["mean"] is not None else None,
+                "median": row["median"],
+                "null_count": row["null_count"],
+                "distinct_count": row["distinct_count"],
+            }
+
+        elif is_string:
+            # Basic counts
+            count_result = lf.select(
+                col.null_count().alias("null_count"),
+                col.n_unique().alias("distinct_count"),
+            ).collect()
+            count_row = count_result.to_dicts()[0]
+
+            # String length stats from non-null values
+            length_result = lf.filter(col.is_not_null()).select(
+                col.str.len_chars().min().alias("min_length"),
+                col.str.len_chars().max().alias("max_length"),
+            ).collect()
+            length_row = length_result.to_dicts()[0]
+
+            # Top 5 most common values
+            top5_result = (
+                lf.filter(col.is_not_null())
+                .group_by(column_name)
+                .agg(pl.len().alias("count"))
+                .sort("count", descending=True)
+                .head(5)
+                .collect()
+            )
+            top_5_values = [
+                {"value": str(r[column_name]), "count": r["count"]}
+                for r in top5_result.to_dicts()
+            ]
+
+            stats = {
+                "min_length": length_row["min_length"],
+                "max_length": length_row["max_length"],
+                "null_count": count_row["null_count"],
+                "distinct_count": count_row["distinct_count"],
+                "top_5_values": top_5_values,
+            }
+
+        elif is_datetime:
+            result = lf.select(
+                col.min().alias("min"),
+                col.max().alias("max"),
+                col.null_count().alias("null_count"),
+                col.n_unique().alias("distinct_count"),
+            ).collect()
+            row = result.to_dicts()[0]
+            stats = {
+                "min": str(row["min"]) if row["min"] is not None else None,
+                "max": str(row["max"]) if row["max"] is not None else None,
+                "null_count": row["null_count"],
+                "distinct_count": row["distinct_count"],
+            }
+
+        else:
+            # Fallback for other types: just null_count and distinct_count
+            result = lf.select(
+                col.null_count().alias("null_count"),
+                col.n_unique().alias("distinct_count"),
+            ).collect()
+            row = result.to_dicts()[0]
+            stats = {
+                "null_count": row["null_count"],
+                "distinct_count": row["distinct_count"],
+            }
+
+        return {"stats": stats}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 def execute_query(sql: str, datasets: list[dict]) -> dict:
     """Execute SQL query against parquet datasets.
 
@@ -368,8 +521,15 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
                     lf = pl.scan_parquet(tmp_path)
                     ctx.register(dataset["table_name"], lf)
 
+        # Auto-inject LIMIT for SELECT queries that don't have one
+        limit_applied = False
+        effective_sql = sql
+        if _is_select(sql) and not _has_limit(sql):
+            effective_sql = f"{sql.rstrip().rstrip(';')} LIMIT {MAX_QUERY_ROWS}"
+            limit_applied = True
+
         # Execute the query
-        result_lf = ctx.execute(sql)
+        result_lf = ctx.execute(effective_sql)
 
         # Collect the full result to get total row count
         result_df = result_lf.collect()
@@ -391,6 +551,7 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
             "columns": columns,
             "total_rows": total_rows,
             "execution_time_ms": execution_time_ms,
+            "limit_applied": limit_applied,
         }
 
     except Exception as exc:

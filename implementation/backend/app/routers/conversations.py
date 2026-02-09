@@ -934,6 +934,8 @@ async def run_query(
 
     # Detect whether this was a cache hit
     is_cached = result.pop("cached", False)
+    # Detect whether an auto-LIMIT was injected by the worker
+    is_limit_applied = result.pop("limit_applied", False)
 
     # Convert row dicts to list-of-lists
     columns = result.get("columns", [])
@@ -979,6 +981,7 @@ async def run_query(
         page_size=page_size,
         total_pages=total_pages,
         cached=is_cached,
+        limit_applied=is_limit_applied,
     )
 
 

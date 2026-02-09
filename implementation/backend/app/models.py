@@ -64,6 +64,13 @@ class RenameDatasetRequest(BaseModel):
     )
 
 
+class ProfileColumnRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/datasets/{dataset_id}/profile-column``."""
+
+    column_name: str = Field(..., min_length=1)
+    column_type: str = Field(..., min_length=1)
+
+
 class RunQueryRequest(BaseModel):
     """Body for ``POST /conversations/{id}/query``."""
 
@@ -83,6 +90,7 @@ class RunQueryResponse(BaseModel):
     page_size: int = 100
     total_pages: int = 1
     cached: bool = False
+    limit_applied: bool = False
 
 
 # ---------------------------------------------------------------------------

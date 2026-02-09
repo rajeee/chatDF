@@ -8,8 +8,7 @@
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
 - **Use refs for state in stable callbacks**: When a `useCallback` depends on frequently-changing state (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.
-- **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse` with proper Content-Disposition headers, rather than adding heavy JS libraries to the frontend bundle.
-- **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. The SDK's built-in retry isn't surfaced through exceptions — implement your own retry loop.
-- **"Last mile" integrations are high ROI**: When backend endpoints exist but lack frontend UI, wiring them up is low-effort/high-impact. Always check for unused backend capabilities before building new ones.
-- **Mock at the source, not the consumer**: When a function does `from module_a import thing` locally inside a function body, patch `module_a.thing`, not `module_b.thing` where the function lives. The local import resolves at the source module.
-- **Cross-tab state handoff via store**: When one UI tab needs to send data to a component in another tab (e.g., history → SQL panel), use a transient store value (`pendingSql`) that the target component consumes and clears via `useEffect`. Don't persist this state.
+- **File export via backend keeps frontend lean**: For binary format exports (XLSX), POST data to a backend endpoint that returns `StreamingResponse`, rather than adding heavy JS libraries to the frontend bundle.
+- **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. Implement your own retry loop — the SDK's built-in retry isn't surfaced through exceptions.
+- **"Last mile" integrations are high ROI**: When backend endpoints exist but lack frontend UI, wiring them up is low-effort/high-impact. Check for unused backend capabilities before building new ones.
+- **Cross-tab state handoff via store**: When one UI tab needs to send data to another tab's component, use a transient store value that the target consumes and clears via `useEffect`.

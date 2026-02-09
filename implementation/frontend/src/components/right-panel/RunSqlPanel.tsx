@@ -4,10 +4,13 @@
 // Includes SQL autocomplete for keywords, table names, and column names.
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { apiPost } from "@/api/client";
+import { apiPost, explainSql } from "@/api/client";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
+import { useToastStore } from "@/stores/toastStore";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 interface RunQueryResponse {
   columns: string[];
@@ -31,6 +34,11 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explanationExpanded, setExplanationExpanded] = useState(true);
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
@@ -178,12 +186,106 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [sql, result]);
 
+  const handleExplain = useCallback(async () => {
+    const trimmed = sql.trim();
+    if (!trimmed || isExplaining) return;
+
+    setIsExplaining(true);
+    try {
+      const response = await explainSql(conversationId, trimmed);
+      setExplanation(response.explanation);
+      setExplanationExpanded(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to explain query";
+      setExplanation(`Error: ${message}`);
+      setExplanationExpanded(true);
+    } finally {
+      setIsExplaining(false);
+    }
+  }, [sql, isExplaining, conversationId]);
+
+  // Export results as CSV or XLSX via the backend export endpoints
+  const handleExport = useCallback(async (format: "csv" | "xlsx") => {
+    if (!result) return;
+
+    const setExporting = format === "csv" ? setExportingCsv : setExportingXlsx;
+    setExporting(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/export/${format}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          columns: result.columns,
+          rows: result.rows,
+          filename: "query-results",
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Export failed (HTTP ${response.status})`;
+        try {
+          const body = await response.json();
+          if (body && typeof body.error === "string") {
+            errorMessage = body.error;
+          }
+        } catch {
+          // Response was not JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Extract filename from Content-Disposition header if available
+      const disposition = response.headers.get("Content-Disposition");
+      let filename = `query-results.${format}`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";\n]+)"?/);
+        if (match?.[1]) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and trigger download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Export failed";
+      useToastStore.getState().error(message);
+    } finally {
+      setExporting(false);
+    }
+  }, [result]);
+
   // Format execution time for display
   const formatTime = (ms: number): string => {
     if (ms < 1) return `${ms.toFixed(2)}ms`;
     if (ms < 1000) return `${ms.toFixed(0)}ms`;
     return `${(ms / 1000).toFixed(2)}s`;
   };
+
+  // Spinner SVG used for export button loading states
+  const spinnerSvg = (
+    <svg
+      className="w-3 h-3 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="12" r="10" opacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" />
+    </svg>
+  );
 
   return (
     <div
@@ -362,6 +464,35 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </>
               )}
             </button>
+            <button
+              data-testid="run-sql-explain"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors disabled:opacity-50"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "transparent",
+                color: "var(--color-text)",
+              }}
+              disabled={!sql.trim() || isExecuting || isExplaining}
+              onClick={handleExplain}
+            >
+              {isExplaining ? (
+                <>
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" opacity="0.25" />
+                    <path d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                  Explaining...
+                </>
+              ) : (
+                "Explain"
+              )}
+            </button>
             <span
               className="text-[10px] opacity-50"
               style={{ color: "var(--color-text-muted)" }}
@@ -369,6 +500,59 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
               {navigator.platform?.includes("Mac") ? "\u2318" : "Ctrl"}+Enter
             </span>
           </div>
+
+          {/* Explanation display */}
+          {explanation && (
+            <div
+              data-testid="run-sql-explanation"
+              className="rounded border"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-bg)",
+              }}
+            >
+              {/* Explanation header */}
+              <div
+                className="flex items-center justify-between px-2 py-1 cursor-pointer select-none"
+                style={{ color: "var(--color-text)" }}
+                onClick={() => setExplanationExpanded(!explanationExpanded)}
+              >
+                <span className="text-[10px] font-medium flex items-center gap-1">
+                  <svg
+                    className={`w-2.5 h-2.5 transition-transform duration-200 ${explanationExpanded ? "rotate-90" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  Explanation
+                </span>
+                <button
+                  data-testid="run-sql-explanation-dismiss"
+                  className="text-[10px] px-1 py-0.5 rounded hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--color-text-muted)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExplanation(null);
+                  }}
+                  aria-label="Dismiss explanation"
+                >
+                  &times;
+                </button>
+              </div>
+              {/* Explanation body */}
+              {explanationExpanded && (
+                <div
+                  className="px-2 pb-2 text-xs whitespace-pre-wrap"
+                  style={{ color: "var(--color-text)", lineHeight: "1.5" }}
+                >
+                  {explanation}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Error display */}
           {error && (
@@ -408,14 +592,61 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     </span>
                   )}
                 </span>
-                <button
-                  data-testid="run-sql-save"
-                  className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
-                  style={{ color: "var(--color-accent)" }}
-                  onClick={handleSaveQuery}
-                >
-                  {saved ? "Saved!" : "Save Query"}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {/* CSV export button */}
+                  <button
+                    data-testid="export-csv"
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                      backgroundColor: "transparent",
+                    }}
+                    disabled={exportingCsv}
+                    onClick={() => handleExport("csv")}
+                    title="Export as CSV"
+                  >
+                    {exportingCsv ? spinnerSvg : (
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    )}
+                    CSV
+                  </button>
+                  {/* XLSX export button */}
+                  <button
+                    data-testid="export-xlsx"
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                      backgroundColor: "transparent",
+                    }}
+                    disabled={exportingXlsx}
+                    onClick={() => handleExport("xlsx")}
+                    title="Export as Excel"
+                  >
+                    {exportingXlsx ? spinnerSvg : (
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    )}
+                    XLSX
+                  </button>
+                  {/* Save query button */}
+                  <button
+                    data-testid="run-sql-save"
+                    className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
+                    style={{ color: "var(--color-accent)" }}
+                    onClick={handleSaveQuery}
+                  >
+                    {saved ? "Saved!" : "Save Query"}
+                  </button>
+                </div>
               </div>
 
               {/* Results table */}

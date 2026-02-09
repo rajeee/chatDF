@@ -82,6 +82,7 @@ class RunQueryResponse(BaseModel):
     page: int = 1
     page_size: int = 100
     total_pages: int = 1
+    cached: bool = False
 
 
 # ---------------------------------------------------------------------------

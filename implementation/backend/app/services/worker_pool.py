@@ -56,6 +56,11 @@ class WorkerPool:
         self._query_cache.put(sql, datasets, result)
         return result
 
+    @property
+    def query_cache(self) -> QueryCache:
+        """Expose the query cache for stats and management endpoints."""
+        return self._query_cache
+
     async def profile_columns(self, url: str) -> dict:
         return await _profile_columns(self._pool, url)
 

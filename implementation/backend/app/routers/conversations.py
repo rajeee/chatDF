@@ -757,7 +757,7 @@ async def run_query(
 
     datasets_list = [{"url": row["url"], "table_name": row["name"]} for row in rows]
 
-    # Execute via worker pool
+    # Execute via worker pool (includes cache check)
     pool = getattr(request.app.state, "worker_pool", None)
     if pool is None:
         raise HTTPException(status_code=503, detail="Worker pool unavailable")
@@ -773,6 +773,9 @@ async def run_query(
             status_code=400,
             detail=result.get("message", "Query execution failed"),
         )
+
+    # Detect whether this was a cache hit
+    is_cached = result.pop("cached", False)
 
     # Convert row dicts to list-of-lists
     columns = result.get("columns", [])
@@ -796,6 +799,7 @@ async def run_query(
         page=page,
         page_size=page_size,
         total_pages=total_pages,
+        cached=is_cached,
     )
 
 

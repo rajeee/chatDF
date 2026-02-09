@@ -17,14 +17,14 @@ test.describe("CUF-3: Load dataset by URL", () => {
       const datasetInput = authedPage.locator('[data-testid="dataset-input"]');
       await expect(datasetInput).toBeVisible();
 
-      // The input field should have the placeholder "Paste parquet URL..."
+      // The input field should have the placeholder "Paste Parquet/CSV URL..."
       const urlInput = authedPage.locator(
         '[data-testid="dataset-input"] input[type="text"]',
       );
       await expect(urlInput).toBeVisible();
       await expect(urlInput).toHaveAttribute(
         "placeholder",
-        "Paste parquet URL...",
+        "Paste Parquet/CSV URL...",
       );
     },
   );

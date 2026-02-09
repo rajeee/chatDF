@@ -181,15 +181,17 @@ async def upload_dataset(
     user: dict = Depends(get_current_user),
     db: aiosqlite.Connection = Depends(get_db),
 ) -> DatasetAckResponse:
-    """Upload a local parquet file as a dataset."""
+    """Upload a local data file (parquet, CSV, TSV) as a dataset."""
     settings = get_settings()
     worker_pool = _get_worker_pool(request)
     conversation_id = conversation["id"]
 
     # 1. Validate file extension
     filename = file.filename or ""
-    if not filename.lower().endswith(".parquet"):
-        raise HTTPException(status_code=400, detail="Only .parquet files are supported")
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    allowed_exts = {"parquet", "csv", "tsv"}
+    if ext not in allowed_exts and not filename.lower().endswith(".csv.gz"):
+        raise HTTPException(status_code=400, detail="Only .parquet, .csv, .tsv, and .csv.gz files are supported")
 
     # 2. Validate file size (read content to check)
     max_size = settings.max_upload_size_mb * 1024 * 1024
@@ -209,8 +211,8 @@ async def upload_dataset(
     if row["cnt"] >= dataset_service.MAX_DATASETS_PER_CONVERSATION:
         raise HTTPException(status_code=400, detail="Maximum 50 datasets reached")
 
-    # 4. Validate parquet magic bytes
-    if len(content) < 4 or content[:4] != b"PAR1":
+    # 4. Validate parquet magic bytes (only for .parquet files)
+    if ext == "parquet" and (len(content) < 4 or content[:4] != b"PAR1"):
         raise HTTPException(status_code=400, detail="Not a valid parquet file")
 
     # 5. Save file to uploads directory
@@ -220,7 +222,8 @@ async def upload_dataset(
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     file_uuid = str(uuid4())
-    saved_filename = f"{file_uuid}.parquet"
+    file_ext = ".csv.gz" if filename.lower().endswith(".csv.gz") else f".{ext}"
+    saved_filename = f"{file_uuid}{file_ext}"
     saved_path = upload_dir / saved_filename
     with open(saved_path, "wb") as f:
         f.write(content)

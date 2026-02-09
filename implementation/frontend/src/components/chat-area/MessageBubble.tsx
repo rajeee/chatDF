@@ -6,9 +6,10 @@
 
 import { memo, useMemo, useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Message, SqlExecution } from "@/stores/chatStore";
+import { useChatStore, type Message, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useDevModeStore } from "@/stores/devModeStore";
+import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
@@ -82,6 +83,13 @@ function MessageBubbleComponent({
   const devMode = useDevModeStore((s) => s.devMode);
   const reasoningContent = message.reasoning;
 
+  // Bookmark state
+  const isMessageBookmarked = useBookmarkStore((s) => s.isBookmarked(message.id));
+  const addBookmark = useBookmarkStore((s) => s.addBookmark);
+  const removeBookmarkAction = useBookmarkStore((s) => s.removeBookmark);
+  const getBookmarkByMessageId = useBookmarkStore((s) => s.getBookmarkByMessageId);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+
   // Find the first sql_execution that has chartable data
   const visualizableIndex = useMemo(() => {
     for (let i = 0; i < message.sql_executions.length; i++) {
@@ -113,6 +121,23 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
+
+  const handleBookmarkClick = useCallback(() => {
+    if (isMessageBookmarked) {
+      const existing = getBookmarkByMessageId(message.id);
+      if (existing) removeBookmarkAction(existing.id);
+    } else {
+      const sql = message.sql_executions.map((e) => e.query).join(";\n");
+      const title = message.content.slice(0, 50).trim() || "Untitled query";
+      addBookmark({
+        messageId: message.id,
+        conversationId: activeConversationId ?? "",
+        sql,
+        title,
+        tags: [],
+      });
+    }
+  }, [isMessageBookmarked, message.id, message.content, message.sql_executions, activeConversationId, addBookmark, removeBookmarkAction, getBookmarkByMessageId]);
 
   const handleDeleteClick = useCallback(() => {
     if (!onDelete) return;
@@ -595,6 +620,34 @@ function MessageBubbleComponent({
 
         {/* Action buttons row - top right */}
         <div className="absolute top-1 right-1 flex items-center gap-1">
+          {/* Bookmark button - only on assistant messages with SQL */}
+          {!isUser && !isCurrentlyStreaming && message.sql_executions.length > 0 && (
+            <button
+              data-testid={`bookmark-btn-${message.id}`}
+              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
+                isMessageBookmarked
+                  ? "opacity-100"
+                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
+              } active:scale-90`}
+              style={{
+                color: isMessageBookmarked ? "var(--color-accent)" : "var(--color-text)",
+              }}
+              onClick={handleBookmarkClick}
+              aria-label={isMessageBookmarked ? "Remove bookmark" : "Bookmark query"}
+              title={isMessageBookmarked ? "Remove bookmark" : "Bookmark query"}
+            >
+              {isMessageBookmarked ? (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              ) : (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Delete button */}
           {onDelete && !isCurrentlyStreaming && (
             <button
@@ -632,8 +685,8 @@ function MessageBubbleComponent({
             </button>
           )}
 
-          {/* Fork button - only shown on assistant messages */}
-          {!isUser && onFork && !isCurrentlyStreaming && (
+          {/* Fork button */}
+          {onFork && !isCurrentlyStreaming && (
             <button
               data-testid={`fork-btn-${message.id}`}
               className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
@@ -642,7 +695,7 @@ function MessageBubbleComponent({
                   : "opacity-40 hover:opacity-100 hover:bg-white/10"
               } active:scale-90`}
               style={{
-                color: forked ? "var(--color-success)" : "var(--color-text)",
+                color: forked ? "var(--color-success)" : isUser ? "var(--color-white)" : "var(--color-text)",
               }}
               onClick={handleForkClick}
               aria-label={forked ? "Forked" : "Fork conversation"}

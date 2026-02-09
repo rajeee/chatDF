@@ -27,6 +27,7 @@ interface UiState {
   pendingSql: string | null;
   queryResultComparisonOpen: boolean;
   comparisonCurrentResult: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null;
+  schemaDiffDatasetIds: [string, string] | null;
 }
 
 interface UiActions {
@@ -58,6 +59,8 @@ interface UiActions {
   setPendingSql: (sql: string | null) => void;
   openQueryResultComparison: (currentResult?: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null) => void;
   closeQueryResultComparison: () => void;
+  openSchemaDiffModal: (datasetIds: [string, string]) => void;
+  closeSchemaDiffModal: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()(
@@ -84,6 +87,7 @@ export const useUiStore = create<UiState & UiActions>()(
       pendingSql: null,
       queryResultComparisonOpen: false,
       comparisonCurrentResult: null,
+      schemaDiffDatasetIds: null,
 
       toggleLeftPanel: () =>
         set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -165,6 +169,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeQueryResultComparison: () =>
         set({ queryResultComparisonOpen: false, comparisonCurrentResult: null }),
+
+      openSchemaDiffModal: (datasetIds) =>
+        set({ schemaDiffDatasetIds: datasetIds }),
+
+      closeSchemaDiffModal: () =>
+        set({ schemaDiffDatasetIds: null }),
     }),
     {
       name: "chatdf-ui-preferences",

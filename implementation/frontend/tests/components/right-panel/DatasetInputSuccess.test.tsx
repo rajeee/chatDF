@@ -26,7 +26,7 @@ describe("DatasetInput success flash", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "https://example.com/data.parquet");
 
     const addBtn = screen.getByRole("button", { name: "Add" });
@@ -38,7 +38,7 @@ describe("DatasetInput success flash", () => {
     });
 
     // Check the input has success theme border
-    const inputEl = screen.getByPlaceholderText("Paste parquet URL...");
+    const inputEl = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     expect(inputEl.style.borderColor).toBe("var(--color-success)");
 
     apiPostSpy.mockRestore();

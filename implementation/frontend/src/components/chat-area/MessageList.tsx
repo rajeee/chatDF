@@ -13,7 +13,7 @@ import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
-import { deleteMessage, forkConversation, redoMessage } from "@/api/client";
+import { deleteMessage, forkConversation, redoMessage, exportConversationHtml } from "@/api/client";
 import { TokenUsage } from "./TokenUsage";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
@@ -287,6 +287,17 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
     setExportDropdownOpen(false);
   }, [messages, getExportTitle]);
 
+  const handleExportHtml = useCallback(async () => {
+    if (!activeConversationId) return;
+    setExportDropdownOpen(false);
+    try {
+      await exportConversationHtml(activeConversationId);
+    } catch (error) {
+      console.error("Failed to export as HTML:", error);
+      showToast("Failed to export as HTML", "error");
+    }
+  }, [activeConversationId, showToast]);
+
   // Filter messages by search query (case-insensitive content match)
   const filteredMessages = useMemo(() => {
     if (!searchQuery) return messages;
@@ -401,6 +412,30 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
                     <path d="M9 14h6" />
                   </svg>
                   Export as JSON
+                </button>
+                <button
+                  data-testid="export-html-btn"
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-gray-500/10 transition-colors"
+                  style={{ color: "var(--color-text)" }}
+                  onClick={handleExportHtml}
+                  role="menuitem"
+                >
+                  {/* HTML icon (code brackets) */}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                  Export as HTML
                 </button>
               </div>
             )}

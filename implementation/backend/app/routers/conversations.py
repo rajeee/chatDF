@@ -8,7 +8,8 @@ Endpoints:
 - POST /conversations/bulk-delete              -> bulk_delete_conversations
 - POST /conversations/bulk-pin                 -> bulk_pin_conversations
 - GET /conversations/{conversation_id}         -> get_conversation_detail
-- GET /conversations/{conversation_id}/export  -> export_conversation
+- GET /conversations/{conversation_id}/export       -> export_conversation
+- GET /conversations/{conversation_id}/export/html  -> export_conversation_html
 - PATCH /conversations/{conversation_id}       -> rename_conversation
 - DELETE /conversations/{conversation_id}      -> delete_conversation
 - DELETE /conversations                        -> clear_all_conversations
@@ -21,6 +22,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import html as html_module
 import json
 import logging
 import math
@@ -553,6 +555,378 @@ async def export_conversation(
         media_type="application/json",
         headers={
             "Content-Disposition": f'attachment; filename="conversation-{conv_id}.json"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/{conversation_id}/export/html
+# Download conversation as a standalone HTML file
+# ---------------------------------------------------------------------------
+
+
+async def _generate_conversation_html(
+    db: aiosqlite.Connection,
+    conversation_id: str,
+    title: str,
+) -> str:
+    """Generate a self-contained HTML document for a conversation.
+
+    This is extracted as a helper so it can be tested independently
+    without spinning up the full FastAPI application.
+    """
+    escaped_title = html_module.escape(title or "Untitled Conversation")
+
+    # Fetch messages
+    cursor = await db.execute(
+        "SELECT role, content, sql_query, created_at "
+        "FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conversation_id,),
+    )
+    message_rows = await cursor.fetchall()
+
+    # Fetch datasets
+    cursor = await db.execute(
+        "SELECT name, url, row_count, column_count "
+        "FROM datasets WHERE conversation_id = ?",
+        (conversation_id,),
+    )
+    dataset_rows = await cursor.fetchall()
+
+    # Build messages HTML
+    messages_html_parts: list[str] = []
+    for row in message_rows:
+        role = row["role"]
+        content = html_module.escape(row["content"] or "")
+        sql_query = row["sql_query"]
+        created_at = row["created_at"] or ""
+
+        # Convert newlines to <br> for display
+        content_html = content.replace("\n", "<br>")
+
+        role_class = "user" if role == "user" else "assistant"
+        role_label = "You" if role == "user" else "Assistant"
+
+        msg_html = f'<div class="message {role_class}">'
+        msg_html += f'<div class="message-header"><span class="role">{role_label}</span>'
+        if created_at:
+            escaped_ts = html_module.escape(created_at)
+            msg_html += f'<span class="timestamp">{escaped_ts}</span>'
+        msg_html += "</div>"
+        msg_html += f'<div class="message-content">{content_html}</div>'
+
+        if sql_query:
+            escaped_sql = html_module.escape(sql_query)
+            msg_html += f'<div class="sql-block"><div class="sql-label">SQL Query</div><pre><code>{escaped_sql}</code></pre></div>'
+
+        msg_html += "</div>"
+        messages_html_parts.append(msg_html)
+
+    messages_html = "\n".join(messages_html_parts)
+
+    # Build datasets HTML
+    datasets_html = ""
+    if dataset_rows:
+        ds_items: list[str] = []
+        for ds in dataset_rows:
+            name = html_module.escape(ds["name"] or "Unnamed")
+            url = html_module.escape(ds["url"] or "")
+            row_count = ds["row_count"] or 0
+            col_count = ds["column_count"] or 0
+            url_part = ""
+            if url:
+                url_part = f'<br><span class="dataset-url">{url}</span>'
+            ds_items.append(
+                f'<div class="dataset-item">'
+                f"<strong>{name}</strong>"
+                f'<span class="dataset-meta">{row_count:,} rows, {col_count} columns</span>'
+                f"{url_part}"
+                f"</div>"
+            )
+        datasets_html = (
+            '<div class="datasets-section">'
+            "<h2>Datasets</h2>"
+            + "\n".join(ds_items)
+            + "</div>"
+        )
+
+    html_doc = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{escaped_title} - ChatDF Export</title>
+<style>
+  :root {{
+    --bg: #ffffff;
+    --surface: #f8f9fa;
+    --text: #1a1a1a;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --user-bg: #3b82f6;
+    --user-text: #ffffff;
+    --assistant-bg: #f3f4f6;
+    --assistant-text: #1a1a1a;
+    --sql-bg: #f8f5f0;
+    --sql-border: #e8e0d4;
+    --sql-label: #8b7355;
+    --accent: #3b82f6;
+  }}
+
+  @media (prefers-color-scheme: dark) {{
+    :root {{
+      --bg: #111827;
+      --surface: #1f2937;
+      --text: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --border: #374151;
+      --user-bg: #2563eb;
+      --user-text: #ffffff;
+      --assistant-bg: #1f2937;
+      --assistant-text: #f3f4f6;
+      --sql-bg: #1e2330;
+      --sql-border: #2d3748;
+      --sql-label: #a0aec0;
+      --accent: #60a5fa;
+    }}
+  }}
+
+  * {{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }}
+
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }}
+
+  h1 {{
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text);
+  }}
+
+  .export-meta {{
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }}
+
+  .datasets-section {{
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }}
+
+  .datasets-section h2 {{
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }}
+
+  .dataset-item {{
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+  }}
+
+  .dataset-item + .dataset-item {{
+    border-top: 1px solid var(--border);
+  }}
+
+  .dataset-meta {{
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+  }}
+
+  .dataset-url {{
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    word-break: break-all;
+  }}
+
+  .messages {{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }}
+
+  .message {{
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+  }}
+
+  .message.user {{
+    align-self: flex-end;
+  }}
+
+  .message.assistant {{
+    align-self: flex-start;
+  }}
+
+  .message-header {{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+  }}
+
+  .message.user .message-header {{
+    justify-content: flex-end;
+  }}
+
+  .role {{
+    font-weight: 600;
+    color: var(--text-secondary);
+  }}
+
+  .timestamp {{
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+  }}
+
+  .message-content {{
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    word-wrap: break-word;
+  }}
+
+  .message.user .message-content {{
+    background-color: var(--user-bg);
+    color: var(--user-text);
+    border-bottom-right-radius: 4px;
+  }}
+
+  .message.assistant .message-content {{
+    background-color: var(--assistant-bg);
+    color: var(--assistant-text);
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }}
+
+  .sql-block {{
+    margin-top: 0.5rem;
+    border: 1px solid var(--sql-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }}
+
+  .sql-label {{
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.75rem;
+    background: var(--sql-border);
+    color: var(--sql-label);
+  }}
+
+  .sql-block pre {{
+    margin: 0;
+    padding: 0.75rem;
+    background: var(--sql-bg);
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }}
+
+  .sql-block code {{
+    font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }}
+
+  .footer {{
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }}
+
+  @media print {{
+    body {{
+      max-width: 100%;
+      padding: 1rem;
+    }}
+
+    .message {{
+      max-width: 100%;
+      page-break-inside: avoid;
+    }}
+
+    .message.user .message-content {{
+      background-color: #e8f0fe !important;
+      color: #1a1a1a !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }}
+  }}
+</style>
+</head>
+<body>
+  <h1>{escaped_title}</h1>
+  <div class="export-meta">Exported from ChatDF</div>
+
+  {datasets_html}
+
+  <div class="messages">
+    {messages_html}
+  </div>
+
+  <div class="footer">
+    Exported from ChatDF
+  </div>
+</body>
+</html>"""
+
+    return html_doc
+
+
+@router.get("/{conversation_id}/export/html")
+async def export_conversation_html(
+    conversation: dict = Depends(get_conversation),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> StreamingResponse:
+    """Export a conversation as a standalone HTML file.
+
+    Creates a self-contained HTML document with embedded CSS that renders
+    the conversation in a clean, printable format with:
+    - Conversation title and metadata
+    - All messages with role indicators (user/assistant)
+    - SQL queries in code blocks
+    - Dark/light mode support
+    """
+    conv_id = conversation["id"]
+    title = conversation["title"] or "Untitled Conversation"
+
+    html_content = await _generate_conversation_html(db, conv_id, title)
+    html_bytes = html_content.encode("utf-8")
+
+    return StreamingResponse(
+        iter([html_bytes]),
+        media_type="text/html",
+        headers={
+            "Content-Disposition": f'attachment; filename="conversation-{conv_id}.html"',
         },
     )
 

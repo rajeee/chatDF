@@ -19,7 +19,7 @@ import { fireEvent } from "@testing-library/react";
 import * as client from "@/api/client";
 
 const WARNING_TEXT =
-  "This URL doesn't look like a Parquet dataset. ChatDF works best with Parquet files.";
+  "This URL doesn't look like a data file. ChatDF works best with Parquet, CSV, and TSV files.";
 
 beforeEach(() => {
   resetAllStores();
@@ -32,11 +32,11 @@ describe("DI-WARN-1: Non-parquet URL shows a warning message", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
-        target: { value: "https://example.com/somefile.csv" },
+        target: { value: "https://example.com/somefile.zip" },
       });
     });
 
@@ -65,7 +65,7 @@ describe("DI-WARN-2: .parquet URL does NOT show a warning", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
@@ -93,7 +93,7 @@ describe("DI-WARN-2: .parquet URL does NOT show a warning", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
@@ -118,7 +118,7 @@ describe("DI-WARN-3: HuggingFace URL does NOT show a warning", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
@@ -146,7 +146,7 @@ describe("DI-WARN-3: HuggingFace URL does NOT show a warning", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
@@ -171,7 +171,7 @@ describe("DI-WARN-3: HuggingFace URL does NOT show a warning", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.change(input, {
@@ -203,12 +203,12 @@ describe("DI-WARN-4: Warnings don't block submission", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     // Type a non-parquet URL (triggers warning, not error)
     await act(async () => {
       fireEvent.change(input, {
-        target: { value: "https://example.com/somefile.csv" },
+        target: { value: "https://example.com/somefile.zip" },
       });
     });
 
@@ -231,7 +231,7 @@ describe("DI-WARN-4: Warnings don't block submission", () => {
     await waitFor(() => {
       expect(apiPostSpy).toHaveBeenCalledWith(
         "/conversations/conv-1/datasets",
-        { url: "https://example.com/somefile.csv" }
+        { url: "https://example.com/somefile.zip" }
       );
     });
 
@@ -249,7 +249,7 @@ describe("DI-WARN-5: Errors still block submission", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     // Type an invalid URL (triggers error)
     await act(async () => {

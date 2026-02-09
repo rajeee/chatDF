@@ -3,18 +3,20 @@
 // "Preset Sources" button at top, then URL text input with Add button.
 // Client-side validation (debounced 300ms), server-side validation on submit.
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
-import { apiPost, TimeoutError } from "@/api/client";
+import { apiPost, apiUploadFile, TimeoutError } from "@/api/client";
 
 const URL_REGEX = /^https?:\/\/[^/]+\.[^/]+/;
 
 /** Patterns that suggest the URL points to a data source (no warning needed). */
 const DATA_URL_PATTERNS = [
   /\.parquet(\.\w+)?$/i,
+  /\.csv(\.\w+)?$/i,
+  /\.tsv$/i,
   /datasets?\//i,
   /\bdata\./i,
   /s3\.amazonaws\.com/i,
@@ -40,6 +42,8 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const allDatasets = useDatasetStore((s) => s.datasets);
   const datasets = useMemo(
@@ -69,7 +73,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
       const looksLikeData = DATA_URL_PATTERNS.some((re) => re.test(value));
       const warn = looksLikeData
         ? null
-        : "This URL doesn't look like a Parquet dataset. ChatDF works best with Parquet files.";
+        : "This URL doesn't look like a data file. ChatDF works best with Parquet, CSV, and TSV files.";
       return { error: null, warning: warn };
     },
     [datasets]
@@ -185,6 +189,61 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
     }
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || isUploading) return;
+
+    // Reset file input so the same file can be re-selected
+    e.target.value = "";
+
+    setIsUploading(true);
+    setError(null);
+    try {
+      // Auto-create a conversation if none exists
+      let convId = conversationId;
+      if (!convId) {
+        const newConv = await apiPost<{ id: string }>("/conversations");
+        convId = newConv.id;
+        setActiveConversation(convId);
+      }
+
+      const response = await apiUploadFile<{ dataset_id: string; status: string }>(
+        `/conversations/${convId}/datasets/upload`,
+        file
+      );
+
+      // Add a loading-state dataset entry to the store, unless
+      // the WS dataset_loaded event already added it (race condition).
+      const alreadyExists = useDatasetStore
+        .getState()
+        .datasets.some((d) => d.id === response.dataset_id);
+      if (!alreadyExists) {
+        addDataset({
+          id: response.dataset_id,
+          conversation_id: convId,
+          url: `file://${file.name}`,
+          name: "",
+          row_count: 0,
+          column_count: 0,
+          schema_json: "{}",
+          status: "loading",
+          error_message: null,
+        });
+      }
+
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1000);
+      success(`Uploaded ${file.name} successfully`);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to upload file";
+      setError(message);
+      showError(message);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
     setIsDragOver(true);
@@ -216,7 +275,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
   }
 
   const addDisabled =
-    atLimit || url.trim() === "" || isSubmitting || error !== null;
+    atLimit || url.trim() === "" || isSubmitting || isUploading || error !== null;
 
   return (
     <div
@@ -263,9 +322,9 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         Preset Sources
       </button>
 
-      {/* Custom URL input */}
+      {/* Custom URL / file upload input */}
       <label className="text-xs font-medium opacity-70 mb-1 block">
-        Custom Parquet URL
+        Add Dataset
       </label>
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -275,7 +334,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={atLimit ? "Maximum 50 datasets" : "Paste parquet URL..."}
+            placeholder={atLimit ? "Maximum 50 datasets" : "Paste Parquet/CSV URL..."}
             disabled={atLimit || isSubmitting}
             className={`w-full rounded border px-2 py-1 text-sm disabled:opacity-50${showSuccess ? " success-pulse" : ""}`}
             style={{
@@ -329,6 +388,41 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             />
           ) : (
             "Add"
+          )}
+        </button>
+        {/* File upload button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".parquet,.csv,.tsv"
+          onChange={handleFileUpload}
+          className="hidden"
+          data-testid="file-upload-input"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={atLimit || isUploading}
+          aria-label="Upload file"
+          data-testid="file-upload-btn"
+          title="Upload a Parquet, CSV, or TSV file"
+          className="rounded px-2 py-1 text-sm font-medium disabled:opacity-50 hover:brightness-110 active:scale-95 transition-all duration-150"
+          style={{
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text)",
+          }}
+        >
+          {isUploading ? (
+            <span
+              data-testid="upload-spinner"
+              className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
           )}
         </button>
       </div>

@@ -21,6 +21,7 @@ import { PreviewModal } from "./PreviewModal";
 import { ComparisonModal } from "./ComparisonModal";
 import { QueryResultComparisonModal } from "./QueryResultComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
+import { SchemaDiffModal } from "./SchemaDiffModal";
 import { RunSqlPanel } from "./RunSqlPanel";
 import { QueryHistoryPanel } from "./QueryHistoryPanel";
 import { DatasetDiscoveryPanel } from "./DatasetDiscoveryPanel";
@@ -39,6 +40,7 @@ export function RightPanel() {
   const setRightPanelTab = useUiStore((s) => s.setRightPanelTab);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const openComparisonModal = useUiStore((s) => s.openComparisonModal);
+  const openSchemaDiffModal = useUiStore((s) => s.openSchemaDiffModal);
   const setPendingSql = useUiStore((s) => s.setPendingSql);
   const readyDatasets = useMemo(
     () => datasets.filter((d) => d.status === "ready"),
@@ -285,32 +287,60 @@ export function RightPanel() {
                 )}
               </div>
               {readyDatasets.length >= 2 && (
-                <button
-                  data-testid="compare-datasets-button"
-                  onClick={() =>
-                    openComparisonModal([readyDatasets[0].id, readyDatasets[1].id])
-                  }
-                  className="mt-3 w-full flex items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium hover:brightness-110 active:scale-[0.98] transition-all duration-150"
-                  style={{
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <div className="mt-3 flex gap-2">
+                  <button
+                    data-testid="compare-datasets-button"
+                    onClick={() =>
+                      openComparisonModal([readyDatasets[0].id, readyDatasets[1].id])
+                    }
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium hover:brightness-110 active:scale-[0.98] transition-all duration-150"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
                   >
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  Compare Datasets
-                </button>
+                    <svg
+                      className="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    Compare
+                  </button>
+                  <button
+                    data-testid="schema-diff-button"
+                    onClick={() =>
+                      openSchemaDiffModal([readyDatasets[0].id, readyDatasets[1].id])
+                    }
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium hover:brightness-110 active:scale-[0.98] transition-all duration-150"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 3v18" />
+                      <path d="M3 12h18" />
+                      <path d="M5 5l14 14" />
+                    </svg>
+                    Schema Diff
+                  </button>
+                </div>
               )}
               <DatasetSearch
                 onLoad={handleLoadFromSearch}
@@ -338,6 +368,7 @@ export function RightPanel() {
       <SchemaModal />
       <PreviewModal />
       <ComparisonModal />
+      <SchemaDiffModal />
       <QueryResultComparisonModal />
       <PresetSourcesModal />
     </aside>

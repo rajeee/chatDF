@@ -176,6 +176,29 @@ export async function apiDelete<T>(path: string, timeoutMs?: number): Promise<T>
   return handleResponse<T>(response);
 }
 
+/**
+ * Upload a file via multipart form data.
+ */
+export async function apiUploadFile<T>(
+  path: string,
+  file: File,
+  timeoutMs: number = 60_000
+): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetchWithTimeout(
+    `${BASE_URL}${path}`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+      // Don't set Content-Type - browser sets it with boundary
+    },
+    timeoutMs
+  );
+  return handleResponse<T>(response);
+}
+
 // ---------------------------------------------------------------------------
 // Domain-specific API helpers
 // ---------------------------------------------------------------------------
@@ -465,6 +488,34 @@ export async function getCorrelations(
   return apiGet<CorrelationResponse>(
     `/conversations/${conversationId}/datasets/${datasetId}/correlations`
   );
+}
+
+// ---------------------------------------------------------------------------
+// HTML conversation export
+// ---------------------------------------------------------------------------
+
+/**
+ * Export a conversation as a standalone HTML file and trigger a download.
+ *
+ * Fetches the HTML from the backend, creates a Blob URL, and clicks a
+ * hidden anchor element to initiate the browser download.
+ */
+export async function exportConversationHtml(conversationId: string): Promise<void> {
+  const response = await fetchWithTimeout(
+    `${BASE_URL}/conversations/${conversationId}/export/html`,
+    { method: "GET", credentials: "include" },
+    30_000
+  );
+  if (!response.ok) throw new ApiError(response.status, "Export failed");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conversation-export.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------

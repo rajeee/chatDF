@@ -4,13 +4,16 @@
 // Controlled by uiStore.leftPanelOpen.
 // Resizable via drag handle on right edge. Collapsible to 48px strip.
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { ChatHistory } from "./ChatHistory";
+import { BookmarkPanel } from "./BookmarkPanel";
 import { Settings } from "./Settings";
 import { UsageStats } from "./UsageStats";
 import { Account } from "./Account";
+
+type LeftPanelView = "conversations" | "bookmarks";
 
 function HamburgerIcon() {
   return (
@@ -38,6 +41,7 @@ export function LeftPanel() {
   const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
   const setLeftPanelWidth = useUiStore((s) => s.setLeftPanelWidth);
   const isDragging = useRef(false);
+  const [activeView, setActiveView] = useState<LeftPanelView>("conversations");
 
   const swipeRef = useSwipeToDismiss({
     direction: "left",
@@ -121,7 +125,7 @@ export function LeftPanel() {
       }}
     >
       <div className="flex flex-col h-full p-4 overflow-y-auto animate-panel-content-fade-in">
-        <div className="flex items-center mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <button
             data-testid="toggle-left-panel"
             onClick={toggleLeftPanel}
@@ -131,8 +135,37 @@ export function LeftPanel() {
           >
             <HamburgerIcon />
           </button>
+          <div className="flex flex-1 rounded overflow-hidden border" style={{ borderColor: "var(--color-border)" }}>
+            <button
+              data-testid="left-panel-tab-conversations"
+              className="flex-1 px-2 py-1 text-xs font-medium transition-colors"
+              style={{
+                backgroundColor: activeView === "conversations" ? "var(--color-accent)" : "transparent",
+                color: activeView === "conversations" ? "white" : "var(--color-text)",
+                opacity: activeView === "conversations" ? 1 : 0.6,
+              }}
+              onClick={() => setActiveView("conversations")}
+            >
+              Chats
+            </button>
+            <button
+              data-testid="left-panel-tab-bookmarks"
+              className="flex-1 px-2 py-1 text-xs font-medium transition-colors flex items-center justify-center gap-1"
+              style={{
+                backgroundColor: activeView === "bookmarks" ? "var(--color-accent)" : "transparent",
+                color: activeView === "bookmarks" ? "white" : "var(--color-text)",
+                opacity: activeView === "bookmarks" ? 1 : 0.6,
+              }}
+              onClick={() => setActiveView("bookmarks")}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              Bookmarks
+            </button>
+          </div>
         </div>
-        <ChatHistory />
+        {activeView === "conversations" ? <ChatHistory /> : <BookmarkPanel />}
         <div className="mt-4">
           <Settings />
         </div>

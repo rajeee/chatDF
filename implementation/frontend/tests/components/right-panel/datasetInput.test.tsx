@@ -52,7 +52,7 @@ describe("DI-VALID-1: Invalid URL shows error", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "not-a-url");
 
     await waitFor(() => {
@@ -66,7 +66,7 @@ describe("DI-VALID-1: Invalid URL shows error", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "http://localhost");
 
     await waitFor(() => {
@@ -93,7 +93,7 @@ describe("DI-VALID-2: Empty input shows no error", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "not-a-url");
 
     await waitFor(() => {
@@ -119,7 +119,7 @@ describe("DI-DUP-1: Duplicate URL shows error", () => {
       <DatasetInput conversationId="conv-1" datasetCount={1} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "https://example.com/data.parquet");
 
     await waitFor(() => {
@@ -151,7 +151,7 @@ describe("DI-SUBMIT-1: Success clears input", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "https://example.com/data.parquet");
 
     const button = screen.getByRole("button", { name: /add/i });
@@ -172,7 +172,7 @@ describe("DI-SUBMIT-1: Success clears input", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "https://example.com/data.parquet{Enter}");
 
     await waitFor(() => {
@@ -197,7 +197,7 @@ describe("DI-SUBMIT-2: API error shows message", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     await user.type(input, "https://example.com/bad.parquet");
 
     const button = screen.getByRole("button", { name: /add/i });

@@ -59,7 +59,7 @@ describe("DI-PASTE-1: Auto-submits when a valid URL is pasted", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       pasteText(input, "https://example.com/new-data.parquet");
@@ -91,7 +91,7 @@ describe("DI-PASTE-1: Auto-submits when a valid URL is pasted", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       pasteText(input, "https://example.com/new-data.parquet");
@@ -117,7 +117,7 @@ describe("DI-PASTE-2: Does not auto-submit when invalid text is pasted", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       pasteText(input, "not-a-url");
@@ -138,7 +138,7 @@ describe("DI-PASTE-2: Does not auto-submit when invalid text is pasted", () => {
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       pasteText(input, "http://localhost");
@@ -163,7 +163,7 @@ describe("DI-PASTE-3: Does not auto-submit when a duplicate URL is pasted", () =
       <DatasetInput conversationId="conv-1" datasetCount={1} />
     );
 
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       pasteText(input, "https://example.com/data.parquet");

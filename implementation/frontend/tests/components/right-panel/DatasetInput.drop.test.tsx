@@ -226,7 +226,7 @@ describe("DI-DROP-6: Auto-submits valid URL on drop", () => {
     );
 
     const dropZone = screen.getByTestId("dataset-input");
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
 
     await act(async () => {
       fireEvent.drop(dropZone, makeDragEvent("drop", {

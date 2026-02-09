@@ -25,7 +25,7 @@ describe("DatasetInput clear button", () => {
     renderWithProviders(
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     fireEvent.change(input, { target: { value: "https://example.com/data.parquet" } });
     expect(screen.getByTestId("clear-url-btn")).toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe("DatasetInput clear button", () => {
     renderWithProviders(
       <DatasetInput conversationId="conv-1" datasetCount={0} />
     );
-    const input = screen.getByPlaceholderText("Paste parquet URL...");
+    const input = screen.getByPlaceholderText("Paste Parquet/CSV URL...");
     fireEvent.change(input, { target: { value: "https://example.com/data.parquet" } });
     expect(input).toHaveValue("https://example.com/data.parquet");
 

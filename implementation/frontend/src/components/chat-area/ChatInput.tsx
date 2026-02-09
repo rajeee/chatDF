@@ -170,7 +170,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               aria-label="Stop generating"
               title="Stop generating (Esc)"
-              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-red-100 active:scale-95"
+              className="flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-error)]/10 active:scale-95"
               onClick={onStop}
             >
               {/* Square stop icon */}
@@ -189,7 +189,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               aria-label="Send message"
               title="Send message (⏎)"
-              className={`flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-blue-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isSending ? "animate-pulse" : ""}`}
+              className={`flex-shrink-0 rounded-lg p-2 transition-all duration-150 hover:bg-[var(--color-accent)]/10 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isSending ? "animate-pulse" : ""}`}
               onClick={handleSend}
               disabled={trimmedEmpty || dailyLimitReached || isSending}
               data-sending={isSending}

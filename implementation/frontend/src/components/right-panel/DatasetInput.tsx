@@ -216,13 +216,13 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
             style={{
               backgroundColor: "var(--color-surface)",
               borderColor: showSuccess
-                ? "#22c55e"
+                ? "var(--color-success)"
                 : error
-                  ? "#ef4444"
+                  ? "var(--color-error)"
                   : warning
-                    ? "#f59e0b"
+                    ? "var(--color-warning)"
                     : validated && url.trim() && !error && !warning
-                      ? "#22c55e80"
+                      ? "color-mix(in srgb, var(--color-success) 50%, transparent)"
                       : "var(--color-border)",
               color: "var(--color-text)",
               paddingRight: url && !atLimit && !isSubmitting ? "1.75rem" : undefined,
@@ -273,7 +273,7 @@ export function DatasetInput({ conversationId, datasetCount }: DatasetInputProps
         </p>
       )}
       {!error && warning && (
-        <p className="mt-1 text-sm" style={{ color: "#f59e0b" }} data-testid="dataset-input-warning">
+        <p className="mt-1 text-sm" style={{ color: "var(--color-warning)" }} data-testid="dataset-input-warning">
           {warning}
         </p>
       )}

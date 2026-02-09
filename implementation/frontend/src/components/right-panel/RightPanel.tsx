@@ -92,7 +92,7 @@ export function RightPanel() {
         className="absolute top-0 -left-1 w-3 h-full cursor-col-resize group transition-colors hidden lg:block"
         style={{ zIndex: 10 }}
       >
-        <div className="absolute left-1 top-0 w-0.5 h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)]" />
+        <div className="absolute left-1 top-0 w-[2px] h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]" />
       </div>
       <div className="flex flex-col h-full p-4 overflow-y-auto">
         {/* Close button and title (mobile only) */}

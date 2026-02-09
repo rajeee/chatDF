@@ -54,8 +54,8 @@ describe("DI-WARN-1: Non-parquet URL shows a warning message", () => {
       screen.queryByTestId("dataset-input-error")
     ).not.toBeInTheDocument();
 
-    // Input border should be amber (browser normalizes hex to rgb)
-    expect(input.style.borderColor).toBe("rgb(245, 158, 11)");
+    // Input border should use warning theme variable
+    expect(input.style.borderColor).toBe("var(--color-warning)");
   });
 });
 
@@ -284,8 +284,8 @@ describe("DI-WARN-5: Errors still block submission", () => {
       screen.queryByTestId("dataset-input-warning")
     ).not.toBeInTheDocument();
 
-    // Input border should be red (browser normalizes hex to rgb)
-    expect(input.style.borderColor).toBe("rgb(239, 68, 68)");
+    // Input border should use error theme variable
+    expect(input.style.borderColor).toBe("var(--color-error)");
 
     apiPostSpy.mockRestore();
   });

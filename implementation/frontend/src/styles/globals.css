@@ -20,6 +20,8 @@
     --color-info: #3b82f6;
     --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.08);
+    --color-surface-hover: rgba(0, 0, 0, 0.04);
+    --color-text-muted: #9ca3af;
     --color-backdrop: rgba(0, 0, 0, 0.5);
 
     /* Syntax highlighting (light theme) */
@@ -49,6 +51,8 @@
     --color-info: #60a5fa;
     --color-white: #ffffff;
     --color-shadow: rgba(0, 0, 0, 0.3);
+    --color-surface-hover: rgba(255, 255, 255, 0.08);
+    --color-text-muted: #6b7280;
     --color-backdrop: rgba(0, 0, 0, 0.5);
 
     /* Syntax highlighting (dark theme) */
@@ -66,7 +70,7 @@ html.theme-transitioning,
 html.theme-transitioning *,
 html.theme-transitioning *::before,
 html.theme-transitioning *::after {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 /* Message appear animation */
@@ -530,6 +534,22 @@ select:focus-visible {
   animation: copyCheckIn 0.2s ease-out forwards;
 }
 
+/* Chart visualization entrance — fade + subtle scale */
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chart-fade-in {
+  animation: chartFadeIn 0.3s ease-out forwards;
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
@@ -550,7 +570,8 @@ select:focus-visible {
   .dropdown-enter,
   .list-item-enter,
   .search-bar-enter,
-  .copy-check-enter {
+  .copy-check-enter,
+  .chart-fade-in {
     animation-duration: 0.01s !important;
     animation-delay: 0s !important;
   }

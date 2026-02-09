@@ -149,7 +149,7 @@ export function LeftPanel() {
         className="absolute top-0 -right-1 w-3 h-full cursor-col-resize group transition-colors"
         style={{ zIndex: 10 }}
       >
-        <div className="absolute right-1 top-0 w-0.5 h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)]" />
+        <div className="absolute right-1 top-0 w-[2px] h-full transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]" />
       </div>
     </aside>
   );

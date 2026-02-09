@@ -671,7 +671,7 @@ describe("ML-VIZ-1: Visualize button in chat messages", () => {
     renderWithProviders(<MessageList />);
 
     const vizBtn = screen.getByTestId("visualize-btn-msg-style");
-    expect(vizBtn).toHaveStyle({ borderColor: "#34d399", color: "#34d399" });
+    expect(vizBtn).toHaveStyle({ borderColor: "var(--color-success)", color: "var(--color-success)" });
     // Has chart icon SVG
     expect(vizBtn.querySelector("svg")).not.toBeNull();
     expect(vizBtn).toHaveAttribute("aria-label", "Visualize query results");

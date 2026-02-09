@@ -18,7 +18,7 @@ export function ConnectionBanner() {
         backgroundColor: isReconnecting
           ? "var(--color-warning)"
           : "var(--color-error)",
-        color: "#fff",
+        color: "var(--color-white)",
       }}
       role="alert"
     >

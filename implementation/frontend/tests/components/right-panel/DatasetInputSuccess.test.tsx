@@ -37,9 +37,9 @@ describe("DatasetInput success flash", () => {
       expect(screen.getByTestId("url-success-icon")).toBeInTheDocument();
     });
 
-    // Check the input has green border
+    // Check the input has success theme border
     const inputEl = screen.getByPlaceholderText("Paste parquet URL...");
-    expect(inputEl.style.borderColor).toBe("rgb(34, 197, 94)");
+    expect(inputEl.style.borderColor).toBe("var(--color-success)");
 
     apiPostSpy.mockRestore();
   });

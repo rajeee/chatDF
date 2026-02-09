@@ -265,7 +265,7 @@ function MessageBubbleComponent({
             data-testid={`sql-error-${message.id}`}
             className="mt-2 rounded text-xs px-3 py-2 flex items-start gap-2"
             style={{
-              backgroundColor: "rgba(220, 38, 38, 0.08)",
+              backgroundColor: "color-mix(in srgb, var(--color-error) 8%, transparent)",
               border: "1px solid var(--color-error)",
               color: "var(--color-error)",
             }}
@@ -291,7 +291,7 @@ function MessageBubbleComponent({
         {!isUser && !isCurrentlyStreaming && message.sql_executions.some(e => e.chartSpec && e.columns && e.rows) && (
           <div
             data-testid={`inline-chart-${message.id}`}
-            className="mt-3 rounded-lg overflow-hidden"
+            className="mt-3 rounded-lg overflow-hidden chart-fade-in"
             style={{
               border: "1px solid var(--color-border)",
               backgroundColor: "var(--color-bg)",
@@ -346,9 +346,9 @@ function MessageBubbleComponent({
                 data-testid={`visualize-btn-${message.id}`}
                 className="text-xs px-3 py-1 rounded border font-medium hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
                 style={{
-                  borderColor: "#34d399",
-                  color: "#34d399",
-                  backgroundColor: "rgba(52, 211, 153, 0.1)",
+                  borderColor: "var(--color-success)",
+                  color: "var(--color-success)",
+                  backgroundColor: "color-mix(in srgb, var(--color-success) 10%, transparent)",
                 }}
                 onClick={() => onVisualize(message.sql_executions, visualizableIndex)}
                 aria-label="Visualize query results"

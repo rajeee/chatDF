@@ -183,7 +183,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
           type="button"
           aria-label="Copy table"
           onClick={handleCopy}
-          className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className={`text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150${copied ? " scale-105 font-medium" : ""}`}
         >
           {copied ? "Copied!" : "Copy table"}
         </button>
@@ -202,7 +202,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                     <th
                       key={header.id}
                       role="columnheader"
-                      className={`px-3 py-2 text-left font-medium border-b cursor-pointer select-none${
+                      className={`px-3 py-2 text-left font-medium border-b cursor-pointer select-none transition-colors duration-200${
                         isNumeric ? " text-right" : ""
                       }${isSorted ? " bg-accent/5" : ""}`}
                       style={{
@@ -214,13 +214,15 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                     >
                       <div className="flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getIsSorted() === "asc" ? (
-                          <SortAscIcon />
-                        ) : header.column.getIsSorted() === "desc" ? (
-                          <SortDescIcon />
-                        ) : (
-                          <SortUnsortedIcon />
-                        )}
+                        <span className="inline-flex transition-transform duration-200" data-testid="sort-icon-wrapper">
+                          {header.column.getIsSorted() === "asc" ? (
+                            <SortAscIcon />
+                          ) : header.column.getIsSorted() === "desc" ? (
+                            <SortDescIcon />
+                          ) : (
+                            <SortUnsortedIcon />
+                          )}
+                        </span>
                       </div>
                       {/* Resize handle */}
                       <div
@@ -249,7 +251,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
               </tr>
             ) : (
               table.getRowModel().rows.map((row, rowIndex) => (
-                <tr key={row.id} role="row" className={`border-b transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]${rowIndex % 2 === 1 ? " bg-black/[0.02] dark:bg-white/[0.02]" : ""}`} style={{ borderColor: "var(--color-border)" }}>
+                <tr key={row.id} role="row" className={`border-b transition-colors duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]${rowIndex % 2 === 1 ? " bg-black/[0.02] dark:bg-white/[0.02]" : ""}`} style={{ borderColor: "var(--color-border)" }}>
                   {row.getVisibleCells().map((cell) => {
                     const isNumeric = numericColumns.has(cell.column.id);
                     return (

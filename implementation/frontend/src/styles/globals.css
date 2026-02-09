@@ -85,6 +85,14 @@ html.theme-transitioning *::after {
   animation: messageSlideIn 0.3s ease-out forwards;
 }
 
+/* Staggered message cascade — entrance animation for initial message load.
+   Uses --stagger-index custom property set inline for per-message delay. */
+.message-cascade {
+  opacity: 0;
+  animation: messageSlideIn 0.3s ease-out forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 40ms);
+}
+
 /* Typing indicator animation - smooth pulsing dots */
 @keyframes typingPulse {
   0%, 60%, 100% {
@@ -405,12 +413,65 @@ select:focus-visible {
   }
 }
 
+/* Thinking indicator — shimmer sweep + icon pulse + fade entrance */
+@keyframes thinkingShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes thinkingIconPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes thinkingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.thinking-indicator {
+  animation: thinkingFadeIn 0.3s ease-out forwards;
+}
+
+.thinking-indicator-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-accent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: thinkingShimmer 2s ease-in-out infinite;
+  opacity: 0.07;
+}
+
+.thinking-indicator-icon {
+  animation: thinkingIconPulse 2s ease-in-out infinite;
+}
+
 /* Respect prefers-reduced-motion: reduce or disable animations.
    - Transform/slide animations → instant (0.01s to still fire animationend)
    - Informational animations (cursor pulse) → reduced but kept
    - Hover lift effects → disabled */
 @media (prefers-reduced-motion: reduce) {
   .message-appear,
+  .message-cascade,
   .first-message-entrance,
   .onboarding-fade-in,
   .onboarding-fade-in-delayed,
@@ -436,6 +497,19 @@ select:focus-visible {
 
   .streaming-cursor {
     animation-duration: 2s !important;
+  }
+
+  .thinking-indicator {
+    animation-duration: 0.01s !important;
+  }
+
+  .thinking-indicator-shimmer {
+    animation: none !important;
+  }
+
+  .thinking-indicator-icon {
+    animation: none !important;
+    opacity: 0.8;
   }
 
   .prompt-chip:hover {

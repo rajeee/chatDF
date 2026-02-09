@@ -37,6 +37,28 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollRafRef = useRef<number | null>(null);
 
+  // Track initial load message count for staggered cascade animation.
+  // When a conversation is first loaded (or switched to), we record how many
+  // messages arrived in the initial batch so only those get the cascade delay.
+  // New messages added during live chat use the regular message-appear animation.
+  const initialLoadCountRef = useRef<number | null>(null);
+  const prevConversationRef = useRef<string | null>(null);
+
+  // Reset on conversation switch
+  useEffect(() => {
+    if (activeConversationId !== prevConversationRef.current) {
+      initialLoadCountRef.current = null;
+      prevConversationRef.current = activeConversationId;
+    }
+  }, [activeConversationId]);
+
+  // Set initial count on first message batch
+  useEffect(() => {
+    if (messages.length > 0 && initialLoadCountRef.current === null) {
+      initialLoadCountRef.current = messages.length;
+    }
+  }, [messages.length]);
+
   // Check if user is near bottom of page
   const isNearBottom = useCallback(() => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -301,15 +323,23 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         aria-live="polite"
         aria-label="Chat messages"
       >
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isStreamingMessage =
             isStreaming && message.id === streamingMessageId;
+          // Only stagger the initial batch of messages, cap at 10 to keep it snappy
+          const isInitialMessage =
+            initialLoadCountRef.current !== null &&
+            index < initialLoadCountRef.current;
+          const staggerIndex = isInitialMessage
+            ? Math.min(index, 10)
+            : undefined;
 
           return (
             <MessageBubble
               key={message.id}
               message={message}
               isCurrentlyStreaming={isStreamingMessage}
+              staggerIndex={staggerIndex}
               onShowSQL={handleShowSQL}
               onShowReasoning={handleShowReasoning}
               onCopy={handleCopy}

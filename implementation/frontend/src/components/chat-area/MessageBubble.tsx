@@ -15,6 +15,7 @@ import { detectChartTypes } from "@/utils/chartDetection";
 interface MessageBubbleProps {
   message: Message;
   isCurrentlyStreaming: boolean;
+  staggerIndex?: number;
   onShowSQL: (executions: SqlExecution[]) => void;
   onShowReasoning: (reasoning: string) => void;
   onCopy: (content: string) => void;
@@ -37,6 +38,7 @@ function formatTimestamp(isoString: string): string {
 function MessageBubbleComponent({
   message,
   isCurrentlyStreaming,
+  staggerIndex,
   onShowSQL,
   onShowReasoning,
   onCopy,
@@ -69,10 +71,13 @@ function MessageBubbleComponent({
   return (
     <div
       data-testid={`message-row-${message.id}`}
-      className={`flex flex-col ${isUser ? "items-end" : "items-start"} group message-appear`}
+      className={`flex flex-col ${isUser ? "items-end" : "items-start"} group ${
+        staggerIndex !== undefined ? "message-cascade" : "message-appear"
+      }`}
       style={{
         contentVisibility: "auto",
         containIntrinsicSize: "auto 100px",
+        ...(staggerIndex !== undefined ? { "--stagger-index": staggerIndex } as React.CSSProperties : {}),
       }}
     >
       <div

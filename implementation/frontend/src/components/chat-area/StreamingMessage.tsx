@@ -7,6 +7,48 @@ import { useChatStore } from "@/stores/chatStore";
 import ReactMarkdown from "react-markdown";
 import { CodeBlock } from "./CodeBlock";
 
+/** Sparkle SVG icon used in the thinking indicator */
+function SparkleIcon() {
+  return (
+    <svg
+      className="thinking-indicator-icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+    </svg>
+  );
+}
+
+/** Phase-aware thinking indicator shown before streaming tokens arrive */
+function ThinkingIndicator() {
+  return (
+    <div
+      data-testid="thinking-indicator"
+      className="thinking-indicator relative flex items-center gap-2 rounded-lg px-3 py-2 overflow-hidden"
+      style={{ color: "var(--color-text-secondary)" }}
+    >
+      {/* Shimmer sweep background */}
+      <div
+        className="thinking-indicator-shimmer absolute inset-0 pointer-events-none"
+        aria-hidden="true"
+      />
+      {/* Icon + text */}
+      <SparkleIcon />
+      <span className="text-xs" style={{ opacity: 0.75 }}>
+        Analyzing your question...
+      </span>
+    </div>
+  );
+}
+
 interface StreamingMessageProps {
   messageId: string;
 }
@@ -27,8 +69,14 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
     return null; // Not streaming or different message
   }
 
+  const showThinkingIndicator =
+    isThisMessageStreaming && !streamingTokens && !streamingReasoning;
+
   return (
     <>
+      {/* Thinking indicator — shown before any tokens or reasoning arrive */}
+      {showThinkingIndicator && <ThinkingIndicator />}
+
       {/* Streaming reasoning display */}
       {streamingReasoning && (
         <div className="mb-2 pb-2 border-b" style={{ borderColor: "var(--color-border)" }}>

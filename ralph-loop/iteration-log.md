@@ -79,3 +79,4 @@ Track each improvement cycle: what was done, what was learned.
 | 73 | 2026-02-08 | DataGrid sort icons, zebra striping, dataset exit animation, schema/chart polish | U87, U88, U89, U90 | 780/788 frontend (+24 new tests, 8 pre-existing failures), 64/65 backend | fc4dc20 |
 | 74 | 2026-02-08 | Auto-focus after send, word wrapping, skeleton messages, connection banner | U91, U92, U94, U95 | 803/811 frontend (+23 new tests, 8 pre-existing failures), 64/65 backend | 32bc75c |
 | 75 | 2026-02-08 | LLM-driven chart visualization Phase 1 MVP | work.md Phase 1 | 803/811 frontend (8 pre-existing failures), 64/65 backend | 95534f3 |
+| 76 | 2026-02-09 | Heatmap & choropleth charts + user chart controls (Phase 2 & 3) | work.md Phase 2 & 3 | 807/815 frontend (+4 new detection tests, 8 pre-existing failures), 64/65 backend | f8abc25 |

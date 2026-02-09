@@ -9,3 +9,5 @@
 - **LLM tool results can be frontend-passthrough**: `create_chart` doesn't need backend execution — just forward the spec to frontend via WS and return success to the LLM.
 - **Optimistic updates need onSettled invalidation**: When using TanStack Query optimistic updates, always `invalidateQueries` in `onSettled` (not `onSuccess`) to ensure consistency after both success and error paths.
 - **Use `color-mix()` for transparent CSS variable backgrounds**: Can't append hex alpha to CSS variables. Use `color-mix(in srgb, var(--my-color) 8%, transparent)` instead.
+- **Clear timeouts on rapid re-invocation**: When a function uses `setTimeout` and can be called again before it fires, store the timeout ID and `clearTimeout` before setting a new one. Also clear in `destroy()`/cleanup.
+- **Use refs for state in stable callbacks**: When a `useCallback` depends on state that changes often (causing listener re-registration), use a ref to hold the state and keep the callback deps empty.

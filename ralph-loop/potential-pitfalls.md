@@ -10,7 +10,6 @@
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 
 ## Testing
-- **jsdom AbortController + MSW**: `fetchWithTimeout` with `AbortController.signal` fails in jsdom. Mock `apiPost`/`apiGet` directly with `vi.spyOn`.
 - **CodeMirror in tests**: Mock `useEditableCodeMirror` hook in jsdom tests — CodeMirror needs real DOM.
 
 ## Naming Conflicts

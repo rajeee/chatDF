@@ -48,6 +48,18 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      "/shared": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/saved-queries": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/health": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
     },
   },
 });

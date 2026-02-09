@@ -9,12 +9,14 @@ import { SignIn } from "@/components/auth/SignIn";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 import { ToastContainer } from "@/components/common/ToastContainer";
+import { SharedConversationView } from "@/components/shared/SharedConversationView";
 
 export default function App() {
   return (
     <>
       <Routes>
         <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/share/:shareToken" element={<SharedConversationView />} />
         <Route
           path="/c/:conversationId"
           element={

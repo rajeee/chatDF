@@ -2,11 +2,17 @@
 //
 // Fetches /shared/{share_token} and displays messages in a simplified
 // read-only format. No chat input, no streaming, no side panels.
+// Supports markdown rendering with code blocks, collapsible SQL previews,
+// and inline chart visualizations.
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { apiGetPublic } from "@/api/client";
 import ReactMarkdown from "react-markdown";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface SharedMessage {
   id: string;
@@ -34,6 +40,10 @@ interface SharedConversation {
   shared_at: string;
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString(undefined, {
     year: "numeric",
@@ -41,6 +51,206 @@ function formatDate(isoString: string): string {
     day: "numeric",
   });
 }
+
+function formatTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Inline code block for markdown (lightweight, no toast store dependency)
+// ---------------------------------------------------------------------------
+
+interface SharedCodeBlockProps {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+function SharedCodeBlock({ inline, className, children, ...props }: SharedCodeBlockProps) {
+  const language = className?.replace(/^language-/, "") || "";
+  const codeText = String(children).replace(/\n$/, "");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(codeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Ignore copy failures in shared view
+    }
+  };
+
+  if (inline) {
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  return (
+    <div className="relative group/code my-2">
+      <div
+        className="flex items-center justify-between px-3 py-1.5 text-xs rounded-t"
+        style={{ backgroundColor: "var(--color-surface-hover)" }}
+      >
+        <span className="font-mono opacity-60">{language || "code"}</span>
+        <button
+          onClick={handleCopy}
+          className="px-2 py-1 rounded text-xs opacity-0 group-hover/code:opacity-100 focus-visible:opacity-100 transition-all duration-150 flex items-center gap-1.5 hover:bg-white/10 active:scale-95"
+          style={{ color: "var(--color-text)" }}
+          aria-label="Copy code"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            {copied ? (
+              <polyline points="20 6 9 17 4 12" />
+            ) : (
+              <>
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </>
+            )}
+          </svg>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre
+        className="m-0 p-3 overflow-x-auto rounded-b"
+        style={{ backgroundColor: "var(--color-surface-hover)" }}
+      >
+        <code className={className} {...props}>
+          {children}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible SQL Preview
+// ---------------------------------------------------------------------------
+
+function SqlPreview({ sql, messageId }: { sql: string; messageId: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      data-testid={`sql-preview-${messageId}`}
+      className="mt-2 rounded overflow-hidden text-xs"
+      style={{
+        backgroundColor: "var(--color-bg)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      <button
+        data-testid={`sql-preview-toggle-${messageId}`}
+        className="w-full flex items-center gap-1.5 px-2 py-1 text-left opacity-60 hover:opacity-100 transition-opacity"
+        style={{ color: "var(--color-text)" }}
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        <svg
+          className={`w-3 h-3 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        <span className="font-mono opacity-70">SQL</span>
+      </button>
+      <div
+        data-testid={`sql-preview-content-${messageId}`}
+        style={{
+          maxHeight: expanded ? "200px" : "0px",
+          opacity: expanded ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-height 200ms ease, opacity 200ms ease",
+        }}
+      >
+        <pre
+          className="px-2 py-1.5 overflow-x-auto font-mono border-t"
+          style={{
+            borderColor: "var(--color-border)",
+            color: "var(--color-text)",
+            fontSize: "0.7rem",
+            lineHeight: "1.4",
+            maxHeight: "120px",
+            overflowY: "auto",
+          }}
+        >
+          {sql}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Schema Info (expandable per-dataset)
+// ---------------------------------------------------------------------------
+
+function DatasetSchemaInfo({ dataset }: { dataset: SharedDataset }) {
+  const [expanded, setExpanded] = useState(false);
+
+  let columns: { name: string; dtype: string }[] = [];
+  try {
+    columns = JSON.parse(dataset.schema_json);
+  } catch {
+    // schema_json may not be valid
+  }
+
+  if (columns.length === 0) return null;
+
+  return (
+    <div className="mt-1">
+      <button
+        className="text-xs opacity-50 hover:opacity-80 transition-opacity flex items-center gap-1"
+        style={{ color: "var(--color-text)" }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <svg
+          className={`w-2.5 h-2.5 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        {columns.length} columns
+      </button>
+      {expanded && (
+        <div
+          className="mt-1 text-xs font-mono flex flex-wrap gap-x-3 gap-y-0.5 pl-3.5"
+          style={{ color: "var(--color-muted)" }}
+        >
+          {columns.map((col) => (
+            <span key={col.name}>
+              {col.name}
+              <span className="opacity-50"> ({col.dtype})</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
 
 export function SharedConversationView() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -84,13 +294,14 @@ export function SharedConversationView() {
     };
   }, [shareToken]);
 
+  // --- Loading state ---
   if (loading) {
     return (
       <div
         className="min-h-screen flex flex-col"
         style={{ backgroundColor: "var(--color-bg)" }}
       >
-        <Header />
+        <SharedHeader />
         <div className="flex-1 flex items-center justify-center">
           <p
             className="text-sm animate-pulse"
@@ -103,13 +314,14 @@ export function SharedConversationView() {
     );
   }
 
+  // --- Error state ---
   if (error || !conversation) {
     return (
       <div
         className="min-h-screen flex flex-col"
         style={{ backgroundColor: "var(--color-bg)" }}
       >
-        <Header />
+        <SharedHeader />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4 px-4">
             <svg
@@ -131,6 +343,7 @@ export function SharedConversationView() {
             <p
               className="text-sm"
               style={{ color: "var(--color-muted)" }}
+              data-testid="error-message"
             >
               {error || "Conversation not found"}
             </p>
@@ -150,12 +363,13 @@ export function SharedConversationView() {
     );
   }
 
+  // --- Success state ---
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      <Header />
+      <SharedHeader />
 
       {/* Title and metadata bar */}
       <div
@@ -163,17 +377,30 @@ export function SharedConversationView() {
         style={{ borderColor: "var(--color-border)" }}
       >
         <div className="max-w-3xl mx-auto">
-          <h1
-            className="text-lg font-semibold"
-            style={{ color: "var(--color-text)" }}
-          >
-            {conversation.title || "Untitled Conversation"}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1
+              className="text-lg font-semibold"
+              style={{ color: "var(--color-text)" }}
+              data-testid="conversation-title"
+            >
+              {conversation.title || "Untitled Conversation"}
+            </h1>
+            <span
+              className="text-xs px-2 py-0.5 rounded flex-shrink-0"
+              style={{
+                backgroundColor: "var(--color-bg)",
+                color: "var(--color-muted)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              Shared conversation
+            </span>
+          </div>
           <div
             className="flex items-center gap-3 mt-1 text-xs"
             style={{ color: "var(--color-muted)" }}
           >
-            <span>
+            <span data-testid="shared-at">
               Shared {formatDate(conversation.shared_at)}
             </span>
             <span>
@@ -193,38 +420,42 @@ export function SharedConversationView() {
         <div
           className="border-b px-4 py-2"
           style={{ borderColor: "var(--color-border)" }}
+          data-testid="datasets-section"
         >
-          <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
+          <div className="max-w-3xl mx-auto space-y-1">
             {conversation.datasets.map((ds) => (
-              <span
-                key={ds.id}
-                className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded"
-                style={{
-                  backgroundColor: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              <div key={ds.id}>
+                <span
+                  className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded"
+                  style={{
+                    backgroundColor: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                  data-testid={`dataset-${ds.id}`}
                 >
-                  <ellipse cx="12" cy="5" rx="9" ry="3" />
-                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                </svg>
-                {ds.name}
-                <span style={{ color: "var(--color-muted)" }}>
-                  ({ds.row_count} rows, {ds.column_count} cols)
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  </svg>
+                  {ds.name}
+                  <span style={{ color: "var(--color-muted)" }}>
+                    ({ds.row_count.toLocaleString()} rows, {ds.column_count} cols)
+                  </span>
                 </span>
-              </span>
+                <DatasetSchemaInfo dataset={ds} />
+              </div>
             ))}
           </div>
         </div>
@@ -239,6 +470,7 @@ export function SharedConversationView() {
               <div
                 key={message.id}
                 className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+                data-testid={`message-${message.id}`}
               >
                 <div
                   className="max-w-[80%] rounded-lg px-4 py-2 text-sm break-words"
@@ -261,18 +493,37 @@ export function SharedConversationView() {
                     <span className="break-words">{message.content}</span>
                   ) : (
                     <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          code: SharedCodeBlock,
+                          p: ({ children }) => {
+                            if (
+                              children &&
+                              typeof children === "object" &&
+                              "type" in children &&
+                              children.type === "div"
+                            ) {
+                              return <>{children}</>;
+                            }
+                            return <p>{children}</p>;
+                          },
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
+                  )}
+
+                  {/* SQL preview for messages with sql_query */}
+                  {!isUser && message.sql_query && (
+                    <SqlPreview sql={message.sql_query} messageId={message.id} />
                   )}
                 </div>
                 <span
                   className="text-xs mt-1 opacity-30"
                   style={{ color: "var(--color-text)" }}
                 >
-                  {new Date(message.created_at).toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
+                  {formatTime(message.created_at)}
                 </span>
               </div>
             );
@@ -280,30 +531,44 @@ export function SharedConversationView() {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer CTA */}
       <div
-        className="border-t px-4 py-3 text-center"
+        className="border-t px-4 py-4 text-center"
         style={{ borderColor: "var(--color-border)" }}
       >
         <p
-          className="text-xs"
+          className="text-sm mb-2"
+          style={{ color: "var(--color-text)" }}
+        >
+          Explore your own data with ChatDF
+        </p>
+        <Link
+          to="/"
+          className="inline-block text-sm px-5 py-2 rounded font-medium transition-all duration-150 hover:opacity-90 active:scale-95"
+          style={{
+            backgroundColor: "var(--color-accent)",
+            color: "var(--color-white)",
+          }}
+          data-testid="try-chatdf-link"
+        >
+          Try ChatDF
+        </Link>
+        <p
+          className="text-xs mt-2"
           style={{ color: "var(--color-muted)" }}
         >
-          This is a read-only view of a shared ChatDF conversation.{" "}
-          <Link
-            to="/"
-            className="underline hover:opacity-80 transition-opacity"
-            style={{ color: "var(--color-accent)" }}
-          >
-            Try ChatDF
-          </Link>
+          This is a read-only view of a shared conversation.
         </p>
       </div>
     </div>
   );
 }
 
-function Header() {
+// ---------------------------------------------------------------------------
+// Shared Header
+// ---------------------------------------------------------------------------
+
+function SharedHeader() {
   return (
     <header
       className="border-b px-4 py-3 flex items-center gap-2"
@@ -311,6 +576,7 @@ function Header() {
         borderColor: "var(--color-border)",
         backgroundColor: "var(--color-surface)",
       }}
+      data-testid="shared-header"
     >
       <Link
         to="/"

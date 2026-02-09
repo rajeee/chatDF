@@ -10,11 +10,13 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUiStore } from "@/stores/uiStore";
 import { useCodeMirror } from "@/hooks/useCodeMirror";
+import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import { useDraggable } from "@/hooks/useDraggable";
 import { useResizable } from "@/hooks/useResizable";
 import { useSortedRows } from "@/hooks/useSortedRows";
 import { cellValue } from "@/utils/tableUtils";
 import { downloadCsv } from "@/utils/csvExport";
+import { downloadJson } from "@/utils/jsonExport";
 import { detectChartTypes } from "@/utils/chartDetection";
 import { ChartVisualization } from "./ChartVisualization";
 import type { SqlExecution } from "@/stores/chatStore";
@@ -74,6 +76,8 @@ function SQLQueryBlock({
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const isDark = document.documentElement.classList.contains("dark");
 
   useCodeMirror(editorRef, execution.query, isDark);
@@ -82,6 +86,21 @@ function SQLQueryBlock({
     await navigator.clipboard.writeText(execution.query);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }, [execution.query]);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      // Generate a default name from the first ~50 chars of the query
+      const defaultName = execution.query.replace(/\s+/g, ' ').trim().slice(0, 50);
+      await useSavedQueryStore.getState().saveQuery(defaultName, execution.query);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false);
+    }
   }, [execution.query]);
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
@@ -119,13 +138,24 @@ function SQLQueryBlock({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          {copied ? "Copied!" : "Copy"}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || saved}
+            data-testid={`save-query-btn-${index}`}
+            className="text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            {saved ? "Saved!" : saving ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-xs px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
       </div>
 
       {/* CodeMirror editor */}
@@ -383,6 +413,16 @@ function SQLResultModal({
                   style={{ color: "var(--color-accent)" }}
                 >
                   Download CSV
+                </button>
+              )}
+              {viewMode === "table" && (
+                <button
+                  onClick={() => downloadJson(columns, sortedRows, `query_${index + 1}.json`)}
+                  className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                  data-testid="download-json-btn"
+                >
+                  Download JSON
                 </button>
               )}
               <button

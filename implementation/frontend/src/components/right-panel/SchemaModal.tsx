@@ -133,6 +133,7 @@ export function SchemaModal() {
   const conversationId = useChatStore((s) => s.activeConversationId);
 
   const [editedName, setEditedName] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -140,11 +141,12 @@ export function SchemaModal() {
 
   useFocusTrap(modalRef, !!schemaModalDatasetId);
 
-  // Sync editedName when dataset changes.
+  // Sync editedName and reset search when dataset changes.
   useEffect(() => {
     if (dataset) {
       setEditedName(dataset.name);
     }
+    setSearchTerm("");
   }, [dataset]);
 
   // Focus the table name input on open.
@@ -176,6 +178,9 @@ export function SchemaModal() {
   }
 
   const columns = parseColumns(dataset.schema_json);
+  const filteredColumns = searchTerm
+    ? columns.filter(col => col.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : columns;
 
   function handleNameSave() {
     if (editedName !== dataset!.name && editedName.trim() !== "") {
@@ -314,6 +319,48 @@ export function SchemaModal() {
 
           {/* Column list */}
           <div className="mb-4">
+            {/* Column search */}
+            {columns.length > 5 && (
+              <div className="mb-2 relative">
+                <input
+                  type="text"
+                  placeholder="Filter columns..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  data-testid="schema-column-search"
+                  className="w-full rounded border px-2 py-1 pl-7 text-sm"
+                  style={{
+                    backgroundColor: "var(--color-surface)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
+                <svg
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-40"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded opacity-40 hover:opacity-70 transition-opacity"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
             <div
               data-testid="schema-column-table-container"
               className="max-h-[300px] overflow-y-auto rounded border"
@@ -322,7 +369,14 @@ export function SchemaModal() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--color-surface)" }}>
                   <tr className="border-b" style={{ borderColor: "var(--color-border)" }}>
-                    <th className="text-left py-1 font-medium">Name</th>
+                    <th className="text-left py-1 font-medium">
+                      Name
+                      {searchTerm && (
+                        <span className="ml-1 font-normal opacity-50" data-testid="schema-column-count">
+                          ({filteredColumns.length}/{columns.length})
+                        </span>
+                      )}
+                    </th>
                     <th className="text-left py-1 font-medium">Type</th>
                     {columnProfiles && (
                       <>
@@ -334,7 +388,7 @@ export function SchemaModal() {
                   </tr>
                 </thead>
                 <tbody>
-                  {columns.map((col, idx) => {
+                  {filteredColumns.map((col, idx) => {
                     const profile = profileMap.get(col.name);
                     const isNumeric = ["Int32", "Int64", "Float32", "Float64", "UInt32", "UInt64"].includes(col.type) ||
                       col.type.startsWith("Int") || col.type.startsWith("UInt") || col.type.startsWith("Float");
@@ -381,6 +435,11 @@ export function SchemaModal() {
                 </tbody>
               </table>
             </div>
+            {filteredColumns.length === 0 && searchTerm && (
+              <div className="text-center py-4 text-sm opacity-50">
+                No columns match &quot;{searchTerm}&quot;
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}

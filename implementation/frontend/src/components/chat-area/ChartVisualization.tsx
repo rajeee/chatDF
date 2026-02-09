@@ -8,8 +8,9 @@
  * - Lazy-loaded plotly.js for bundle efficiency
  */
 
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { cellValueRaw } from "@/utils/tableUtils";
+import { analyzeColumns } from "@/utils/chartDetection";
 import type { ChartSpec } from "@/stores/chatStore";
 import {
   detectChartTypes,
@@ -65,6 +66,29 @@ const CHART_ICONS: Record<ChartType, React.ReactNode> = {
       <line x1="7" y1="10.5" x2="7" y2="13" strokeWidth="1.2" />
     </svg>
   ),
+  heatmap: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="shrink-0" opacity="0.85">
+      <rect x="0.5" y="0.5" width="4" height="4" rx="0.5" opacity="0.3" />
+      <rect x="5" y="0.5" width="4" height="4" rx="0.5" opacity="0.7" />
+      <rect x="9.5" y="0.5" width="4" height="4" rx="0.5" opacity="1" />
+      <rect x="0.5" y="5" width="4" height="4" rx="0.5" opacity="0.6" />
+      <rect x="5" y="5" width="4" height="4" rx="0.5" opacity="0.4" />
+      <rect x="9.5" y="5" width="4" height="4" rx="0.5" opacity="0.8" />
+      <rect x="0.5" y="9.5" width="4" height="4" rx="0.5" opacity="0.9" />
+      <rect x="5" y="9.5" width="4" height="4" rx="0.5" opacity="0.5" />
+      <rect x="9.5" y="9.5" width="4" height="4" rx="0.5" opacity="0.2" />
+    </svg>
+  ),
+  choropleth: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" className="shrink-0">
+      <path d="M7 1.5C4 1.5 1.5 4 1.5 7s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5S10 1.5 7 1.5z" strokeWidth="1.1" />
+      <path d="M7 1.5c-1.5 0-3 2.5-3 5.5s1.5 5.5 3 5.5" strokeWidth="1.1" />
+      <path d="M7 1.5c1.5 0 3 2.5 3 5.5s-1.5 5.5-3 5.5" strokeWidth="1.1" />
+      <line x1="1.5" y1="7" x2="12.5" y2="7" strokeWidth="1.1" />
+      <line x1="2.5" y1="4" x2="11.5" y2="4" strokeWidth="0.8" />
+      <line x1="2.5" y1="10" x2="11.5" y2="10" strokeWidth="0.8" />
+    </svg>
+  ),
 };
 
 /** Extract column data as an array of raw values */
@@ -74,6 +98,89 @@ function extractColumn(
   columns: string[],
 ): (string | number | Date | null)[] {
   return rows.map((row) => cellValueRaw(row, colIdx, columns) as string | number | Date | null);
+}
+
+/** Map of US state full names to abbreviations for choropleth locationmode */
+const STATE_NAME_TO_ABBR: Record<string, string> = {
+  "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR",
+  "california": "CA", "colorado": "CO", "connecticut": "CT", "delaware": "DE",
+  "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
+  "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS",
+  "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+  "massachusetts": "MA", "michigan": "MI", "minnesota": "MN",
+  "mississippi": "MS", "missouri": "MO", "montana": "MT", "nebraska": "NE",
+  "nevada": "NV", "new hampshire": "NH", "new jersey": "NJ",
+  "new mexico": "NM", "new york": "NY", "north carolina": "NC",
+  "north dakota": "ND", "ohio": "OH", "oklahoma": "OK", "oregon": "OR",
+  "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT",
+  "vermont": "VT", "virginia": "VA", "washington": "WA",
+  "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
+  "district of columbia": "DC",
+};
+
+/** Normalize location values to state abbreviations for Plotly choropleth */
+function normalizeLocations(values: (string | number | Date | null)[]): string[] {
+  return values.map((v) => {
+    if (v == null) return "";
+    const s = String(v).trim();
+    // Already an abbreviation (2 chars)?
+    if (s.length === 2) return s.toUpperCase();
+    // Full name → abbreviation
+    return STATE_NAME_TO_ABBR[s.toLowerCase()] ?? s;
+  });
+}
+
+/** Pivot flat rows into a 2D matrix for heatmap visualization */
+function pivotToMatrix(
+  rows: unknown[][],
+  xColIdx: number,
+  yColIdx: number,
+  zColIdx: number,
+  columns: string[],
+): { xLabels: string[]; yLabels: string[]; zMatrix: (number | null)[][] } {
+  const xSet = new Map<string, number>();
+  const ySet = new Map<string, number>();
+
+  // Collect unique x and y labels maintaining order
+  for (const row of rows) {
+    const xVal = String(cellValueRaw(row, xColIdx, columns) ?? "");
+    const yVal = String(cellValueRaw(row, yColIdx, columns) ?? "");
+    if (!xSet.has(xVal)) xSet.set(xVal, xSet.size);
+    if (!ySet.has(yVal)) ySet.set(yVal, ySet.size);
+  }
+
+  const xLabels = [...xSet.keys()];
+  const yLabels = [...ySet.keys()];
+
+  // Initialize matrix with nulls
+  const zMatrix: (number | null)[][] = Array.from({ length: yLabels.length }, () =>
+    Array(xLabels.length).fill(null),
+  );
+
+  // Fill in values
+  for (const row of rows) {
+    const xVal = String(cellValueRaw(row, xColIdx, columns) ?? "");
+    const yVal = String(cellValueRaw(row, yColIdx, columns) ?? "");
+    const zRaw = cellValueRaw(row, zColIdx, columns);
+    const zVal = zRaw != null ? Number(zRaw) : null;
+    const xi = xSet.get(xVal);
+    const yi = ySet.get(yVal);
+    if (xi != null && yi != null) {
+      zMatrix[yi][xi] = zVal;
+    }
+  }
+
+  return { xLabels, yLabels, zMatrix };
+}
+
+/** Resolve a color scale spec string to a Plotly colorscale */
+function resolveColorScale(spec?: string): Plotly.ColorScale | undefined {
+  switch (spec) {
+    case "diverging": return "RdBu";
+    case "sequential": return "Viridis";
+    default: return undefined;
+  }
 }
 
 /** Build Plotly trace(s) and layout from an LLM-provided chart spec */
@@ -227,6 +334,82 @@ function buildPlotlyConfigFromSpec(
         boxmean: true,
       }));
       return { data, layout: baseLayout };
+    }
+
+    case "heatmap": {
+      // x_column = column dimension, y_columns[0] = row dimension, z_column = value
+      const xColName = spec.x_column ?? columns[0];
+      const yColName = effectiveYColumns[0] ?? columns[1];
+      const zColName = spec.z_column ?? columns.find((c) => c !== xColName && c !== yColName) ?? columns[2];
+      const xIdx = colIndex(xColName);
+      const yIdx = colIndex(yColName);
+      const zIdx = colIndex(zColName);
+      if (xIdx < 0 || yIdx < 0 || zIdx < 0) return { data: [], layout: baseLayout };
+
+      const { xLabels, yLabels, zMatrix } = pivotToMatrix(rows, xIdx, yIdx, zIdx, columns);
+      const colorscale = resolveColorScale(spec.color_scale) ?? "Viridis";
+      // Center diverging scales at zero
+      const zmid = spec.color_scale === "diverging" ? 0 : undefined;
+
+      const data: Plotly.Data[] = [{
+        type: "heatmap" as const,
+        x: xLabels,
+        y: yLabels,
+        z: zMatrix,
+        colorscale,
+        zmid,
+        hovertemplate: "%{y} × %{x}: %{z}<extra></extra>",
+        colorbar: { tickfont: { color: textColor }, titlefont: { color: textColor } },
+      }];
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: spec.x_label ? { text: spec.x_label } : { text: xColName } },
+          yaxis: { ...baseLayout.yaxis, title: spec.y_label ? { text: spec.y_label } : { text: yColName }, autorange: "reversed" as const },
+        },
+      };
+    }
+
+    case "choropleth": {
+      const locationColName = spec.location_column ?? spec.x_column ?? columns[0];
+      const valueColName = effectiveYColumns[0] ?? columns[1];
+      const locationValues = normalizeLocations(extractByName(locationColName));
+      const numericValues = extractByName(valueColName) as number[];
+      const colorscale = resolveColorScale(spec.color_scale) ?? "Blues";
+      const zmid = spec.color_scale === "diverging" ? 0 : undefined;
+
+      const data: Plotly.Data[] = [{
+        type: "choropleth" as const,
+        locationmode: "USA-states" as const,
+        locations: locationValues,
+        z: numericValues,
+        colorscale,
+        zmid,
+        colorbar: {
+          title: { text: spec.y_label ?? valueColName, font: { color: textColor } },
+          tickfont: { color: textColor },
+        },
+        marker: { line: { color: isDark ? "#374151" : "#d1d5db", width: 0.5 } },
+        hovertemplate: "%{location}: %{z}<extra></extra>",
+      }];
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          xaxis: undefined,
+          yaxis: undefined,
+          geo: {
+            scope: "usa" as const,
+            projection: { type: "albers usa" as const },
+            bgcolor: "rgba(0,0,0,0)",
+            lakecolor: isDark ? "#1e3a5f" : "#c6dbef",
+            landcolor: isDark ? "#1f2937" : "#f3f4f6",
+            showlakes: true,
+            showland: true,
+          },
+        },
+      };
     }
 
     default:
@@ -387,26 +570,212 @@ function buildPlotlyConfig(
       };
     }
 
+    case "heatmap": {
+      const yIdx = rec.yCols[0]; // row dimension
+      const zIdx = rec.zCol ?? -1;
+      if (rec.xCol == null || yIdx == null || zIdx < 0) return { data: [], layout: baseLayout };
+
+      const { xLabels, yLabels, zMatrix } = pivotToMatrix(rows, rec.xCol, yIdx, zIdx, columns);
+      const data: Plotly.Data[] = [{
+        type: "heatmap" as const,
+        x: xLabels,
+        y: yLabels,
+        z: zMatrix,
+        colorscale: "Viridis" as Plotly.ColorScale,
+        hovertemplate: "%{y} × %{x}: %{z}<extra></extra>",
+        colorbar: { tickfont: { color: textColor }, titlefont: { color: textColor } },
+      }];
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: { text: xLabel } },
+          yaxis: { ...baseLayout.yaxis, title: { text: columns[yIdx] }, autorange: "reversed" as const },
+        },
+      };
+    }
+
+    case "choropleth": {
+      const locIdx = rec.locationCol ?? -1;
+      const valIdx = rec.yCols[0];
+      if (locIdx < 0 || valIdx == null) return { data: [], layout: baseLayout };
+
+      const locationValues = normalizeLocations(extractColumn(rows, locIdx, columns));
+      const numericValues = extractColumn(rows, valIdx, columns) as number[];
+      const data: Plotly.Data[] = [{
+        type: "choropleth" as const,
+        locationmode: "USA-states" as const,
+        locations: locationValues,
+        z: numericValues,
+        colorscale: "Blues" as Plotly.ColorScale,
+        colorbar: {
+          title: { text: columns[valIdx], font: { color: textColor } },
+          tickfont: { color: textColor },
+        },
+        marker: { line: { color: isDark ? "#374151" : "#d1d5db", width: 0.5 } },
+        hovertemplate: "%{location}: %{z}<extra></extra>",
+      }];
+      return {
+        data,
+        layout: {
+          ...baseLayout,
+          xaxis: undefined,
+          yaxis: undefined,
+          geo: {
+            scope: "usa" as const,
+            projection: { type: "albers usa" as const },
+            bgcolor: "rgba(0,0,0,0)",
+            lakecolor: isDark ? "#1e3a5f" : "#c6dbef",
+            landcolor: isDark ? "#1f2937" : "#f3f4f6",
+            showlakes: true,
+            showland: true,
+          },
+        },
+      };
+    }
+
     default:
       return { data: [], layout: baseLayout };
   }
+}
+
+/** Compact select dropdown for chart controls */
+function ChartSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-[10px]" style={{ color: "var(--color-text-secondary)" }}>
+      <span className="font-medium uppercase tracking-wide">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded px-1.5 py-0.5 text-[11px] border outline-none transition-colors"
+        style={{
+          backgroundColor: "var(--color-surface)",
+          borderColor: "var(--color-border)",
+          color: "var(--color-text-primary)",
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Toggle pill button for chart controls */
+function ChartToggle({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide border transition-all duration-150"
+      style={{
+        backgroundColor: active ? "var(--color-accent)" : "transparent",
+        color: active ? "#fff" : "var(--color-text-secondary)",
+        borderColor: active ? "var(--color-accent)" : "var(--color-border)",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** User overrides for chart configuration */
+interface ChartOverrides {
+  xCol?: number;
+  yCol?: number;
+  orientation?: "v" | "h";
+  barMode?: "group" | "stack";
+  colorScale?: string;
+}
+
+/** Apply user overrides to a recommendation to produce a modified spec for rendering */
+function applyOverrides(
+  rec: ChartRecommendation,
+  overrides: ChartOverrides,
+  columns: string[],
+  rows: unknown[][],
+  isDark: boolean,
+): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  // Build a modified recommendation
+  const modRec: ChartRecommendation = { ...rec };
+  if (overrides.xCol != null) modRec.xCol = overrides.xCol;
+  if (overrides.yCol != null) modRec.yCols = [overrides.yCol];
+
+  // Build base config
+  const config = buildPlotlyConfig(modRec, columns, rows, isDark);
+
+  // Apply orientation override for bar charts
+  if (overrides.orientation === "h" && (rec.type === "bar")) {
+    config.data = config.data.map((d) => ({
+      ...d,
+      x: (d as any).y,
+      y: (d as any).x,
+      orientation: "h" as const,
+    }));
+  }
+
+  // Apply bar mode override
+  if (overrides.barMode && (rec.type === "bar")) {
+    config.layout.barmode = overrides.barMode;
+  }
+
+  // Apply color scale override for heatmap/choropleth
+  if (overrides.colorScale) {
+    config.data = config.data.map((d) => ({
+      ...d,
+      colorscale: resolveColorScale(overrides.colorScale) ?? (d as any).colorscale,
+    }));
+  }
+
+  return config;
 }
 
 export function ChartVisualization({
   columns,
   rows,
   llmSpec,
+  onExpand,
 }: {
   columns: string[];
   rows: unknown[][];
   llmSpec?: ChartSpec;
+  onExpand?: () => void;
 }) {
   const recommendations = useMemo(
     () => detectChartTypes(columns, rows),
     [columns, rows],
   );
 
+  const colAnalysis = useMemo(() => analyzeColumns(columns, rows), [columns, rows]);
+
   const [selectedType, setSelectedType] = useState<ChartType | null>(null);
+  const [overrides, setOverrides] = useState<ChartOverrides>({});
+  const [showControls, setShowControls] = useState(false);
+
+  // Reset overrides when chart type changes
+  const handleTypeChange = useCallback((type: ChartType) => {
+    setSelectedType(type);
+    setOverrides({});
+  }, []);
 
   // Use selected type or default to first recommendation
   const activeRec = useMemo<ChartRecommendation | null>(() => {
@@ -424,8 +793,28 @@ export function ChartVisualization({
       return buildPlotlyConfigFromSpec(llmSpec, columns, rows, isDark);
     }
     if (!activeRec) return null;
+    // Apply user overrides if any exist
+    if (Object.keys(overrides).length > 0) {
+      return applyOverrides(activeRec, overrides, columns, rows, isDark);
+    }
     return buildPlotlyConfig(activeRec, columns, rows, isDark);
-  }, [activeRec, columns, rows, isDark, llmSpec]);
+  }, [activeRec, columns, rows, isDark, llmSpec, overrides]);
+
+  // Column options for dropdowns
+  const numericColOptions = useMemo(
+    () => colAnalysis.filter((c) => c.isNumeric).map((c) => ({ value: String(c.index), label: c.name })),
+    [colAnalysis],
+  );
+  const allColOptions = useMemo(
+    () => columns.map((name, i) => ({ value: String(i), label: name })),
+    [columns],
+  );
+
+  // Which controls to show based on active chart type
+  const activeType = activeRec?.type ?? null;
+  const showBarControls = activeType === "bar";
+  const showColorScaleControls = activeType === "heatmap" || activeType === "choropleth";
+  const showAxisControls = activeType != null && activeType !== "pie" && activeType !== "choropleth";
 
   if (!llmSpec && !recommendations.length) {
     return (
@@ -457,7 +846,7 @@ export function ChartVisualization({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chart type switcher */}
+      {/* Chart type switcher + controls toggle + expand */}
       <div
         className="flex items-center gap-1 px-4 py-2 border-b overflow-x-auto"
         style={{ borderColor: "var(--color-border)" }}
@@ -468,7 +857,7 @@ export function ChartVisualization({
             <button
               key={rec.type}
               type="button"
-              onClick={() => setSelectedType(rec.type)}
+              onClick={() => handleTypeChange(rec.type)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 isActive ? "" : "hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
               }`}
@@ -482,7 +871,123 @@ export function ChartVisualization({
             </button>
           );
         })}
+
+        <div className="flex-1" />
+
+        {/* Controls toggle */}
+        {!llmSpec && (
+          <button
+            type="button"
+            onClick={() => setShowControls((s) => !s)}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+            style={{ color: showControls ? "var(--color-accent)" : "var(--color-text-secondary)" }}
+            aria-label="Toggle chart controls"
+            title="Chart settings"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" className="shrink-0">
+              <line x1="1" y1="3" x2="11" y2="3" />
+              <circle cx="4" cy="3" r="1.2" fill="currentColor" />
+              <line x1="1" y1="6" x2="11" y2="6" />
+              <circle cx="8" cy="6" r="1.2" fill="currentColor" />
+              <line x1="1" y1="9" x2="11" y2="9" />
+              <circle cx="5" cy="9" r="1.2" fill="currentColor" />
+            </svg>
+          </button>
+        )}
+
+        {/* Expand button */}
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+            style={{ color: "var(--color-text-secondary)" }}
+            aria-label="Expand chart"
+            title="Open in full view"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" className="shrink-0">
+              <polyline points="7,1 11,1 11,5" />
+              <polyline points="5,11 1,11 1,7" />
+              <line x1="11" y1="1" x2="7" y2="5" />
+              <line x1="1" y1="11" x2="5" y2="7" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {/* User controls toolbar (collapsible) */}
+      {showControls && !llmSpec && (
+        <div
+          className="flex items-center gap-3 px-4 py-1.5 border-b overflow-x-auto animate-[slideDown_150ms_ease-out]"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          {/* X-axis column selector */}
+          {showAxisControls && (
+            <ChartSelect
+              label="X"
+              value={String(overrides.xCol ?? activeRec?.xCol ?? 0)}
+              options={allColOptions}
+              onChange={(v) => setOverrides((o) => ({ ...o, xCol: parseInt(v) }))}
+            />
+          )}
+
+          {/* Y-axis column selector */}
+          {showAxisControls && numericColOptions.length > 0 && (
+            <ChartSelect
+              label="Y"
+              value={String(overrides.yCol ?? activeRec?.yCols[0] ?? numericColOptions[0]?.value ?? 0)}
+              options={numericColOptions}
+              onChange={(v) => setOverrides((o) => ({ ...o, yCol: parseInt(v) }))}
+            />
+          )}
+
+          {/* Bar chart controls */}
+          {showBarControls && (
+            <>
+              <div className="flex items-center gap-1">
+                <ChartToggle
+                  label="Vertical"
+                  active={(overrides.orientation ?? "v") === "v"}
+                  onClick={() => setOverrides((o) => ({ ...o, orientation: "v" }))}
+                />
+                <ChartToggle
+                  label="Horizontal"
+                  active={overrides.orientation === "h"}
+                  onClick={() => setOverrides((o) => ({ ...o, orientation: "h" }))}
+                />
+              </div>
+              {(activeRec?.yCols.length ?? 0) > 1 && (
+                <div className="flex items-center gap-1">
+                  <ChartToggle
+                    label="Group"
+                    active={(overrides.barMode ?? "group") === "group"}
+                    onClick={() => setOverrides((o) => ({ ...o, barMode: "group" }))}
+                  />
+                  <ChartToggle
+                    label="Stack"
+                    active={overrides.barMode === "stack"}
+                    onClick={() => setOverrides((o) => ({ ...o, barMode: "stack" }))}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Color scale selector for heatmap/choropleth */}
+          {showColorScaleControls && (
+            <ChartSelect
+              label="Colors"
+              value={overrides.colorScale ?? "default"}
+              options={[
+                { value: "default", label: "Default" },
+                { value: "sequential", label: "Sequential" },
+                { value: "diverging", label: "Diverging" },
+              ]}
+              onChange={(v) => setOverrides((o) => ({ ...o, colorScale: v }))}
+            />
+          )}
+        </div>
+      )}
 
       {/* Chart area */}
       <div className="flex-1 min-h-0 px-2 py-2">

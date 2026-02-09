@@ -11,6 +11,14 @@ vi.mock("react-plotly.js", () => ({
 const mockDetectChartTypes = vi.fn<() => ChartRecommendation[]>(() => []);
 vi.mock("@/utils/chartDetection", () => ({
   detectChartTypes: (...args: unknown[]) => mockDetectChartTypes(),
+  analyzeColumns: (columns: string[], rows: unknown[][]) =>
+    columns.map((name, index) => ({
+      index,
+      name,
+      isNumeric: typeof rows[0]?.[index] === "number",
+      isDate: false,
+      uniqueCount: rows.length,
+    })),
 }));
 
 // Mock tableUtils so extractColumn doesn't blow up

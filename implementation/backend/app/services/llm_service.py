@@ -79,7 +79,7 @@ _create_chart_decl = types.FunctionDeclaration(
         properties={
             "chart_type": types.Schema(
                 type="STRING",
-                enum=["bar", "horizontal_bar", "line", "scatter", "histogram", "pie", "box"],
+                enum=["bar", "horizontal_bar", "line", "scatter", "histogram", "pie", "box", "heatmap", "choropleth"],
                 description="The type of chart to create",
             ),
             "title": types.Schema(
@@ -88,7 +88,7 @@ _create_chart_decl = types.FunctionDeclaration(
             ),
             "x_column": types.Schema(
                 type="STRING",
-                description="Column name for x-axis (or categories for bar/pie charts)",
+                description="Column name for x-axis (or categories for bar/pie charts, or row dimension for heatmaps)",
             ),
             "y_columns": types.Schema(
                 type="ARRAY",
@@ -130,6 +130,19 @@ _create_chart_decl = types.FunctionDeclaration(
             "show_values": types.Schema(
                 type="BOOLEAN",
                 description="Show value labels on bars/points. Default: false.",
+            ),
+            "z_column": types.Schema(
+                type="STRING",
+                description="Column name for z-axis values (used in heatmap to specify the numeric value for the color intensity)",
+            ),
+            "location_column": types.Schema(
+                type="STRING",
+                description="Column name containing geographic locations (state names, abbreviations, or FIPS codes) for choropleth maps",
+            ),
+            "location_type": types.Schema(
+                type="STRING",
+                enum=["state_name", "state_abbr", "country_name", "country_iso3"],
+                description="Type of geographic identifier in location_column. Default: auto-detect.",
             ),
         },
         required=["chart_type", "title"],
@@ -250,10 +263,14 @@ def build_system_prompt(datasets: list[dict]) -> str:
         parts.append("- histogram: distribution of a single numeric column")
         parts.append("- box: comparing distributions across groups")
         parts.append("- pie: proportions (only <=8 categories)")
+        parts.append("- heatmap: showing intensity/correlation across two categorical dimensions with a numeric value (x_column = column dimension, y_columns[0] = row dimension, z_column = value; data is pivoted into a 2D matrix)")
+        parts.append("- choropleth: geographic distribution across US states (requires a location column with state names/abbreviations and a numeric value column)")
         parts.append("")
         parts.append("Use diverging color_scale when data represents change, savings, or difference from a baseline.")
         parts.append("Set show_values to true for bar charts with <=15 bars.")
         parts.append("Set orientation to 'horizontal' when category labels are long strings.")
+        parts.append("For heatmap charts: set x_column to the column dimension, y_columns to [row_dimension_column], and z_column to the value column.")
+        parts.append("For choropleth charts: set location_column to the column with geographic names/codes, y_columns to [value_column], and title descriptively. Use color_scale='diverging' when showing change/difference.")
     else:
         parts.append("\n## No Datasets Loaded\n")
         parts.append(

@@ -12,13 +12,15 @@
 
 import { cellValueRaw } from "./tableUtils";
 
-export type ChartType = "bar" | "line" | "scatter" | "histogram" | "pie" | "box";
+export type ChartType = "bar" | "line" | "scatter" | "histogram" | "pie" | "box" | "heatmap" | "choropleth";
 
 export interface ChartRecommendation {
   type: ChartType;
   label: string;
-  xCol: number | null; // column index for x-axis
-  yCols: number[];     // column indices for y-axis (can be multiple series)
+  xCol: number | null;    // column index for x-axis
+  yCols: number[];         // column indices for y-axis (can be multiple series)
+  zCol?: number | null;    // column index for z values (heatmap)
+  locationCol?: number | null;  // column index for geographic locations (choropleth)
 }
 
 /** Check if a value looks numeric */
@@ -44,6 +46,47 @@ function isDateValue(v: unknown): boolean {
     return n >= 1900 && n <= 2100;
   }
   return false;
+}
+
+const US_STATE_NAMES = new Set([
+  "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+  "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+  "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana",
+  "maine", "maryland", "massachusetts", "michigan", "minnesota",
+  "mississippi", "missouri", "montana", "nebraska", "nevada",
+  "new hampshire", "new jersey", "new mexico", "new york",
+  "north carolina", "north dakota", "ohio", "oklahoma", "oregon",
+  "pennsylvania", "rhode island", "south carolina", "south dakota",
+  "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+  "west virginia", "wisconsin", "wyoming", "district of columbia",
+]);
+
+const US_STATE_ABBRS = new Set([
+  "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga",
+  "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md",
+  "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj",
+  "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "ri", "sc",
+  "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy", "dc",
+]);
+
+/** Check if a column likely contains US state names or abbreviations */
+function isGeographicColumn(name: string, values: Set<string>): boolean {
+  const lowerName = name.toLowerCase();
+  const nameHint = /state|location|region|geography|geo/.test(lowerName);
+
+  // Check how many unique values match known state names/abbreviations
+  let matchCount = 0;
+  for (const v of values) {
+    const lower = v.toLowerCase().trim();
+    if (US_STATE_NAMES.has(lower) || US_STATE_ABBRS.has(lower)) {
+      matchCount++;
+    }
+  }
+
+  const hasMatches = matchCount > 0;
+  const majorityMatch = values.size > 0 && matchCount / values.size > 0.5;
+
+  return (nameHint || majorityMatch) && hasMatches;
 }
 
 interface ColumnAnalysis {
@@ -159,6 +202,37 @@ export function detectChartTypes(
       xCol: null,
       yCols: numericCols.map((c) => c.index),
     });
+  }
+
+  // 6) Two categoricals + numeric → heatmap
+  if (categoricalCols.length >= 2 && numericCols.length >= 1) {
+    recommendations.push({
+      type: "heatmap",
+      label: "Heatmap",
+      xCol: categoricalCols[0].index,     // column dimension
+      yCols: [categoricalCols[1].index],  // row dimension
+      zCol: numericCols[0].index,         // value
+    });
+  }
+
+  // 7) Geographic column + numeric → choropleth
+  for (const catCol of categoricalCols) {
+    const uniqueVals = new Set<string>();
+    const sampleSize = Math.min(rows.length, 50);
+    for (let r = 0; r < sampleSize; r++) {
+      const v = cellValueRaw(rows[r], catCol.index, columns);
+      if (v != null) uniqueVals.add(String(v).toLowerCase());
+    }
+    if (isGeographicColumn(catCol.name, uniqueVals) && numericCols.length >= 1) {
+      recommendations.push({
+        type: "choropleth",
+        label: "Map",
+        xCol: null,
+        yCols: [numericCols[0].index],
+        locationCol: catCol.index,
+      });
+      break;  // only one choropleth suggestion
+    }
   }
 
   return recommendations;

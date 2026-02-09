@@ -236,14 +236,18 @@ function MessageBubbleComponent({
           >
             {message.sql_executions
               .filter(e => e.chartSpec && e.columns && e.rows)
-              .map((exec, i) => (
-                <ChartVisualization
-                  key={i}
-                  columns={exec.columns!}
-                  rows={exec.rows!}
-                  llmSpec={exec.chartSpec}
-                />
-              ))}
+              .map((exec, i) => {
+                const execIndex = message.sql_executions.indexOf(exec);
+                return (
+                  <ChartVisualization
+                    key={i}
+                    columns={exec.columns!}
+                    rows={exec.rows!}
+                    llmSpec={exec.chartSpec}
+                    onExpand={() => onVisualize(message.sql_executions, execIndex)}
+                  />
+                );
+              })}
           </div>
         )}
 

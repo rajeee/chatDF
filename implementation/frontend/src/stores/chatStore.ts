@@ -14,6 +14,9 @@ export interface ChartSpec {
   x_label?: string;
   y_label?: string;
   show_values?: boolean;
+  z_column?: string;           // heatmap value column
+  location_column?: string;    // choropleth location column
+  location_type?: string;      // choropleth location type (state_name, state_abbr, etc.)
 }
 
 export interface SqlExecution {

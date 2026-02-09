@@ -185,6 +185,62 @@ describe("detectChartTypes", () => {
     // Line should be first recommendation for time series
     expect(recs[0].type).toBe("line");
   });
+
+  it("recommends heatmap for two categoricals + numeric", () => {
+    const columns = ["state", "year_group", "value"];
+    const rows = [
+      ["CA", "Group A", 100],
+      ["NY", "Group A", 200],
+      ["CA", "Group B", 150],
+      ["NY", "Group B", 250],
+    ];
+    const recs = detectChartTypes(columns, rows);
+    const heatmap = recs.find((r) => r.type === "heatmap");
+    expect(heatmap).toBeDefined();
+    expect(heatmap!.xCol).toBe(0);
+    expect(heatmap!.yCols).toEqual([1]);
+    expect(heatmap!.zCol).toBe(2);
+  });
+
+  it("recommends choropleth for state names + numeric", () => {
+    const columns = ["state", "population"];
+    const rows = [
+      ["California", 39500000],
+      ["Texas", 29000000],
+      ["Florida", 21500000],
+      ["New York", 20200000],
+    ];
+    const recs = detectChartTypes(columns, rows);
+    const choropleth = recs.find((r) => r.type === "choropleth");
+    expect(choropleth).toBeDefined();
+    expect(choropleth!.locationCol).toBe(0);
+    expect(choropleth!.yCols).toEqual([1]);
+  });
+
+  it("recommends choropleth for state abbreviations + numeric", () => {
+    const columns = ["st", "count"];
+    const rows = [
+      ["CA", 100],
+      ["TX", 200],
+      ["FL", 150],
+      ["NY", 300],
+    ];
+    const recs = detectChartTypes(columns, rows);
+    const choropleth = recs.find((r) => r.type === "choropleth");
+    expect(choropleth).toBeDefined();
+  });
+
+  it("does NOT recommend choropleth for non-geographic categories", () => {
+    const columns = ["product", "revenue"];
+    const rows = [
+      ["Widget", 1000],
+      ["Gadget", 2000],
+      ["Doohickey", 1500],
+    ];
+    const recs = detectChartTypes(columns, rows);
+    const choropleth = recs.find((r) => r.type === "choropleth");
+    expect(choropleth).toBeUndefined();
+  });
 });
 
 describe("getDefaultChart", () => {

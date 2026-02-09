@@ -188,7 +188,7 @@ class TestGenerateSql:
 
         mock_generate = AsyncMock(return_value=mock_response)
 
-        with patch("app.routers.conversations.client") as mock_client:
+        with patch("app.services.llm_service.client") as mock_client:
             mock_client.aio.models.generate_content = mock_generate
 
             response = await authed_client.post(
@@ -218,7 +218,7 @@ class TestGenerateSql:
 
         mock_generate = AsyncMock(return_value=mock_response)
 
-        with patch("app.routers.conversations.client") as mock_client:
+        with patch("app.services.llm_service.client") as mock_client:
             mock_client.aio.models.generate_content = mock_generate
 
             response = await authed_client.post(
@@ -247,7 +247,7 @@ class TestGenerateSql:
 
         mock_generate = AsyncMock(return_value=mock_response)
 
-        with patch("app.routers.conversations.client") as mock_client:
+        with patch("app.services.llm_service.client") as mock_client:
             mock_client.aio.models.generate_content = mock_generate
 
             response = await authed_client.post(
@@ -270,7 +270,7 @@ class TestGenerateSql:
 
         mock_generate = AsyncMock(side_effect=Exception("LLM service unavailable"))
 
-        with patch("app.routers.conversations.client") as mock_client:
+        with patch("app.services.llm_service.client") as mock_client:
             mock_client.aio.models.generate_content = mock_generate
 
             response = await authed_client.post(

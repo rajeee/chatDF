@@ -3,11 +3,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SqlExecution } from "@/stores/chatStore";
 
+export type RightPanelTab = "datasets" | "history";
+
 interface UiState {
   leftPanelOpen: boolean;
   leftPanelWidth: number;
   rightPanelOpen: boolean;
   rightPanelWidth: number;
+  rightPanelTab: RightPanelTab;
   messageDensity: "compact" | "normal" | "spacious";
   sqlModalOpen: boolean;
   activeSqlExecutions: SqlExecution[];
@@ -28,6 +31,7 @@ interface UiActions {
   setLeftPanelWidth: (w: number) => void;
   toggleRightPanel: () => void;
   setRightPanelWidth: (w: number) => void;
+  setRightPanelTab: (tab: RightPanelTab) => void;
   setMessageDensity: (density: "compact" | "normal" | "spacious") => void;
   openSqlModal: (executions: SqlExecution[]) => void;
   closeSqlModal: () => void;
@@ -57,6 +61,7 @@ export const useUiStore = create<UiState & UiActions>()(
       leftPanelWidth: 260,
       rightPanelOpen: true,
       rightPanelWidth: 300,
+      rightPanelTab: "datasets" as RightPanelTab,
       messageDensity: "normal" as const,
       sqlModalOpen: false,
       activeSqlExecutions: [],
@@ -82,6 +87,8 @@ export const useUiStore = create<UiState & UiActions>()(
 
       setRightPanelWidth: (w) =>
         set({ rightPanelWidth: Math.max(200, Math.min(500, w)) }),
+
+      setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
 
       setMessageDensity: (density) => set({ messageDensity: density }),
 

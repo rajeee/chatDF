@@ -102,3 +102,4 @@ Track each improvement cycle: what was done, what was learned.
 | 95 | 2026-02-09 | JSON export, schema column search, save query from SQL modal | U162, U163, U164 | 983/990 frontend (+35 new tests, 7 pre-existing), 137/138 backend (1 pre-existing) | 9cdb92e |
 | 96 | 2026-02-09 | Run SQL panel, conversation templates, SQL result persistence | U165, U166, U168 | 979/986 frontend (7 pre-existing), backend pass | e679d03 |
 | 97 | 2026-02-09 | Fix broken LLM tool call tests, update onboarding tests | test fixes | 979/986 frontend (7 pre-existing), 539/545 backend (6 pre-existing) | 3570013 |
+| 99 | 2026-02-09 | Dataset comparison view, SQL auto-complete | U167, U169 | 1035/1042 frontend (+56 new tests, 7 pre-existing), 198/199 backend (1 pre-existing) | b61c8fb |

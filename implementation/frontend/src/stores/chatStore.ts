@@ -79,6 +79,11 @@ export function parseSqlExecutions(sqlQuery: string | null): SqlExecution[] {
 
 export type LoadingPhase = "idle" | "thinking" | "executing" | "formatting" | null;
 
+export interface PendingToolCall {
+  tool: string;
+  args: Record<string, unknown>;
+}
+
 interface ChatState {
   activeConversationId: string | null;
   messages: Message[];
@@ -91,6 +96,7 @@ interface ChatState {
   dailyLimitReached: boolean;
   isLoadingMessages: boolean;
   pendingChartSpecs: Array<{ executionIndex: number; spec: ChartSpec }>;
+  pendingToolCall: PendingToolCall | null;
   queryProgress: number | null;
   searchQuery: string;
   searchOpen: boolean;
@@ -113,6 +119,7 @@ interface ChatActions {
   removeMessage: (messageId: string) => void;
   setChartSpec: (executionIndex: number, spec: ChartSpec) => void;
   addPendingChartSpec: (executionIndex: number, spec: ChartSpec) => void;
+  setPendingToolCall: (tc: PendingToolCall | null) => void;
   setQueryProgress: (queryNumber: number | null) => void;
   setSearchQuery: (query: string) => void;
   setSearchOpen: (open: boolean) => void;
@@ -133,6 +140,7 @@ const initialState: ChatState = {
   dailyLimitReached: false,
   isLoadingMessages: false,
   pendingChartSpecs: [],
+  pendingToolCall: null,
   queryProgress: null,
   searchQuery: "",
   searchOpen: false,
@@ -155,6 +163,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       loadingPhase: "idle",
       isLoadingMessages: id !== null,
       pendingChartSpecs: [],
+      pendingToolCall: null,
       queryProgress: null,
       searchQuery: "",
       searchOpen: false,
@@ -181,7 +190,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set(
       isStreaming
         ? { isStreaming: true, streamingMessageId: messageId ?? null }
-        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false, pendingChartSpecs: [], queryProgress: null }
+        : { isStreaming: false, streamingMessageId: null, streamingTokens: "", streamingReasoning: "", isReasoning: false, pendingChartSpecs: [], pendingToolCall: null, queryProgress: null }
     ),
 
   setReasoning: (isReasoning) =>
@@ -240,6 +249,9 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set((state) => ({
       pendingChartSpecs: [...state.pendingChartSpecs, { executionIndex, spec }],
     })),
+
+  setPendingToolCall: (tc) =>
+    set({ pendingToolCall: tc }),
 
   setQueryProgress: (queryNumber) =>
     set({ queryProgress: queryNumber }),

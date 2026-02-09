@@ -140,6 +140,15 @@ export function useWebSocket(isAuthenticated: boolean): void {
           chatStore.addPendingChartSpec(executionIndex, spec);
           break;
         }
+        case "tcs": // tool_call_start (compressed)
+        case "tool_call_start": {
+          const chatStore = useChatStore.getState();
+          const tool = (msg.tl || msg.tool) as string;
+          const args = (msg.a || msg.args) as Record<string, unknown>;
+          chatStore.setPendingToolCall({ tool, args });
+          chatStore.setLoadingPhase("executing");
+          break;
+        }
         case "qp": // query_progress (compressed)
         case "query_progress": {
           const chatStore = useChatStore.getState();

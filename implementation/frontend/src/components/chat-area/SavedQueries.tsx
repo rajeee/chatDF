@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
+import { useUiStore } from "@/stores/uiStore";
+import type { SqlExecution } from "@/stores/chatStore";
 
 interface SavedQueriesProps {
   onRunQuery?: (query: string) => void;
@@ -18,6 +20,21 @@ export function SavedQueries({ onRunQuery }: SavedQueriesProps) {
     await navigator.clipboard.writeText(query);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
+  }, []);
+
+  const handleViewResults = useCallback((query: string, resultData: { columns: string[]; rows: unknown[][]; total_rows: number }) => {
+    // Build a synthetic SqlExecution to display in the existing SQL result modal
+    const execution: SqlExecution = {
+      query,
+      columns: resultData.columns,
+      rows: resultData.rows,
+      total_rows: resultData.total_rows,
+      error: null,
+      execution_time_ms: null,
+    };
+    const { openSqlModal, openSqlResultModal } = useUiStore.getState();
+    openSqlModal([execution]);
+    openSqlResultModal(0);
   }, []);
 
   if (queries.length === 0 && !isLoading) return null;
@@ -56,12 +73,41 @@ export function SavedQueries({ onRunQuery }: SavedQueriesProps) {
               onClick={() => handleCopy(q.query, q.id)}
             >
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{q.name}</div>
+                <div className="font-medium truncate">
+                  {q.name}
+                  {q.result_data && (
+                    <span
+                      className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-normal"
+                      style={{
+                        backgroundColor: "var(--color-accent)",
+                        color: "#fff",
+                        opacity: 0.8,
+                      }}
+                    >
+                      {q.result_data.total_rows} rows
+                    </span>
+                  )}
+                </div>
                 <div className="font-mono opacity-50 truncate text-[10px]">{q.query}</div>
               </div>
               <span className="text-[10px] opacity-40 shrink-0">
                 {copiedId === q.id ? "Copied!" : ""}
               </span>
+              {q.result_data && (
+                <button
+                  data-testid={`view-results-${q.id}`}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-0.5 rounded transition-opacity"
+                  style={{ color: "var(--color-accent)" }}
+                  onClick={(e) => { e.stopPropagation(); handleViewResults(q.query, q.result_data!); }}
+                  aria-label={`View results for ${q.name}`}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18" />
+                    <path d="M9 3v18" />
+                  </svg>
+                </button>
+              )}
               {onRunQuery && (
                 <button
                   data-testid={`run-saved-query-${q.id}`}

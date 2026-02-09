@@ -226,6 +226,15 @@ async def init_db_schema(conn: aiosqlite.Connection) -> None:
     except Exception:
         pass  # Column already exists
 
+    # Migration: add result_json column to saved_queries for bookmark results
+    try:
+        await conn.execute(
+            "ALTER TABLE saved_queries ADD COLUMN result_json TEXT"
+        )
+        await conn.commit()
+    except Exception:
+        pass  # Column already exists
+
 
 # Backward compatibility alias
 init_db = init_db_schema

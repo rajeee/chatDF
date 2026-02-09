@@ -218,6 +218,7 @@ class SaveQueryRequest(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=100)
     query: str = Field(..., min_length=1, max_length=10000)
+    result_json: str | None = None
 
 
 class SavedQueryResponse(BaseModel):
@@ -227,6 +228,7 @@ class SavedQueryResponse(BaseModel):
     name: str
     query: str
     created_at: datetime
+    result_json: str | None = None
 
 
 class SavedQueryListResponse(BaseModel):

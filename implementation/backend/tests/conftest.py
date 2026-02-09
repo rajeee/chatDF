@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name            TEXT NOT NULL,
     query           TEXT NOT NULL,
+    result_json     TEXT,
     created_at      TEXT NOT NULL
 );
 

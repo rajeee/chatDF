@@ -53,6 +53,86 @@ interface StreamingMessageProps {
   messageId: string;
 }
 
+/** Spinner SVG used in tool call preview */
+function Spinner({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" strokeOpacity="0.75" />
+    </svg>
+  );
+}
+
+/** Human-readable label for a tool call */
+function toolCallLabel(tool: string): string {
+  switch (tool) {
+    case "execute_sql":
+      return "Executing SQL...";
+    case "load_dataset":
+      return "Loading dataset...";
+    case "create_chart":
+      return "Creating chart...";
+    default:
+      return `Running ${tool}...`;
+  }
+}
+
+/** Inline preview shown when a tool call is in progress */
+function ToolCallPreview({ tool, args }: { tool: string; args: Record<string, unknown> }) {
+  const sqlQuery = (args.query || args.sql) as string | undefined;
+  const showSql = tool === "execute_sql" && sqlQuery;
+
+  return (
+    <div
+      data-testid="tool-call-preview"
+      className="my-2 rounded-md border overflow-hidden"
+      style={{
+        borderColor: "var(--color-border)",
+        background: "var(--color-bg-secondary, var(--color-bg-subtle, rgba(0,0,0,0.03)))",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium"
+        style={{ color: "var(--color-text-secondary)" }}
+        data-testid="tool-call-label"
+      >
+        <Spinner />
+        <span>{toolCallLabel(tool)}</span>
+      </div>
+
+      {/* SQL code block */}
+      {showSql && (
+        <div
+          data-testid="tool-call-sql"
+          className="px-3 pb-2"
+        >
+          <pre
+            className="font-mono text-xs rounded px-2.5 py-2 overflow-x-auto whitespace-pre-wrap break-words"
+            style={{
+              background: "var(--color-bg-tertiary, var(--color-bg-subtle, rgba(0,0,0,0.05)))",
+              color: "var(--color-text-primary)",
+              margin: 0,
+              maxHeight: "10rem",
+            }}
+          >
+            {sqlQuery}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
   // Subscribe ONLY to streaming state - this is the only component that re-renders per token
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -61,6 +141,7 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
   const isReasoning = useChatStore((s) => s.isReasoning);
   const streamingReasoning = useChatStore((s) => s.streamingReasoning);
   const queryProgress = useChatStore((s) => s.queryProgress);
+  const pendingToolCall = useChatStore((s) => s.pendingToolCall);
 
   const [reasoningCollapsed, setReasoningCollapsed] = useState(false);
 
@@ -138,6 +219,11 @@ function StreamingMessageComponent({ messageId }: StreamingMessageProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Tool call preview — shown when LLM invokes a tool (e.g., execute_sql) */}
+      {pendingToolCall && (
+        <ToolCallPreview tool={pendingToolCall.tool} args={pendingToolCall.args} />
       )}
 
       {/* Streaming message content */}

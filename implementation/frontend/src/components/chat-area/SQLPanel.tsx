@@ -93,7 +93,16 @@ function SQLQueryBlock({
     try {
       // Generate a default name from the first ~50 chars of the query
       const defaultName = execution.query.replace(/\s+/g, ' ').trim().slice(0, 50);
-      await useSavedQueryStore.getState().saveQuery(defaultName, execution.query);
+      // Include result data if available (columns, rows, total_rows)
+      const resultData =
+        execution.columns && execution.rows
+          ? {
+              columns: execution.columns,
+              rows: execution.rows,
+              total_rows: execution.total_rows ?? execution.rows.length,
+            }
+          : undefined;
+      await useSavedQueryStore.getState().saveQuery(defaultName, execution.query, resultData);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -101,7 +110,7 @@ function SQLQueryBlock({
     } finally {
       setSaving(false);
     }
-  }, [execution.query]);
+  }, [execution.query, execution.columns, execution.rows, execution.total_rows]);
 
   const hasOutput = execution.columns != null && execution.columns.length > 0;
   const hasChartData = useMemo(

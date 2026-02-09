@@ -7,7 +7,7 @@ const SHORTCUTS = [
   { keys: ["Ctrl", "B"], description: "Toggle left sidebar" },
   { keys: ["Ctrl", "E"], description: "Toggle dataset panel" },
   { keys: ["Ctrl", "P"], description: "Toggle pin on conversation" },
-  { keys: ["Ctrl", "Enter"], description: "Send message" },
+  { keys: ["Ctrl", "Enter"], description: "Send message / Run SQL" },
   { keys: ["Ctrl", "Shift", "F"], description: "Search messages" },
   { keys: ["Ctrl", "Shift", "L"], description: "Toggle theme" },
   { keys: ["?"], description: "Show this help" },

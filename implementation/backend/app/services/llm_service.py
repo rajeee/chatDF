@@ -179,7 +179,8 @@ class SqlExecution:
 
     query: str = ""
     columns: list[str] | None = None
-    rows: list[list] | None = None
+    rows: list[list] | None = None          # Capped at 100 rows (for WS transmission)
+    full_rows: list[list] | None = None     # Up to 1000 rows (for DB persistence)
     total_rows: int | None = None
     error: str | None = None
     execution_time_ms: float | None = None
@@ -560,17 +561,20 @@ async def stream_chat(
                     rows = query_result.get("rows", [])
                     columns = query_result.get("columns", [])
                     total = query_result.get("total_rows", len(rows))
-                    # Cap rows at 100 for the frontend payload.
                     # Convert dict rows to arrays (Polars to_dicts() returns
                     # list[dict], but the frontend expects list[list]).
-                    capped_rows = [
+                    # full_rows: up to 1000 rows for DB persistence
+                    all_rows = [
                         [row.get(c) for c in columns]
-                        for row in rows[:100]
+                        for row in rows
                     ]
+                    # rows: capped at 100 for WS transmission
+                    capped_rows = all_rows[:100]
                     result.sql_executions.append(SqlExecution(
                         query=query,
                         columns=columns,
                         rows=capped_rows,
+                        full_rows=all_rows,
                         total_rows=total,
                         execution_time_ms=query_result.get("execution_time_ms"),
                     ))

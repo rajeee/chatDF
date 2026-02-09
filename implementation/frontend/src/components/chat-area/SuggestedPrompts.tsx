@@ -5,6 +5,7 @@
 // Uses column names and types to generate smart, schema-aware questions.
 
 import { useCallback, useRef, useState } from "react";
+import { useChatStore } from "@/stores/chatStore";
 import type { Dataset } from "@/stores/datasetStore";
 
 interface SchemaColumn {
@@ -133,7 +134,25 @@ export function SuggestedPrompts({
   datasets,
   onSendPrompt,
 }: SuggestedPromptsProps) {
-  const suggestions = buildSmartSuggestions(datasets);
+  const templatePrompts = useChatStore((s) => s.templatePrompts);
+  const setTemplatePrompts = useChatStore((s) => s.setTemplatePrompts);
+
+  // Template prompts take priority over schema-generated suggestions
+  const schemaSuggestions = buildSmartSuggestions(datasets);
+  const suggestions =
+    templatePrompts.length > 0 ? templatePrompts : schemaSuggestions;
+
+  const handleSendPrompt = useCallback(
+    (text: string) => {
+      // Clear template prompts once the user sends a message
+      if (templatePrompts.length > 0) {
+        setTemplatePrompts([]);
+      }
+      onSendPrompt(text);
+    },
+    [templatePrompts, setTemplatePrompts, onSendPrompt]
+  );
+
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -157,10 +176,10 @@ export function SuggestedPrompts({
         chipRefs.current[prev]?.focus();
       } else if (e.key === "Enter" && focusedIndex >= 0) {
         e.preventDefault();
-        onSendPrompt(suggestions[focusedIndex]);
+        handleSendPrompt(suggestions[focusedIndex]);
       }
     },
-    [focusedIndex, suggestions, onSendPrompt]
+    [focusedIndex, suggestions, handleSendPrompt]
   );
 
   return (
@@ -189,7 +208,7 @@ export function SuggestedPrompts({
             role="option"
             aria-selected={focusedIndex === index}
             tabIndex={focusedIndex === index || (focusedIndex < 0 && index === 0) ? 0 : -1}
-            onClick={() => onSendPrompt(suggestion)}
+            onClick={() => handleSendPrompt(suggestion)}
             onFocus={() => setFocusedIndex(index)}
             className="prompt-chip px-4 py-2 rounded-full text-sm cursor-pointer"
             style={{

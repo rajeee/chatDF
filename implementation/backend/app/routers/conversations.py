@@ -39,6 +39,8 @@ from app.models import (
     PinConversationRequest,
     PublicConversationResponse,
     RenameConversationRequest,
+    RunQueryRequest,
+    RunQueryResponse,
     SearchResponse,
     SearchResult,
     SendMessageRequest,
@@ -683,6 +685,69 @@ async def unshare_conversation(
     await db.commit()
 
     return {"success": True}
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/query
+# Execute raw SQL against conversation datasets
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{conversation_id}/query", response_model=RunQueryResponse)
+async def run_query(
+    request: Request,
+    body: RunQueryRequest,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> RunQueryResponse:
+    """Execute a SQL query against the conversation's loaded datasets."""
+    conv_id = conversation["id"]
+
+    # Fetch datasets for this conversation
+    cursor = await db.execute(
+        "SELECT url, name FROM datasets WHERE conversation_id = ? AND status = 'ready'",
+        (conv_id,),
+    )
+    rows = await cursor.fetchall()
+
+    if not rows:
+        raise HTTPException(
+            status_code=400,
+            detail="No datasets loaded in this conversation",
+        )
+
+    datasets_list = [{"url": row["url"], "table_name": row["name"]} for row in rows]
+
+    # Execute via worker pool
+    pool = getattr(request.app.state, "worker_pool", None)
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Worker pool unavailable")
+
+    import time
+
+    start = time.monotonic()
+    result = await pool.run_query(body.sql, datasets_list)
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    if "error_type" in result:
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("message", "Query execution failed"),
+        )
+
+    # Convert row dicts to list-of-lists
+    columns = result.get("columns", [])
+    row_dicts = result.get("rows", [])
+    result_rows = [[row.get(col) for col in columns] for row in row_dicts]
+    total_rows = result.get("total_rows", len(result_rows))
+
+    return RunQueryResponse(
+        columns=columns,
+        rows=result_rows,
+        total_rows=total_rows,
+        execution_time_ms=round(elapsed_ms, 2),
+    )
 
 
 # ---------------------------------------------------------------------------

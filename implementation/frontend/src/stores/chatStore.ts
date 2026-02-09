@@ -95,6 +95,7 @@ interface ChatState {
   searchQuery: string;
   searchOpen: boolean;
   followupSuggestions: string[];
+  templatePrompts: string[];
 }
 
 interface ChatActions {
@@ -116,6 +117,7 @@ interface ChatActions {
   setSearchQuery: (query: string) => void;
   setSearchOpen: (open: boolean) => void;
   setFollowupSuggestions: (suggestions: string[]) => void;
+  setTemplatePrompts: (prompts: string[]) => void;
   reset: () => void;
 }
 
@@ -135,6 +137,7 @@ const initialState: ChatState = {
   searchQuery: "",
   searchOpen: false,
   followupSuggestions: [],
+  templatePrompts: [],
 };
 
 export const useChatStore = create<ChatState & ChatActions>()((set) => ({
@@ -156,6 +159,7 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
       searchQuery: "",
       searchOpen: false,
       followupSuggestions: [],
+      templatePrompts: [],
     }),
 
   addMessage: (message) =>
@@ -247,6 +251,8 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set(open ? { searchOpen: true } : { searchOpen: false, searchQuery: "" }),
 
   setFollowupSuggestions: (suggestions) => set({ followupSuggestions: suggestions }),
+
+  setTemplatePrompts: (prompts) => set({ templatePrompts: prompts }),
 
   reset: () => set(initialState),
 }));

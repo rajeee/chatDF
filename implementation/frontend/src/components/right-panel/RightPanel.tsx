@@ -15,6 +15,7 @@ import { DatasetCard } from "./DatasetCard";
 import { SchemaModal } from "./SchemaModal";
 import { PreviewModal } from "./PreviewModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
+import { RunSqlPanel } from "./RunSqlPanel";
 
 export function RightPanel() {
   const conversationId = useChatStore((s) => s.activeConversationId);
@@ -166,6 +167,9 @@ export function RightPanel() {
             ))
           )}
         </div>
+        {datasets.length > 0 && conversationId && (
+          <RunSqlPanel conversationId={conversationId} />
+        )}
       </div>
       <SchemaModal />
       <PreviewModal />

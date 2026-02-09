@@ -98,3 +98,5 @@ Track each improvement cycle: what was done, what was learned.
 | 92 | 2026-02-09 | Theme timeout fix, input transitions, copy toast, callback optimization | U149, U150, U151, U152 | 907/914 frontend (0 new failures, 7 pre-existing), 64/65 backend | ddb848d |
 | 93a | 2026-02-09 | Conversation fork, global search, chart PNG download | prior session | 948/955 frontend (7 pre-existing), backend pass | 4e79c00 |
 | 93 | 2026-02-09 | Message deletion, drag-and-drop dataset URL loading | new features | 948/955 frontend (7 pre-existing), backend pass | c62dcb4 |
+| 94 | 2026-02-09 | Column visibility toggle, saved query run button, health endpoint | U153-U159 | 948/955 frontend (7 pre-existing), backend pass | 6d65bf2 |
+| 95 | 2026-02-09 | JSON export, schema column search, save query from SQL modal | U162, U163, U164 | 983/990 frontend (+35 new tests, 7 pre-existing), 137/138 backend (1 pre-existing) | 9cdb92e |

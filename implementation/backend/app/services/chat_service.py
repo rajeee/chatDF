@@ -172,20 +172,33 @@ async def process_message(
         asst_msg_id = str(uuid4())
         asst_now = datetime.utcnow().isoformat()
         token_count = result.input_tokens + result.output_tokens
-        # Serialize sql_executions as JSON for storage in the sql_query column
-        sql_executions_dicts = [
+        # Serialize sql_executions for DB storage (full_rows: up to 1000 rows)
+        # and WS transmission (rows: capped at 100 rows).
+        sql_executions_for_db = [
+            {
+                "query": ex.query,
+                "columns": ex.columns,
+                "rows": ex.full_rows if ex.full_rows is not None else ex.rows,
+                "total_rows": ex.total_rows,
+                "error": ex.error,
+                "execution_time_ms": ex.execution_time_ms,
+            }
+            for ex in result.sql_executions
+        ]
+        sql_executions_for_ws = [
             {
                 "query": ex.query,
                 "columns": ex.columns,
                 "rows": ex.rows,
                 "total_rows": ex.total_rows,
                 "error": ex.error,
+                "execution_time_ms": ex.execution_time_ms,
             }
             for ex in result.sql_executions
         ]
         sql_query = (
-            json.dumps(sql_executions_dicts, default=str)
-            if sql_executions_dicts
+            json.dumps(sql_executions_for_db, default=str)
+            if sql_executions_for_db
             else None
         )
 
@@ -225,7 +238,7 @@ async def process_message(
                 message_id=asst_msg_id,
                 sql_query=sql_query,
                 token_count=token_count,
-                sql_executions=sql_executions_dicts,
+                sql_executions=sql_executions_for_ws,
                 reasoning=result.reasoning or None,
             )
         )

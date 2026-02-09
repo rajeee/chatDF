@@ -64,6 +64,21 @@ class RenameDatasetRequest(BaseModel):
     )
 
 
+class RunQueryRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/query``."""
+
+    sql: str = Field(..., min_length=1, max_length=50000)
+
+
+class RunQueryResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/query``."""
+
+    columns: list[str]
+    rows: list[list[Any]]
+    total_rows: int
+    execution_time_ms: float
+
+
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------

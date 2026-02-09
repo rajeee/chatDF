@@ -167,7 +167,7 @@ describe("PREVIEW-5: Preview modal shows data grid on success", () => {
     expect(screen.getByText("1,000 total rows")).toBeInTheDocument();
   });
 
-  it("calls previewDataset with correct conversationId and datasetId", async () => {
+  it("calls previewDataset with correct conversationId, datasetId, and default options", async () => {
     const dataset = makeDataset();
     useDatasetStore.setState({ datasets: [dataset] });
     useChatStore.setState({ activeConversationId: "conv-1" });
@@ -182,7 +182,10 @@ describe("PREVIEW-5: Preview modal shows data grid on success", () => {
     renderWithProviders(<PreviewModal />);
 
     await waitFor(() => {
-      expect(previewDatasetMock).toHaveBeenCalledWith("conv-1", "ds-1");
+      expect(previewDatasetMock).toHaveBeenCalledWith("conv-1", "ds-1", {
+        sampleSize: 10,
+        random: false,
+      });
     });
   });
 });

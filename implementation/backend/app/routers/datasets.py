@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 
 import aiosqlite
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
@@ -238,16 +238,26 @@ async def profile_dataset(
 async def preview_dataset(
     request: Request,
     dataset_id: str,
+    sample_size: int = Query(default=10, ge=1, le=100),
+    random_sample: bool = Query(default=False),
     conversation: dict = Depends(get_conversation),
     user: dict = Depends(get_current_user),
     db: aiosqlite.Connection = Depends(get_db),
 ) -> DatasetPreviewResponse:
-    """Return up to 10 sample rows from a dataset for quick preview."""
+    """Return sample rows from a dataset for quick preview.
+
+    Query params:
+      - sample_size: number of rows to return (1-100, default 10)
+      - random_sample: if true, return randomly sampled rows
+    """
     ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
 
     worker_pool = _get_worker_pool(request)
     table_name = ds["name"]
-    sql = f'SELECT * FROM "{table_name}" LIMIT 10'
+    if random_sample:
+        sql = f'SELECT * FROM "{table_name}" ORDER BY RANDOM() LIMIT {sample_size}'
+    else:
+        sql = f'SELECT * FROM "{table_name}" LIMIT {sample_size}'
     datasets = [{"url": ds["url"], "table_name": table_name}]
 
     result = await worker_pool.run_query(sql, datasets)

@@ -297,6 +297,19 @@ class ExplainSqlResponse(BaseModel):
     explanation: str
 
 
+class GenerateSqlRequest(BaseModel):
+    """Body for ``POST /conversations/{id}/generate-sql``."""
+
+    question: str = Field(..., min_length=1, max_length=5000)
+
+
+class GenerateSqlResponse(BaseModel):
+    """Response for ``POST /conversations/{id}/generate-sql``."""
+
+    sql: str
+    explanation: str
+
+
 class ExportXlsxRequest(BaseModel):
     """Request body for XLSX export."""
 

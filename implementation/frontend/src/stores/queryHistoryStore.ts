@@ -1,29 +1,40 @@
 // Query history store for SQL query quick re-run
-// Stores last 20 unique queries across all conversations with localStorage persistence
+// Fetches from backend API with localStorage persistence as fallback.
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { apiGet, apiDelete } from "../api/client";
 
 export interface QueryHistoryEntry {
+  id?: string;
   query: string;
   timestamp: number;
+  conversation_id?: string;
+  execution_time_ms?: number;
+  row_count?: number;
+  status?: "success" | "error";
+  error_message?: string | null;
+  source?: string;
 }
 
 interface QueryHistoryState {
   queries: QueryHistoryEntry[];
+  isFetching: boolean;
 }
 
 interface QueryHistoryActions {
   addQuery: (query: string) => void;
   clearHistory: () => void;
+  fetchHistory: () => Promise<void>;
 }
 
-const MAX_HISTORY_SIZE = 20;
+const MAX_HISTORY_SIZE = 50;
 
 export const useQueryHistoryStore = create<QueryHistoryState & QueryHistoryActions>()(
   persist(
     (set) => ({
       queries: [],
+      isFetching: false,
 
       addQuery: (query: string) => {
         const trimmed = query.trim();
@@ -45,7 +56,39 @@ export const useQueryHistoryStore = create<QueryHistoryState & QueryHistoryActio
         });
       },
 
-      clearHistory: () => set({ queries: [] }),
+      clearHistory: async () => {
+        try {
+          await apiDelete("/query-history");
+        } catch {
+          // Silently fall through — clear local state regardless
+        }
+        set({ queries: [] });
+      },
+
+      fetchHistory: async () => {
+        set({ isFetching: true });
+        try {
+          const response = await apiGet<{ history: Record<string, unknown>[]; total: number }>(
+            "/query-history?limit=50"
+          );
+          const queries: QueryHistoryEntry[] = response.history.map((h) => ({
+            id: h.id as string,
+            query: h.query as string,
+            timestamp: new Date(h.created_at as string).getTime(),
+            conversation_id: h.conversation_id as string | undefined,
+            execution_time_ms: h.execution_time_ms as number | undefined,
+            row_count: h.row_count as number | undefined,
+            status: h.status as "success" | "error" | undefined,
+            error_message: h.error_message as string | null | undefined,
+            source: h.source as string | undefined,
+          }));
+          set({ queries });
+        } catch {
+          // Fall back to localStorage data (already in state)
+        } finally {
+          set({ isFetching: false });
+        }
+      },
     }),
     {
       name: "query-history-storage",

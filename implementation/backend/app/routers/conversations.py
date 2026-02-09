@@ -21,7 +21,7 @@ import asyncio
 import logging
 import math
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -38,6 +38,8 @@ from app.models import (
     ExplainSqlRequest,
     ExplainSqlResponse,
     ForkConversationRequest,
+    GenerateSqlRequest,
+    GenerateSqlResponse,
     MessageAckResponse,
     MessageResponse,
     PinConversationRequest,
@@ -776,6 +778,26 @@ async def run_query(
     elapsed_ms = (time.monotonic() - start) * 1000
 
     if "error_type" in result:
+        # Record failed query in history
+        try:
+            await db.execute(
+                """
+                INSERT INTO query_history (id, user_id, conversation_id, query, execution_time_ms, row_count, status, error_message, source, created_at)
+                VALUES (?, ?, ?, ?, ?, 0, 'error', ?, 'sql_panel', ?)
+                """,
+                (
+                    str(uuid4()),
+                    user["id"],
+                    conv_id,
+                    body.sql,
+                    round(elapsed_ms, 2),
+                    result.get("message", "Query execution failed"),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+            await db.commit()
+        except Exception:
+            pass  # Don't fail the request if history recording fails
         raise HTTPException(
             status_code=400,
             detail=result.get("message", "Query execution failed"),
@@ -797,6 +819,27 @@ async def run_query(
     end_idx = start_idx + page_size
     paginated_rows = result_rows[start_idx:end_idx]
     total_pages = math.ceil(len(result_rows) / page_size) if result_rows else 1
+
+    # Record successful query in history
+    try:
+        await db.execute(
+            """
+            INSERT INTO query_history (id, user_id, conversation_id, query, execution_time_ms, row_count, status, source, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'success', 'sql_panel', ?)
+            """,
+            (
+                str(uuid4()),
+                user["id"],
+                conv_id,
+                body.sql,
+                round(elapsed_ms, 2),
+                total_rows,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        await db.commit()
+    except Exception:
+        pass  # Don't fail the request if history recording fails
 
     return RunQueryResponse(
         columns=columns,
@@ -845,6 +888,122 @@ async def explain_sql(
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
 
     return ExplainSqlResponse(explanation=explanation)
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/{conversation_id}/generate-sql
+# Generate SQL from a natural language question using the LLM
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{conversation_id}/generate-sql",
+    response_model=GenerateSqlResponse,
+)
+async def generate_sql(
+    body: GenerateSqlRequest,
+    conversation: dict = Depends(get_conversation),
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> GenerateSqlResponse:
+    """Use the LLM to generate a SQL query from a natural language question."""
+    from app.services.llm_service import client, MODEL_ID
+
+    conv_id = conversation["id"]
+
+    # Fetch ready datasets for this conversation
+    cursor = await db.execute(
+        "SELECT name, schema_json, column_descriptions "
+        "FROM datasets WHERE conversation_id = ? AND status = 'ready'",
+        (conv_id,),
+    )
+    rows = await cursor.fetchall()
+
+    if not rows:
+        raise HTTPException(
+            status_code=400,
+            detail="No datasets loaded in this conversation",
+        )
+
+    # Build schema description for the prompt
+    import json
+
+    schema_parts: list[str] = []
+    for row in rows:
+        table_name = row["name"]
+        try:
+            schema = json.loads(row["schema_json"]) if row["schema_json"] else []
+        except (json.JSONDecodeError, TypeError):
+            schema = []
+
+        try:
+            col_descs = json.loads(row["column_descriptions"]) if row["column_descriptions"] else {}
+        except (json.JSONDecodeError, TypeError):
+            col_descs = {}
+
+        cols_info: list[str] = []
+        for col in schema:
+            col_name = col.get("name", "unknown")
+            col_type = col.get("type", "unknown")
+            desc = col_descs.get(col_name, "")
+            if desc:
+                cols_info.append(f"  - {col_name} ({col_type}): {desc}")
+            else:
+                cols_info.append(f"  - {col_name} ({col_type})")
+
+        schema_parts.append(f"Table: {table_name}\nColumns:\n" + "\n".join(cols_info))
+
+    schemas_text = "\n\n".join(schema_parts)
+
+    prompt = (
+        "You are a SQL query generator. Given the following table schemas and a "
+        "user's question in natural language, generate a SQL query that answers it.\n\n"
+        "Use Polars SQL dialect. Always include LIMIT 1000 unless the user asks for "
+        "a specific count or aggregate.\n\n"
+        f"Tables:\n{schemas_text}\n\n"
+        f"Question: {body.question}\n\n"
+        "Respond in this exact format:\n"
+        "SQL: <the sql query>\n"
+        "EXPLANATION: <1-2 sentence explanation of what the query does>"
+    )
+
+    try:
+        response = await client.aio.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt,
+        )
+        raw_text = response.text or ""
+    except Exception as exc:
+        _logger.exception(
+            "Failed to generate SQL for conversation %s", conv_id
+        )
+        raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
+
+    # Parse the response to extract SQL and explanation
+    generated_sql = raw_text
+    explanation_text = ""
+
+    # Try to parse structured response
+    if "SQL:" in raw_text and "EXPLANATION:" in raw_text:
+        sql_start = raw_text.index("SQL:") + len("SQL:")
+        explanation_start = raw_text.index("EXPLANATION:")
+        generated_sql = raw_text[sql_start:explanation_start].strip()
+        explanation_text = raw_text[explanation_start + len("EXPLANATION:"):].strip()
+    elif "SQL:" in raw_text:
+        sql_start = raw_text.index("SQL:") + len("SQL:")
+        generated_sql = raw_text[sql_start:].strip()
+
+    # Strip markdown code fences if present
+    generated_sql = generated_sql.strip()
+    if generated_sql.startswith("```sql"):
+        generated_sql = generated_sql[len("```sql"):]
+    elif generated_sql.startswith("```"):
+        generated_sql = generated_sql[len("```"):]
+    if generated_sql.endswith("```"):
+        generated_sql = generated_sql[:-len("```")]
+    generated_sql = generated_sql.strip()
+
+    return GenerateSqlResponse(sql=generated_sql, explanation=explanation_text)
 
 
 # ---------------------------------------------------------------------------

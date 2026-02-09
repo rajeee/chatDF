@@ -457,6 +457,135 @@ async def test_preview_dataset_worker_error_returns_500(
 
 
 # ---------------------------------------------------------------------------
+# DS-EP-14: POST preview with custom sample_size
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_custom_sample_size(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview with sample_size=25 uses LIMIT 25 in the SQL query."""
+    from app.main import app
+
+    mock_worker_pool.run_query.return_value = {
+        "columns": ["id", "value"],
+        "rows": [{"id": i, "value": f"v{i}"} for i in range(25)],
+        "total_rows": 25,
+    }
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview?sample_size=25",
+    )
+
+    body = assert_success_response(response, status_code=200)
+    assert len(body["rows"]) == 25
+
+    # Verify the SQL query uses LIMIT 25
+    call_args = mock_worker_pool.run_query.call_args
+    sql_arg = call_args[0][0]
+    assert "LIMIT 25" in sql_arg
+    assert "ORDER BY RANDOM()" not in sql_arg
+
+
+# ---------------------------------------------------------------------------
+# DS-EP-15: POST preview with random_sample=true
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_random_sample(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview with random_sample=true includes ORDER BY RANDOM() in SQL."""
+    from app.main import app
+
+    mock_worker_pool.run_query.return_value = {
+        "columns": ["id", "value"],
+        "rows": [{"id": 5, "value": "e"}, {"id": 2, "value": "b"}],
+        "total_rows": 2,
+    }
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview?random_sample=true",
+    )
+
+    body = assert_success_response(response, status_code=200)
+    assert body["columns"] == ["id", "value"]
+
+    # Verify the SQL query includes ORDER BY RANDOM()
+    call_args = mock_worker_pool.run_query.call_args
+    sql_arg = call_args[0][0]
+    assert "ORDER BY RANDOM()" in sql_arg
+    assert "LIMIT 10" in sql_arg
+
+
+# ---------------------------------------------------------------------------
+# DS-EP-16: POST preview with both sample_size and random_sample
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_random_sample_with_custom_size(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview with sample_size=50 and random_sample=true uses both in SQL."""
+    from app.main import app
+
+    mock_worker_pool.run_query.return_value = {
+        "columns": ["id"],
+        "rows": [{"id": i} for i in range(50)],
+        "total_rows": 50,
+    }
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview"
+        "?sample_size=50&random_sample=true",
+    )
+
+    body = assert_success_response(response, status_code=200)
+    assert len(body["rows"]) == 50
+
+    # Verify the SQL query
+    call_args = mock_worker_pool.run_query.call_args
+    sql_arg = call_args[0][0]
+    assert "ORDER BY RANDOM()" in sql_arg
+    assert "LIMIT 50" in sql_arg
+
+
+# ---------------------------------------------------------------------------
+# DS-EP-17: POST preview with sample_size out of range returns 422
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_preview_sample_size_out_of_range_returns_422(
+    authed_client, fresh_db, conversation_owned, dataset_in_conversation, mock_worker_pool
+):
+    """POST preview with sample_size > 100 returns 422 validation error."""
+    from app.main import app
+
+    app.state.worker_pool = mock_worker_pool
+
+    dataset_id = dataset_in_conversation["id"]
+    response = await authed_client.post(
+        f"/conversations/{conversation_owned['id']}/datasets/{dataset_id}/preview?sample_size=200",
+    )
+
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
 # Unauthenticated returns 401
 # ---------------------------------------------------------------------------
 

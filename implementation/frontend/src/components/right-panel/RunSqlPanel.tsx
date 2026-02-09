@@ -4,7 +4,7 @@
 // Includes SQL autocomplete for keywords, table names, and column names.
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { apiPost, explainSql } from "@/api/client";
+import { apiPost, explainSql, generateSql } from "@/api/client";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import { useSqlAutocomplete, type Suggestion } from "@/hooks/useSqlAutocomplete";
@@ -30,6 +30,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [sql, setSql] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
+  const [nlQuestion, setNlQuestion] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<RunQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -205,6 +207,28 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [sql, isExplaining, conversationId]);
 
+  const handleGenerateSql = useCallback(async () => {
+    const trimmed = nlQuestion.trim();
+    if (!trimmed || isGenerating) return;
+
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const response = await generateSql(conversationId, trimmed);
+      setSql(response.sql);
+      if (response.explanation) {
+        setExplanation(response.explanation);
+        setExplanationExpanded(true);
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to generate SQL";
+      setError(message);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [nlQuestion, isGenerating, conversationId]);
+
   // Export results as CSV or XLSX via the backend export endpoints
   const handleExport = useCallback(async (format: "csv" | "xlsx") => {
     if (!result) return;
@@ -314,6 +338,68 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
 
       {isExpanded && (
         <div className="px-1 pb-2 space-y-2">
+          {/* Natural language to SQL input */}
+          <div className="flex gap-1.5">
+            <input
+              data-testid="nl-to-sql-input"
+              type="text"
+              className="flex-1 rounded border px-2 py-1.5 text-xs focus:outline-none focus:ring-1"
+              style={{
+                borderColor: "var(--color-border)",
+                backgroundColor: "var(--color-bg)",
+                color: "var(--color-text)",
+              }}
+              placeholder="Ask a question about your data..."
+              value={nlQuestion}
+              onChange={(e) => setNlQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleGenerateSql();
+                }
+              }}
+            />
+            <button
+              data-testid="nl-to-sql-generate"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+              style={{
+                backgroundColor: "var(--color-accent)",
+                color: "#fff",
+              }}
+              disabled={!nlQuestion.trim() || isGenerating}
+              onClick={handleGenerateSql}
+            >
+              {isGenerating ? (
+                <>
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" opacity="0.25" />
+                    <path d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z" />
+                  </svg>
+                  Generate SQL
+                </>
+              )}
+            </button>
+          </div>
+
           {/* SQL textarea with autocomplete */}
           <div className="relative">
             <textarea

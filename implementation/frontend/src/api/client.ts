@@ -188,14 +188,22 @@ export interface PreviewResponse {
 }
 
 /**
- * Fetch up to 10 sample rows from a dataset for quick preview.
+ * Fetch sample rows from a dataset for quick preview.
+ *
+ * @param options.sampleSize  Number of rows to return (1-100, default 10)
+ * @param options.random      If true, return randomly sampled rows
  */
 export async function previewDataset(
   conversationId: string,
-  datasetId: string
+  datasetId: string,
+  options?: { sampleSize?: number; random?: boolean }
 ): Promise<PreviewResponse> {
+  const params = new URLSearchParams();
+  if (options?.sampleSize) params.set("sample_size", String(options.sampleSize));
+  if (options?.random) params.set("random_sample", "true");
+  const qs = params.toString();
   return apiPost<PreviewResponse>(
-    `/conversations/${conversationId}/datasets/${datasetId}/preview`
+    `/conversations/${conversationId}/datasets/${datasetId}/preview${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -309,6 +317,28 @@ export async function explainSql(
   return apiPost<ExplainSqlResponse>(
     `/conversations/${conversationId}/explain-sql`,
     { query, schema_json: schemaJson }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Natural language to SQL generation
+// ---------------------------------------------------------------------------
+
+export interface GenerateSqlResponse {
+  sql: string;
+  explanation: string;
+}
+
+/**
+ * Ask the LLM to generate a SQL query from a natural language question.
+ */
+export async function generateSql(
+  conversationId: string,
+  question: string
+): Promise<GenerateSqlResponse> {
+  return apiPost<GenerateSqlResponse>(
+    `/conversations/${conversationId}/generate-sql`,
+    { question }
   );
 }
 

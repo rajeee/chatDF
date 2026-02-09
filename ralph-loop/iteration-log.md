@@ -111,3 +111,4 @@ Track each improvement cycle: what was done, what was learned.
 | 104 | 2026-02-09 | Gemini 429 retry with exponential backoff | work.md task | 1099/1107 frontend (8 pre-existing), 210/211 backend (+6 new, 1 pre-existing) | ac244bf |
 | 105 | 2026-02-09 | Query pagination, column descriptions, query history table | prior session | 1099/1107 frontend (8 pre-existing), 576/588 backend (12 pre-existing) | 03381b3 |
 | 106 | 2026-02-09 | SQL explain in RunSqlPanel, CSV/Excel export, query cache integration | U177, U178, U179 | 1099/1107 frontend (8 pre-existing), 576/588 backend (12 pre-existing, +12 new cache tests) | 30f6e05 |
+| 108 | 2026-02-09 | Dev Mode: full LLM visibility & controls (6 features) | work.md task | 1099/1107 frontend (8 pre-existing), 575/588 backend (12 pre-existing) | 67c1c14 |

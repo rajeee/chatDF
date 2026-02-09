@@ -1,6 +1,7 @@
-// PreviewModal: shows up to 10 sample rows from a dataset in a data grid.
+// PreviewModal: shows configurable sample rows from a dataset in a data grid.
 // Triggered via the Preview button on DatasetCard.
 // Uses the existing DataGrid component for rendering the table.
+// Supports configurable sample size (10/25/50/100), random sampling, and refresh.
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUiStore } from "@/stores/uiStore";
@@ -25,11 +26,13 @@ export function PreviewModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PreviewResponse | null>(null);
+  const [sampleSize, setSampleSize] = useState(10);
+  const [randomSample, setRandomSample] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useFocusTrap(modalRef, !!previewModalDatasetId);
 
-  // Fetch preview data when modal opens
+  // Fetch preview data when modal opens (initial load only)
   useEffect(() => {
     if (!previewModalDatasetId || !conversationId) {
       setData(null);
@@ -42,7 +45,10 @@ export function PreviewModal() {
     setError(null);
     setData(null);
 
-    previewDataset(conversationId, previewModalDatasetId)
+    previewDataset(conversationId, previewModalDatasetId, {
+      sampleSize,
+      random: randomSample,
+    })
       .then((result) => {
         if (!cancelled) {
           setData(result);
@@ -62,7 +68,24 @@ export function PreviewModal() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewModalDatasetId, conversationId]);
+
+  // Refresh handler: re-fetches with current sample size and random settings
+  const handleRefresh = useCallback(() => {
+    if (!previewModalDatasetId || !conversationId) return;
+    setLoading(true);
+    setError(null);
+    previewDataset(conversationId, previewModalDatasetId, {
+      sampleSize,
+      random: randomSample,
+    })
+      .then(setData)
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Failed to load preview")
+      )
+      .finally(() => setLoading(false));
+  }, [previewModalDatasetId, conversationId, sampleSize, randomSample]);
 
   // Close on Escape key
   const handleKeyDown = useCallback(
@@ -133,28 +156,104 @@ export function PreviewModal() {
                 {formatNumber(data?.total_rows ?? dataset.row_count)} total rows
               </p>
             </div>
-            <button
-              onClick={closePreviewModal}
-              aria-label="Close"
-              title="Close"
-              data-testid="preview-modal-close"
-              className="p-1 rounded hover:opacity-70 active:scale-90 transition-all duration-150"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
+
+            <div className="flex items-center gap-3">
+              {/* Sample size selector */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs opacity-60" htmlFor="sample-size">
+                  Rows:
+                </label>
+                <select
+                  id="sample-size"
+                  data-testid="preview-sample-size"
+                  className="text-xs rounded border px-1.5 py-0.5"
+                  style={{
+                    borderColor: "var(--color-border)",
+                    backgroundColor: "var(--color-bg)",
+                    color: "var(--color-text)",
+                  }}
+                  value={sampleSize}
+                  onChange={(e) => setSampleSize(Number(e.target.value))}
+                >
+                  {[10, 25, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Random sample toggle */}
+              <label
+                className="flex items-center gap-1 text-xs cursor-pointer"
+                data-testid="preview-random-toggle"
+              >
+                <input
+                  type="checkbox"
+                  checked={randomSample}
+                  onChange={(e) => setRandomSample(e.target.checked)}
+                  className="rounded"
                 />
-              </svg>
-            </button>
+                <span className="opacity-60">Random</span>
+              </label>
+
+              {/* Refresh button */}
+              <button
+                data-testid="preview-refresh"
+                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded border hover:opacity-70 transition-opacity"
+                style={{
+                  borderColor: "var(--color-border)",
+                  color: "var(--color-text)",
+                }}
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                <svg
+                  className={`w-3 h-3 ${loading ? "animate-spin" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M1 4v6h6M23 20v-6h-6" />
+                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                </svg>
+                Refresh
+              </button>
+
+              {/* Close button */}
+              <button
+                onClick={closePreviewModal}
+                aria-label="Close"
+                title="Close"
+                data-testid="preview-modal-close"
+                className="p-1 rounded hover:opacity-70 active:scale-90 transition-all duration-150"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Loading state */}
           {loading && (
-            <div className="flex items-center justify-center py-12" data-testid="preview-loading">
+            <div
+              className="flex items-center justify-center py-12"
+              data-testid="preview-loading"
+            >
               <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              <span className="ml-2 text-sm opacity-60">Loading preview...</span>
+              <span className="ml-2 text-sm opacity-60">
+                Loading preview...
+              </span>
             </div>
           )}
 

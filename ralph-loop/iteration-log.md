@@ -118,3 +118,5 @@ Track each improvement cycle: what was done, what was learned.
 | 112 | 2026-02-09 | SQL formatter, format button, copy-to-clipboard TSV | U185, U186 | 1171/1179 frontend (+17 new, 8 pre-existing), 64/65 backend (1 pre-existing) | ed2e7d1 |
 | 113 | 2026-02-09 | CodeMirror SQL editor, column sorting, chart in RunSqlPanel | U187, U188, U189 | 1185/1193 frontend (8 pre-existing), 64/65 backend (1 pre-existing) | 04cce20, 3a0e7bd |
 | 114 | 2026-02-09 | Explain SQL button, row count badge, inline CSV/XLSX export | U190, U191, U192 | 1199/1207 frontend (8 pre-existing), 64/65 backend (1 pre-existing) | 783ae70 |
+| 115a | 2026-02-09 | Persistent query cache, draft persistence, bulk conversation ops | prior session | 1259 frontend pass, 64/65 backend (1 pre-existing) | e642ea0 |
+| 115 | 2026-02-09 | Auto-profile datasets on load via WebSocket | U193 | stores pass, 662/677 backend (15 pre-existing) | e63f946 |

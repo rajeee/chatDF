@@ -15,6 +15,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { downloadCsv } from "@/utils/csvExport";
+import { downloadExcel } from "@/utils/excelExport";
 
 /* ---------- Sort indicator SVG icons ---------- */
 function SortAscIcon() {
@@ -213,6 +214,10 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
     downloadCsv(visibleColumns, rows, "query-results.csv");
   }, [visibleColumns, rows]);
 
+  const handleDownloadExcel = useCallback(() => {
+    downloadExcel(visibleColumns, rows, "query-results");
+  }, [visibleColumns, rows]);
+
   return (
     <div data-testid="data-grid" className="border rounded">
       {/* Toolbar */}
@@ -318,6 +323,27 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
             <path d="M2 10h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           Download CSV
+        </button>
+        <button
+          type="button"
+          aria-label="Download Excel"
+          onClick={handleDownloadExcel}
+          className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 flex items-center gap-1"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+            className="inline-block shrink-0"
+          >
+            <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.2" />
+            <line x1="1" y1="4" x2="11" y2="4" stroke="currentColor" strokeWidth="1" />
+            <line x1="1" y1="7" x2="11" y2="7" stroke="currentColor" strokeWidth="1" />
+            <line x1="5" y1="1" x2="5" y2="11" stroke="currentColor" strokeWidth="1" />
+          </svg>
+          Download Excel
         </button>
         <button
           type="button"

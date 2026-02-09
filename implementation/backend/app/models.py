@@ -271,6 +271,14 @@ class SearchResponse(BaseModel):
     total: int
 
 
+class ExportXlsxRequest(BaseModel):
+    """Request body for XLSX export."""
+
+    columns: list[str]
+    rows: list[list[Any]]
+    filename: str = "query-results"  # optional filename without extension
+
+
 class ErrorResponse(BaseModel):
     """Standardized error response format."""
 

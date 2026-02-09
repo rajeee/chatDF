@@ -8,6 +8,5 @@ Ideas are scored by **impact** (1-5) and **effort** (1-5, lower=easier). Priorit
 |----|------|--------|--------|----------|--------|
 | U160 | Multi-dataset JOIN queries | 5 | 5 | 1.0 | pending |
 | U176 | Dataset auto-suggest (suggest datasets from popular data catalogs) | 4 | 4 | 1.0 | pending |
-| U193 | Auto-profile datasets on load (push stats via WS) | 4 | 2 | 2.0 | done |
 | U194 | Conversation templates (pre-built analysis workflows) | 4 | 4 | 1.0 | pending |
 | U195 | Query result comparison (diff two query results side-by-side) | 4 | 4 | 1.0 | pending |

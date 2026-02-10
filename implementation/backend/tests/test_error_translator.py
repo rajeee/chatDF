@@ -1,9 +1,9 @@
 """Tests for the Polars SQL error translator.
 
 Covers:
-- All known error pattern matches (patterns 1-15)
+- All known error pattern matches (patterns 1-17)
+- Generic fallback for unrecognised errors
 - User-friendly message formatting with technical details
-- Fallback behaviour for unrecognised errors
 - Case-insensitivity of pattern matching
 - Column-not-found enrichment with available columns
 """
@@ -227,8 +227,9 @@ class TestStringToNumberConversion:
         """'conversion' alone (without 'string') should NOT match pattern 14."""
         raw = "conversion failed for date"
         result = translate_polars_error(raw)
-        # Should fall through -- returned as-is (no friendly wrapper)
-        assert result == raw
+        # Should fall through to generic fallback (not pattern 14)
+        _assert_friendly(result, "The query encountered an error", raw)
+        assert "Could not convert string" not in result
 
 
 class TestDistinctOn:
@@ -246,18 +247,68 @@ class TestDistinctOn:
 
 
 # ---------------------------------------------------------------------------
-# Fallback / edge-case behaviour
+# New patterns (16-17)
 # ---------------------------------------------------------------------------
 
 
-class TestFallback:
-    """Unrecognised errors are returned as-is."""
+class TestTimeout:
+    """Pattern 16: query timeout / resource exhaustion."""
 
-    def test_unknown_error_returned_unchanged(self):
+    def test_timeout(self):
+        raw = "Query execution timeout after 30s"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "Query timed out or ran out of memory", raw)
+
+    def test_out_of_memory(self):
+        raw = "ComputeError: out of memory during aggregation"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "LIMIT clause", raw)
+
+    def test_resource_exhaustion(self):
+        raw = "resource limit exceeded during query execution"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "selecting fewer columns", raw)
+
+
+class TestJoinError:
+    """Pattern 17: JOIN errors."""
+
+    def test_join_column_error(self):
+        raw = "join failed: column 'user_id' not found in right table"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "JOIN error", raw)
+
+    def test_join_key_mismatch(self):
+        raw = "join key types do not match: Int64 vs Utf8"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "CAST() if types differ", raw)
+
+    def test_join_without_column_or_key_no_match(self):
+        """'join' alone (without 'column' or 'key') should NOT match pattern 17."""
+        raw = "join operation completed with warnings"
+        result = translate_polars_error(raw)
+        # Should hit the generic fallback, not the JOIN pattern
+        _assert_friendly(result, "The query encountered an error", raw)
+
+
+# ---------------------------------------------------------------------------
+# Generic fallback / edge-case behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestGenericFallback:
+    """Unrecognised errors get a helpful generic message."""
+
+    def test_unknown_error_gets_generic_message(self):
         raw = "some completely unknown polars error xyz"
         result = translate_polars_error(raw)
-        assert result == raw
-        assert "Technical details" not in result
+        _assert_friendly(result, "The query encountered an error", raw)
+
+    def test_generic_fallback_mentions_common_fixes(self):
+        raw = "an obscure internal error nobody has ever seen"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "LOWER() instead of ILIKE", raw)
+        _assert_friendly(result, "strftime() instead of DATE_TRUNC", raw)
 
     def test_empty_string(self):
         result = translate_polars_error("")

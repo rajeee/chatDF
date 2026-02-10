@@ -4,8 +4,8 @@
  * Tests:
  * 1. Load app, authenticate via dev-login, verify main UI renders
  * 2. Paste a dataset URL → dataset loads → schema appears
- * 3. Conversation CRUD (create, rename, delete, pin)
- * 4. Export results as CSV
+ * 3. Conversation CRUD via API (create, rename, pin/unpin, delete)
+ * 4. Export via API (CSV, conversation JSON, conversation HTML)
  *
  * NOTE: Chat/LLM tests require a real Gemini API key and are skipped
  * when running against a test backend with a dummy key.
@@ -143,145 +143,244 @@ test.describe("Core Journey: Dataset Loading", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test: Conversation CRUD
+// Test: Conversation CRUD (API-driven for reliability)
 // ---------------------------------------------------------------------------
 
 test.describe("Core Journey: Conversation Management", () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page);
-    await waitForAppReady(page);
   });
 
-  test("create a new conversation", async ({ page }) => {
-    // Find and click the "New Chat" button
-    const newChatBtn = page.getByRole("button", { name: /new chat/i });
-    if (await newChatBtn.isVisible().catch(() => false)) {
-      const countBefore = await page
-        .locator('[data-testid="conversation-item"]')
-        .count();
+  test("create a new conversation via API", async ({ page }) => {
+    const resp = await page.request.post(`${BACKEND_URL}/conversations`);
+    expect(resp.ok()).toBe(true);
+    expect(resp.status()).toBe(201);
 
-      await newChatBtn.click();
-      await page.waitForTimeout(500);
+    const conv = await resp.json();
+    expect(conv.id).toBeTruthy();
+    expect(typeof conv.id).toBe("string");
+    expect(conv.created_at).toBeTruthy();
 
-      // A new conversation should appear in the sidebar or the chat area
-      // should reset
-      const chatInput = page.locator("textarea").first();
-      await expect(chatInput).toBeVisible({ timeout: 5_000 });
-    }
+    // Verify the conversation appears in the list
+    const listResp = await page.request.get(`${BACKEND_URL}/conversations`);
+    expect(listResp.ok()).toBe(true);
+    const list = await listResp.json();
+    const found = list.conversations.some(
+      (c: { id: string }) => c.id === conv.id
+    );
+    expect(found).toBe(true);
+
+    // Clean up
+    await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
   });
 
-  test("rename a conversation", async ({ page }) => {
-    // Create a conversation first by sending a message or just opening one
-    const convItems = page.locator('[data-testid="conversation-item"]');
-    const count = await convItems.count();
+  test("rename a conversation via API", async ({ page }) => {
+    // Create a conversation to rename
+    const createResp = await page.request.post(
+      `${BACKEND_URL}/conversations`
+    );
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
 
-    if (count > 0) {
-      // Right-click or find rename option on first conversation
-      await convItems.first().click({ button: "right" });
-      await page.waitForTimeout(300);
+    // Rename it
+    const renameResp = await page.request.patch(
+      `${BACKEND_URL}/conversations/${conv.id}`,
+      { data: { title: "E2E Renamed Conversation" } }
+    );
+    expect(renameResp.ok()).toBe(true);
+    const renamed = await renameResp.json();
+    expect(renamed.title).toBe("E2E Renamed Conversation");
+    expect(renamed.id).toBe(conv.id);
 
-      const renameOption = page.getByRole("menuitem", { name: /rename/i });
-      if (await renameOption.isVisible().catch(() => false)) {
-        await renameOption.click();
-        await page.waitForTimeout(300);
+    // Verify the rename persisted by fetching the detail
+    const detailResp = await page.request.get(
+      `${BACKEND_URL}/conversations/${conv.id}`
+    );
+    expect(detailResp.ok()).toBe(true);
+    const detail = await detailResp.json();
+    expect(detail.title).toBe("E2E Renamed Conversation");
 
-        // Type new name
-        const renameInput = page.locator("input:focus");
-        if (await renameInput.isVisible().catch(() => false)) {
-          await renameInput.fill("Renamed E2E Test");
-          await renameInput.press("Enter");
-          await page.waitForTimeout(500);
-
-          // Verify the name was updated
-          await expect(
-            page.locator("text=Renamed E2E Test")
-          ).toBeVisible({ timeout: 5_000 });
-        }
-      }
-    }
+    // Clean up
+    await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
   });
 
-  test("pin and unpin a conversation", async ({ page }) => {
-    const convItems = page.locator('[data-testid="conversation-item"]');
-    const count = await convItems.count();
+  test("pin and unpin a conversation via API", async ({ page }) => {
+    // Create a conversation to pin
+    const createResp = await page.request.post(
+      `${BACKEND_URL}/conversations`
+    );
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
 
-    if (count > 0) {
-      // Right-click to get context menu
-      await convItems.first().click({ button: "right" });
-      await page.waitForTimeout(300);
+    // Pin it
+    const pinResp = await page.request.patch(
+      `${BACKEND_URL}/conversations/${conv.id}/pin`,
+      { data: { is_pinned: true } }
+    );
+    expect(pinResp.ok()).toBe(true);
+    const pinned = await pinResp.json();
+    expect(pinned.is_pinned).toBe(true);
+    expect(pinned.id).toBe(conv.id);
 
-      const pinOption = page.getByRole("menuitem", { name: /pin/i });
-      if (await pinOption.isVisible().catch(() => false)) {
-        await pinOption.click();
-        await page.waitForTimeout(500);
+    // Verify pinned status in the conversation list
+    const listResp = await page.request.get(`${BACKEND_URL}/conversations`);
+    expect(listResp.ok()).toBe(true);
+    const list = await listResp.json();
+    const pinnedConv = list.conversations.find(
+      (c: { id: string }) => c.id === conv.id
+    );
+    expect(pinnedConv).toBeTruthy();
+    expect(pinnedConv.is_pinned).toBe(true);
 
-        // Check for pinned indicator
-        const pinnedIndicator = page.locator(
-          '[data-testid="pinned-indicator"], .pinned, [aria-label*="pin"]'
-        );
-        // Pin may show as an icon or badge
-      }
-    }
+    // Unpin it
+    const unpinResp = await page.request.patch(
+      `${BACKEND_URL}/conversations/${conv.id}/pin`,
+      { data: { is_pinned: false } }
+    );
+    expect(unpinResp.ok()).toBe(true);
+    const unpinned = await unpinResp.json();
+    expect(unpinned.is_pinned).toBe(false);
+
+    // Clean up
+    await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
   });
 
-  test("delete a conversation", async ({ page }) => {
-    // First create a new conversation so we have something to delete
-    const newChatBtn = page.getByRole("button", { name: /new chat/i });
-    if (await newChatBtn.isVisible().catch(() => false)) {
-      await newChatBtn.click();
-      await page.waitForTimeout(500);
-    }
+  test("delete a conversation via API", async ({ page }) => {
+    // Create a conversation to delete
+    const createResp = await page.request.post(
+      `${BACKEND_URL}/conversations`
+    );
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
 
-    const convItems = page.locator('[data-testid="conversation-item"]');
-    const countBefore = await convItems.count();
+    // Verify it exists
+    const detailResp = await page.request.get(
+      `${BACKEND_URL}/conversations/${conv.id}`
+    );
+    expect(detailResp.ok()).toBe(true);
 
-    if (countBefore > 0) {
-      // Right-click on the first conversation
-      await convItems.first().click({ button: "right" });
-      await page.waitForTimeout(300);
+    // Delete it
+    const deleteResp = await page.request.delete(
+      `${BACKEND_URL}/conversations/${conv.id}`
+    );
+    expect(deleteResp.ok()).toBe(true);
+    const deleted = await deleteResp.json();
+    expect(deleted.success).toBe(true);
 
-      const deleteOption = page.getByRole("menuitem", { name: /delete/i });
-      if (await deleteOption.isVisible().catch(() => false)) {
-        await deleteOption.click();
-        await page.waitForTimeout(300);
-
-        // Confirm deletion if there's a confirmation dialog
-        const confirmBtn = page.getByRole("button", {
-          name: /confirm|delete|yes/i,
-        });
-        if (await confirmBtn.isVisible().catch(() => false)) {
-          await confirmBtn.click();
-        }
-
-        await page.waitForTimeout(500);
-      }
-    }
+    // Verify it is gone (should return 403 or 404)
+    const goneResp = await page.request.get(
+      `${BACKEND_URL}/conversations/${conv.id}`
+    );
+    expect(goneResp.ok()).toBe(false);
+    expect([403, 404]).toContain(goneResp.status());
   });
 });
 
 // ---------------------------------------------------------------------------
-// Test: CSV Export
+// Test: Export (API-driven)
 // ---------------------------------------------------------------------------
 
 test.describe("Core Journey: Export", () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page);
-    await waitForAppReady(page);
   });
 
-  test("export button is accessible in the UI", async ({ page }) => {
-    // Look for export/download buttons in the UI
-    const exportBtn = page.getByRole("button", { name: /export|download|csv/i });
-    const menuExport = page.locator('[data-testid="export-btn"]');
+  test("CSV export endpoint produces a valid CSV file", async ({ page }) => {
+    // POST to /export/csv with sample data
+    const csvResp = await page.request.post(`${BACKEND_URL}/export/csv`, {
+      data: {
+        columns: ["id", "name", "value"],
+        rows: [
+          [1, "alpha", 10.5],
+          [2, "beta", 20.3],
+          [3, "gamma", 30.1],
+        ],
+        filename: "e2e-test-export",
+      },
+    });
+    expect(csvResp.ok()).toBe(true);
 
-    // The export feature should be present somewhere in the UI
-    // (may be hidden behind a menu or only visible with results)
-    const hasExport =
-      (await exportBtn.first().isVisible().catch(() => false)) ||
-      (await menuExport.isVisible().catch(() => false));
+    // Verify response headers indicate a CSV download
+    const contentType = csvResp.headers()["content-type"];
+    expect(contentType).toContain("text/csv");
+    const disposition = csvResp.headers()["content-disposition"];
+    expect(disposition).toContain("e2e-test-export.csv");
 
-    // Export may only be visible when there are query results,
-    // so we just verify the UI loaded correctly
-    expect(true).toBe(true);
+    // Verify the CSV content is correct
+    const body = await csvResp.text();
+    const lines = body.trim().split("\n");
+    expect(lines.length).toBe(4); // 1 header + 3 data rows
+    expect(lines[0]).toContain("id");
+    expect(lines[0]).toContain("name");
+    expect(lines[0]).toContain("value");
+    expect(lines[1]).toContain("alpha");
+  });
+
+  test("conversation JSON export endpoint works", async ({ page }) => {
+    // Create a conversation to export
+    const createResp = await page.request.post(
+      `${BACKEND_URL}/conversations`
+    );
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
+
+    // Rename it so we can verify the title in the export
+    await page.request.patch(
+      `${BACKEND_URL}/conversations/${conv.id}`,
+      { data: { title: "E2E Export Test" } }
+    );
+
+    // Export the conversation as JSON
+    const exportResp = await page.request.get(
+      `${BACKEND_URL}/conversations/${conv.id}/export`
+    );
+    expect(exportResp.ok()).toBe(true);
+
+    const contentType = exportResp.headers()["content-type"];
+    expect(contentType).toContain("application/json");
+    const disposition = exportResp.headers()["content-disposition"];
+    expect(disposition).toContain("conversation-");
+
+    // Verify the exported JSON structure
+    const exported = await exportResp.json();
+    expect(exported.conversation).toBeTruthy();
+    expect(exported.conversation.id).toBe(conv.id);
+    expect(exported.conversation.title).toBe("E2E Export Test");
+    expect(Array.isArray(exported.messages)).toBe(true);
+    expect(Array.isArray(exported.datasets)).toBe(true);
+
+    // Clean up
+    await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
+  });
+
+  test("HTML export endpoint produces valid HTML", async ({ page }) => {
+    // Create a conversation to export
+    const createResp = await page.request.post(
+      `${BACKEND_URL}/conversations`
+    );
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
+
+    await page.request.patch(
+      `${BACKEND_URL}/conversations/${conv.id}`,
+      { data: { title: "E2E HTML Export" } }
+    );
+
+    // Export as HTML
+    const exportResp = await page.request.get(
+      `${BACKEND_URL}/conversations/${conv.id}/export/html`
+    );
+    expect(exportResp.ok()).toBe(true);
+
+    const contentType = exportResp.headers()["content-type"];
+    expect(contentType).toContain("text/html");
+
+    const htmlBody = await exportResp.text();
+    expect(htmlBody).toContain("<!DOCTYPE html>");
+    expect(htmlBody).toContain("E2E HTML Export");
+    expect(htmlBody).toContain("ChatDF");
+
+    // Clean up
+    await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
   });
 });

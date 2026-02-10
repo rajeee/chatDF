@@ -16,8 +16,8 @@ def translate_polars_error(
     """Translate a raw Polars SQL error into a user-friendly message.
 
     Applies regex-based pattern matching against known Polars error
-    categories. If no pattern matches, returns the original message
-    unchanged.
+    categories.  A generic fallback is returned when no specific
+    pattern matches (empty strings are returned as-is).
 
     Args:
         error_message: The raw error string from Polars.
@@ -28,11 +28,10 @@ def translate_polars_error(
         A formatted string with a user-friendly explanation followed by
         the original technical details.
     """
-    friendly = _match_error_pattern(error_message, available_columns)
-    if friendly is None:
-        # No pattern matched -- return original as-is
+    if not error_message:
         return error_message
 
+    friendly = _match_error_pattern(error_message, available_columns)
     return f"{friendly}\n\nTechnical details: {error_message}"
 
 
@@ -40,7 +39,11 @@ def _match_error_pattern(
     error_message: str,
     available_columns: list[str] | None = None,
 ) -> str | None:
-    """Try each known error pattern and return a friendly message, or None."""
+    """Try each known error pattern and return a friendly message.
+
+    Always returns a string -- falls back to a generic helpful message
+    when no specific pattern matches.
+    """
     msg_lower = error_message.lower()
 
     # 1. Column not found
@@ -169,4 +172,25 @@ def _match_error_pattern(
             "(PARTITION BY col ORDER BY ...) to get distinct rows per group."
         )
 
-    return None
+    # 16. Query timeout / resource exhaustion
+    if "timeout" in msg_lower or "out of memory" in msg_lower or "resource" in msg_lower:
+        return (
+            "Query timed out or ran out of memory. "
+            "Try adding a LIMIT clause, filtering with WHERE, "
+            "or selecting fewer columns."
+        )
+
+    # 17. JOIN errors
+    if "join" in msg_lower and ("column" in msg_lower or "key" in msg_lower):
+        return (
+            "JOIN error — the join column may not exist or have mismatched types. "
+            "Verify both tables have the join column and use CAST() if types differ."
+        )
+
+    # Generic fallback for unrecognized errors
+    return (
+        "The query encountered an error. "
+        "Check your SQL syntax, column names, and data types. "
+        "Common fixes: use LOWER() instead of ILIKE, strftime() instead of DATE_TRUNC, "
+        "and verify column names match the dataset schema exactly."
+    )

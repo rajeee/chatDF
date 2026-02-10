@@ -75,6 +75,11 @@ describe("useTheme hook", () => {
   let originalLocalStorage: Storage;
 
   beforeEach(async () => {
+    // Use fake timers to prevent the 250ms transition timeout in setTheme()
+    // from firing after the test environment is torn down (which would cause
+    // "ReferenceError: document is not defined").
+    vi.useFakeTimers();
+
     // Save originals
     originalMatchMedia = window.matchMedia;
     originalLocalStorage = window.localStorage;
@@ -103,6 +108,10 @@ describe("useTheme hook", () => {
   });
 
   afterEach(() => {
+    // Restore real timers so pending fake timers (e.g. the 250ms transition
+    // timeout from setTheme) are discarded rather than firing post-teardown.
+    vi.useRealTimers();
+
     // Restore originals
     Object.defineProperty(window, "matchMedia", {
       writable: true,

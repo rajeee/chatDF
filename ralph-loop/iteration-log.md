@@ -129,3 +129,4 @@ Track each improvement cycle: what was done, what was learned.
 | 122 | 2026-02-10 | Fix all 14 failing backend tests, add E2E tests | work.md x2 | 1411 frontend pass, 743/743 backend (0 failures!) | f3d2d60, e01b7f5 |
 | 123 | 2026-02-10 | Consolidate branch/fork, error translator, LLM prompt hardening | hardening | 1411 frontend pass, 775/775 backend | da18655 |
 | 124 | 2026-02-10 | Remove dead code, add settings & share endpoint tests | hardening | 1411 frontend pass, 793/793 backend | cbdeabb |
+| 126 | 2026-02-10 | Harden LLM prompt, error translator, fix theme test leak, improve E2E tests | hardening | 1411 frontend pass (0 errors), 800/800 backend | 86c1bf8 |

@@ -7,6 +7,7 @@ Application wiring: lifespan, middleware stack, router mounting, exception handl
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -25,10 +26,37 @@ from app.routers import auth, conversations, dataset_search, datasets, export, h
 from app.routers import settings as settings_router
 from app.routers.conversations import public_router as shared_router
 from app.routers.websocket import router as ws_router
-from app.services import worker_pool
+from app.services import persistent_cache, worker_pool
 from app.services.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Background tasks
+# ---------------------------------------------------------------------------
+
+_cleanup_task: asyncio.Task | None = None
+
+CACHE_CLEANUP_INTERVAL_SECONDS = 1800  # 30 minutes
+
+
+async def _periodic_cache_cleanup(db_pool: DatabasePool) -> None:
+    """Run persistent cache cleanup every 30 minutes.
+
+    Removes expired entries from the ``query_results_cache`` table using
+    the pool's write connection.  Runs until cancelled on shutdown.
+    """
+    while True:
+        try:
+            await asyncio.sleep(CACHE_CLEANUP_INTERVAL_SECONDS)
+            write_conn = db_pool.get_write_connection()
+            removed = await persistent_cache.cleanup(write_conn)
+            if removed > 0:
+                logger.info("Cache cleanup: removed %d expired entries", removed)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.exception("Cache cleanup error")
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +68,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Open the database pool and start worker pool on startup; clean up on shutdown."""
+    global _cleanup_task
+
     settings = get_settings()
 
     # -- Database Pool --
@@ -58,9 +88,20 @@ async def lifespan(application: FastAPI):
     pool.set_db_pool(db_pool)  # enable persistent query result caching
     application.state.worker_pool = pool
 
+    # -- Periodic cache cleanup --
+    _cleanup_task = asyncio.create_task(_periodic_cache_cleanup(db_pool))
+
     yield
 
     # -- Shutdown --
+    # Cancel the periodic cache cleanup task
+    if _cleanup_task is not None:
+        _cleanup_task.cancel()
+        try:
+            await _cleanup_task
+        except asyncio.CancelledError:
+            pass
+
     # Implements: spec/backend/plan.md#Lifespan (drain pool, close DB on shutdown)
     worker_pool.shutdown(pool)
     await db_pool.close()

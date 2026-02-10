@@ -220,6 +220,9 @@ describe("ML-SCROLL-1: Auto-scroll to bottom", () => {
       expect(rafSpy).toHaveBeenCalled();
     });
 
+    // Flush pending microtasks to prevent state updates after teardown
+    await act(async () => {});
+
     rafSpy.mockRestore();
   });
 });

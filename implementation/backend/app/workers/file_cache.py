@@ -13,6 +13,7 @@ import hashlib
 import logging
 import os
 import tempfile
+import time
 import urllib.error
 import urllib.request
 
@@ -31,6 +32,7 @@ CACHE_DIR = os.environ.get("CHATDF_CACHE_DIR", _default_cache)
 MAX_CACHE_BYTES = int(os.environ.get("CHATDF_MAX_CACHE_BYTES", str(1024 ** 3)))  # 1 GB
 MAX_FILE_BYTES = int(os.environ.get("CHATDF_MAX_FILE_BYTES", str(500 * 1024 ** 2)))  # 500 MB
 DOWNLOAD_TIMEOUT = 300  # seconds
+STALE_TEMP_MAX_AGE = 3600  # seconds — remove .download_ temp files older than this
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +66,37 @@ def _cache_path(url: str) -> str:
 def _ensure_cache_dir() -> None:
     """Create the cache directory if it doesn't exist."""
     os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Stale temp file cleanup
+# ---------------------------------------------------------------------------
+
+def _cleanup_stale_temps() -> int:
+    """Remove stale .download_ temp files left behind by crashed downloads.
+
+    Returns the number of removed files.
+    """
+    removed = 0
+    try:
+        now = time.time()
+        for name in os.listdir(CACHE_DIR):
+            if not name.startswith(".download_"):
+                continue
+            path = os.path.join(CACHE_DIR, name)
+            try:
+                if not os.path.isfile(path):
+                    continue
+                age = now - os.path.getmtime(path)
+                if age > STALE_TEMP_MAX_AGE:
+                    os.unlink(path)
+                    removed += 1
+                    logger.info("Removed stale temp file: %s (age %.0fs)", name, age)
+            except OSError:
+                pass
+    except OSError:
+        pass
+    return removed
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +140,8 @@ def _evict_lru() -> None:
     except OSError:
         # Cache dir might have been removed by another process; ignore.
         pass
+
+    _cleanup_stale_temps()
 
 
 # ---------------------------------------------------------------------------

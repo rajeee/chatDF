@@ -373,3 +373,88 @@ class TestOrderByNotInSelect:
         raw = "ORDER BY column 'age' not in SELECT list"
         result = translate_polars_error(raw)
         _assert_friendly(result, "ORDER BY column not found in SELECT", raw)
+
+
+# ---------------------------------------------------------------------------
+# New patterns (23-27)
+# ---------------------------------------------------------------------------
+
+
+class TestWindowFunction:
+    """Pattern 23: window function syntax error."""
+
+    def test_window_partition(self):
+        raw = "window function error: invalid partition by clause"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "Window function error", raw)
+
+    def test_window_over(self):
+        raw = "error in window OVER clause: missing ORDER BY"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "ROW_NUMBER() OVER", raw)
+
+    def test_window_frame(self):
+        raw = "window frame specification error"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "PARTITION BY col ORDER BY col2", raw)
+
+
+class TestStrftime:
+    """Pattern 24: strftime / date format error."""
+
+    def test_strftime_error(self):
+        raw = "strftime: invalid format string '%Q'"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "Date formatting error", raw)
+
+    def test_date_format_error(self):
+        raw = "invalid format for date column"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "'%Y' for year", raw)
+
+
+class TestNullExpression:
+    """Pattern 25: NULL in expression."""
+
+    def test_null_concat(self):
+        raw = "null value encountered during concat operation"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "NULL value in expression", raw)
+
+    def test_null_pipe_operator(self):
+        raw = "ComputeError: null found in || string concatenation"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "COALESCE(column, '')", raw)
+
+    def test_null_arithmetic(self):
+        raw = "null encountered in arithmetic expression"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "COALESCE(column, 0)", raw)
+
+
+class TestHavingClause:
+    """Pattern 26: HAVING clause error."""
+
+    def test_having_aggregate(self):
+        raw = "HAVING clause requires aggregate function"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "HAVING clause error", raw)
+
+    def test_having_group(self):
+        raw = "HAVING clause error: column not in group by"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "Use WHERE to filter individual rows", raw)
+
+
+class TestUnionMismatch:
+    """Pattern 27: UNION column count mismatch."""
+
+    def test_union_column_mismatch(self):
+        raw = "UNION: column count mismatch between queries"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "UNION error", raw)
+
+    def test_union_type_mismatch(self):
+        raw = "UNION ALL: number of columns does not match"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "UNION ALL instead of UNION", raw)

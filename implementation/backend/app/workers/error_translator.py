@@ -226,6 +226,45 @@ def _match_error_pattern(
             "Either add the column to your SELECT clause or use a column position number."
         )
 
+    # 23. Window function syntax error
+    if "window" in msg_lower and ("partition" in msg_lower or "over" in msg_lower or "frame" in msg_lower):
+        return (
+            "Window function error. "
+            "Check your OVER clause syntax: "
+            "ROW_NUMBER() OVER (PARTITION BY col ORDER BY col2)."
+        )
+
+    # 24. strftime / date format error
+    if "strftime" in msg_lower or ("format" in msg_lower and "date" in msg_lower):
+        return (
+            "Date formatting error. "
+            "Use strftime format codes: '%Y' for year, '%m' for month, '%d' for day, "
+            "'%H' for hour, '%M' for minute. Example: strftime('%Y-%m', date_col)."
+        )
+
+    # 25. NULL in expression (concat or arithmetic with NULL)
+    if "null" in msg_lower and ("concat" in msg_lower or "||" in error_message or "arithmetic" in msg_lower):
+        return (
+            "NULL value in expression. "
+            "String concatenation or arithmetic with NULL produces NULL. "
+            "Use COALESCE(column, '') for strings or COALESCE(column, 0) for numbers."
+        )
+
+    # 26. HAVING clause error
+    if "having" in msg_lower and ("aggregate" in msg_lower or "group" in msg_lower or "not allowed" in msg_lower):
+        return (
+            "HAVING clause error. "
+            "HAVING can only filter on aggregate expressions (COUNT, SUM, AVG, etc.). "
+            "Use WHERE to filter individual rows before aggregation."
+        )
+
+    # 27. UNION column count mismatch
+    if "union" in msg_lower and ("column" in msg_lower or "mismatch" in msg_lower or "number" in msg_lower):
+        return (
+            "UNION error — all SELECT statements must have the same number of columns "
+            "with compatible types. Use UNION ALL instead of UNION if deduplication is not needed."
+        )
+
     # Generic fallback for unrecognized errors
     return (
         "The query encountered an error. "

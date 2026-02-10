@@ -46,6 +46,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const scrollRafRef = useRef<number | null>(null);
+  const scrollEventRafRef = useRef<number | null>(null);
 
   // Track initial load message count for staggered cascade animation.
   // When a conversation is first loaded (or switched to), we record how many
@@ -89,7 +90,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
     const handleScroll = () => {
       if (!ticking) {
         ticking = true;
-        requestAnimationFrame(() => {
+        scrollEventRafRef.current = requestAnimationFrame(() => {
           setUserHasScrolledUp(!isNearBottom());
           setShowScrollToTop(!isNearTop());
           const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -98,11 +99,18 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
           const maxScroll = scrollHeight - clientHeight;
           setScrollProgress(maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0);
           ticking = false;
+          scrollEventRafRef.current = null;
         });
       }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollEventRafRef.current !== null) {
+        cancelAnimationFrame(scrollEventRafRef.current);
+        scrollEventRafRef.current = null;
+      }
+    };
   }, [isNearBottom, isNearTop]);
 
   // Auto-scroll to bottom when new content arrives
@@ -135,8 +143,9 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   const scrollToBottom = useCallback(() => {
     setUserHasScrolledUp(false);
     // Use requestAnimationFrame for smooth scroll on manual button click too
-    requestAnimationFrame(() => {
+    scrollEventRafRef.current = requestAnimationFrame(() => {
       sentinelRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      scrollEventRafRef.current = null;
     });
   }, []);
 

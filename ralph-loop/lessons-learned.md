@@ -10,3 +10,5 @@
 - **Fake timers prevent post-teardown errors**: When source code uses `setTimeout` that accesses DOM, test teardown can race with pending timers. Use `vi.useFakeTimers()` in beforeEach and `vi.useRealTimers()` in afterEach to eliminate the race entirely.
 - **E2E tests should use API calls, not fragile UI selectors**: Tests that rely on right-click context menus or conditional visibility checks silently pass without asserting anything. API-driven tests with unconditional assertions are far more reliable.
 - **Error translators should never return raw errors**: Always have a generic fallback message for unrecognized errors. Raw engine errors confuse users and leak implementation details.
+- **MSW `onUnhandledRequest` custom callback for WebSocket**: Use a callback instead of `"error"` string to selectively bypass WS URLs while keeping strict HTTP enforcement.
+- **Avoid `<button>` inside `<button>`**: Use `<div role="button" tabIndex={0}>` for outer clickable containers that contain inner buttons. Add `onKeyDown` for Enter/Space handling.

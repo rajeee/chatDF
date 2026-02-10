@@ -130,3 +130,4 @@ Track each improvement cycle: what was done, what was learned.
 | 123 | 2026-02-10 | Consolidate branch/fork, error translator, LLM prompt hardening | hardening | 1411 frontend pass, 775/775 backend | da18655 |
 | 124 | 2026-02-10 | Remove dead code, add settings & share endpoint tests | hardening | 1411 frontend pass, 793/793 backend | cbdeabb |
 | 126 | 2026-02-10 | Harden LLM prompt, error translator, fix theme test leak, improve E2E tests | hardening | 1411 frontend pass (0 errors), 800/800 backend | 86c1bf8 |
+| 127 | 2026-02-10 | Fix DOM nesting, consolidate imports, add MSW handlers, 42 new saved query tests | hardening | 1410 frontend pass, 842/842 backend | 81d27c3 |

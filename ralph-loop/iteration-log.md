@@ -127,3 +127,5 @@ Track each improvement cycle: what was done, what was learned.
 | 120 | 2026-02-09 | Conversation branching + bookmark button integration | U199, U200 | 1406 frontend (+15 new), 64/65 backend (+9 branch tests, 1 pre-existing) | 59817f2 |
 | 121 | 2026-02-10 | Remove correlations, harden LLM prompt, file cache, error translator | work.md x4 | 1411 frontend pass, 743/743 backend (all pass) | fb5c09b |
 | 122 | 2026-02-10 | Fix all 14 failing backend tests, add E2E tests | work.md x2 | 1411 frontend pass, 743/743 backend (0 failures!) | f3d2d60, e01b7f5 |
+| 123 | 2026-02-10 | Consolidate branch/fork, error translator, LLM prompt hardening | hardening | 1411 frontend pass, 775/775 backend | da18655 |
+| 124 | 2026-02-10 | Remove dead code, add settings & share endpoint tests | hardening | 1411 frontend pass, 793/793 backend | cbdeabb |

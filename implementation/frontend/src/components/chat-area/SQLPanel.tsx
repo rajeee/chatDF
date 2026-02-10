@@ -17,7 +17,7 @@ import { useSortedRows } from "@/hooks/useSortedRows";
 import { cellValue } from "@/utils/tableUtils";
 import { downloadCsv, exportCsv } from "@/utils/csvExport";
 import { downloadExcel } from "@/utils/excelExport";
-import { downloadJson } from "@/utils/jsonExport";
+import { downloadTableJson } from "@/utils/exportJson";
 import { detectChartTypes } from "@/utils/chartDetection";
 import { ChartVisualization } from "./ChartVisualization";
 import { explainSql } from "@/api/client";
@@ -509,7 +509,7 @@ function SQLResultModal({
               )}
               {viewMode === "table" && (
                 <button
-                  onClick={() => downloadJson(columns, sortedRows, `query_${index + 1}.json`)}
+                  onClick={() => downloadTableJson(columns, sortedRows, `query_${index + 1}.json`)}
                   className="text-xs px-2 py-0.5 rounded hover:opacity-70 transition-opacity"
                   style={{ color: "var(--color-accent)" }}
                   data-testid="download-json-btn"

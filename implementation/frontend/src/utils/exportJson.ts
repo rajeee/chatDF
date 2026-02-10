@@ -1,4 +1,5 @@
 import type { Message } from "@/stores/chatStore";
+import { cellValueRaw } from "./tableUtils";
 
 /**
  * Converts an array of chat messages into a pretty-printed JSON string.
@@ -61,6 +62,33 @@ export function exportAsJson(messages: Message[], title: string): string {
  */
 export function downloadJson(content: string, filename: string): void {
   const blob = new Blob([content], { type: "application/json;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Downloads table data as a JSON file.
+ *
+ * Each row is converted to an object whose keys are the column names
+ * and whose values are the raw cell values extracted via cellValueRaw.
+ */
+export function downloadTableJson(columns: string[], rows: unknown[], filename: string): void {
+  const data = rows.map((row) => {
+    const obj: Record<string, unknown> = {};
+    columns.forEach((col, i) => {
+      obj[col] = cellValueRaw(row, i, columns);
+    });
+    return obj;
+  });
+
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

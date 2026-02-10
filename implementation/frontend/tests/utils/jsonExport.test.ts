@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { downloadJson } from "@/utils/jsonExport";
+import { downloadTableJson } from "@/utils/exportJson";
 
-describe("downloadJson", () => {
+describe("downloadTableJson", () => {
   let createObjectURLMock: ReturnType<typeof vi.fn>;
   let revokeObjectURLMock: ReturnType<typeof vi.fn>;
 
@@ -30,7 +30,7 @@ describe("downloadJson", () => {
     const removeChildSpy = vi.spyOn(document.body, "removeChild").mockImplementation(() => mockLink as any);
     vi.spyOn(document, "createElement").mockReturnValue(mockLink as any);
 
-    downloadJson(columns, rows, "test.json");
+    downloadTableJson(columns, rows, "test.json");
 
     // Verify Blob was created with correct JSON content
     expect(createObjectURLMock).toHaveBeenCalledTimes(1);
@@ -55,7 +55,7 @@ describe("downloadJson", () => {
     const removeChildSpy = vi.spyOn(document.body, "removeChild").mockImplementation(() => mockLink as any);
     vi.spyOn(document, "createElement").mockReturnValue(mockLink as any);
 
-    downloadJson(columns, rows, "test.json");
+    downloadTableJson(columns, rows, "test.json");
 
     expect(createObjectURLMock).toHaveBeenCalledTimes(1);
     expect(mockLink.download).toBe("test.json");
@@ -73,7 +73,7 @@ describe("downloadJson", () => {
     const removeChildSpy = vi.spyOn(document.body, "removeChild").mockImplementation(() => mockLink as any);
     vi.spyOn(document, "createElement").mockReturnValue(mockLink as any);
 
-    downloadJson(columns, rows, "test.json");
+    downloadTableJson(columns, rows, "test.json");
 
     expect(createObjectURLMock).toHaveBeenCalledTimes(1);
 
@@ -90,7 +90,7 @@ describe("downloadJson", () => {
     const removeChildSpy = vi.spyOn(document.body, "removeChild").mockImplementation(() => mockLink as any);
     vi.spyOn(document, "createElement").mockReturnValue(mockLink as any);
 
-    downloadJson(columns, rows, "empty.json");
+    downloadTableJson(columns, rows, "empty.json");
 
     expect(createObjectURLMock).toHaveBeenCalledTimes(1);
     expect(mockLink.download).toBe("empty.json");

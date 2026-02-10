@@ -9,7 +9,7 @@ Covers:
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 # Set required env vars before any app imports.
@@ -74,7 +74,7 @@ async def _insert_query_history(
 ) -> str:
     """Insert a query history entry and return its id."""
     entry_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO query_history (id, user_id, query, status, source, created_at, is_starred) "
         "VALUES (?, ?, ?, 'success', 'sql_panel', ?, ?)",

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -135,7 +135,7 @@ async def add_dataset(
         name = await _next_table_name(db, conversation_id)
 
     dataset_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "INSERT INTO datasets "
@@ -215,7 +215,7 @@ async def refresh_schema(
     row_count = schema_result.get("row_count", 0)
     column_count = len(columns)
     schema_json = json.dumps(columns)
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "UPDATE datasets SET schema_json = ?, row_count = ?, column_count = ?, loaded_at = ? WHERE id = ?",

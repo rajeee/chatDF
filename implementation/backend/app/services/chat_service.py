@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -82,7 +82,7 @@ async def process_message(
         # Step 3: Persist user message
         # -------------------------------------------------------------------
         user_msg_id = str(uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         await db.execute(
             "INSERT INTO messages "
             "(id, conversation_id, role, content, sql_query, token_count, created_at) "
@@ -181,7 +181,7 @@ async def process_message(
         # Step 9: Persist assistant message
         # -------------------------------------------------------------------
         asst_msg_id = str(uuid4())
-        asst_now = datetime.utcnow().isoformat()
+        asst_now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         token_count = result.input_tokens + result.output_tokens
         # Serialize sql_executions for DB storage (full_rows: up to 1000 rows)
         # and WS transmission (rows: capped at 100 rows).

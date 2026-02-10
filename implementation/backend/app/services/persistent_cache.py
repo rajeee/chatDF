@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import aiosqlite
 
@@ -60,7 +60,7 @@ async def get(
     returned.
     """
     key = _make_key(sql, datasets)
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     try:
         cursor = await db_conn.execute(
@@ -106,7 +106,7 @@ async def put(
         return
 
     key = _make_key(sql, datasets)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     expires_at = now + timedelta(seconds=PERSISTENT_TTL_SECONDS)
 
     sorted_urls = sorted(d.get("url", "") for d in datasets)
@@ -162,7 +162,7 @@ async def cleanup(db_conn: aiosqlite.Connection) -> int:
     Returns:
         The number of rows removed.
     """
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     try:
         cursor = await db_conn.execute(
             "DELETE FROM query_results_cache WHERE expires_at <= ?",

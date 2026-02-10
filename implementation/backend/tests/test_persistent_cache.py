@@ -11,7 +11,7 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import aiosqlite
@@ -162,7 +162,7 @@ class TestCacheExpiry:
     async def test_expired_entry_returns_none(self, cache_db):
         """An entry that has passed its expires_at should return None."""
         # Insert with an already-expired timestamp
-        past = datetime.utcnow() - timedelta(seconds=10)
+        past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10)
         expired_at = past.isoformat()
         key = _make_key("SELECT 1", SAMPLE_DATASETS)
         import json
@@ -189,7 +189,7 @@ class TestCacheExpiry:
     @pytest.mark.asyncio
     async def test_expired_entry_is_deleted_on_get(self, cache_db):
         """Getting an expired entry should also delete the row."""
-        past = datetime.utcnow() - timedelta(seconds=10)
+        past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10)
         key = _make_key("SELECT 1", SAMPLE_DATASETS)
         import json
 
@@ -277,8 +277,8 @@ class TestCleanup:
         """Expired entries are removed by cleanup."""
         import json
 
-        past = datetime.utcnow() - timedelta(seconds=100)
-        future = datetime.utcnow() + timedelta(seconds=3600)
+        past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=100)
+        future = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=3600)
 
         # Insert one expired and one fresh entry
         await cache_db.execute(
@@ -293,7 +293,7 @@ class TestCleanup:
                (cache_key, sql_query, dataset_urls, result_json, row_count, created_at, expires_at)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             ("fresh_key", "SELECT new", "urls", json.dumps(SAMPLE_RESULT), 1,
-             datetime.utcnow().isoformat(), future.isoformat()),
+             datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), future.isoformat()),
         )
         await cache_db.commit()
 

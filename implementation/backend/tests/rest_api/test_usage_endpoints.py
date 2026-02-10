@@ -19,10 +19,10 @@ async def test_authenticated_request_returns_usage_stats(authed_client, fresh_db
     """GET /usage with valid session returns tokens_used, token_limit, remaining,
     resets_in_seconds, and usage_percent."""
     # Seed some token usage for the test user
-    from datetime import datetime
+    from datetime import datetime, timezone
     from uuid import uuid4
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await fresh_db.execute(
         "INSERT INTO token_usage (id, user_id, conversation_id, model_name, "
         "input_tokens, output_tokens, cost, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

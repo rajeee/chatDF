@@ -4,13 +4,13 @@ Each factory produces a valid dict with UUID ids and ISO 8601 timestamps by
 default.  Pass keyword overrides to customize individual fields.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 
 def make_user(**overrides: object) -> dict:
     """Return a user dict matching the ``users`` table schema."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     defaults: dict = {
         "id": str(uuid4()),
         "google_id": f"google_{uuid4().hex[:8]}",
@@ -25,7 +25,7 @@ def make_user(**overrides: object) -> dict:
 
 def make_session(**overrides: object) -> dict:
     """Return a session dict matching the ``sessions`` table schema."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     defaults: dict = {
         "id": str(uuid4()),
         "user_id": str(uuid4()),
@@ -37,7 +37,7 @@ def make_session(**overrides: object) -> dict:
 
 def make_conversation(**overrides: object) -> dict:
     """Return a conversation dict matching the ``conversations`` table schema."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     defaults: dict = {
         "id": str(uuid4()),
         "user_id": str(uuid4()),
@@ -57,7 +57,7 @@ def make_message(**overrides: object) -> dict:
         "content": "Hello, world!",
         "sql_query": None,
         "token_count": 0,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }
     return {**defaults, **overrides}
 
@@ -74,7 +74,7 @@ def make_dataset(**overrides: object) -> dict:
         "schema_json": "[]",
         "status": "loading",
         "error_message": None,
-        "loaded_at": datetime.utcnow().isoformat(),
+        "loaded_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }
     return {**defaults, **overrides}
 
@@ -89,7 +89,7 @@ def make_token_usage(**overrides: object) -> dict:
         "input_tokens": 100,
         "output_tokens": 50,
         "cost": 0.0,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }
     return {**defaults, **overrides}
 
@@ -100,7 +100,7 @@ def make_referral_key(**overrides: object) -> dict:
         "key": f"ref-{uuid4().hex[:12]}",
         "created_by": None,
         "used_by": None,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "used_at": None,
     }
     return {**defaults, **overrides}

@@ -11,7 +11,7 @@ Constant: TOKEN_LIMIT = 5_000_000
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -157,10 +157,10 @@ async def seed_token_usage(
     """Insert token_usage records at specific offsets.
 
     Each record is ``(input_tokens, output_tokens, hours_ago)``.
-    The timestamp is computed as ``utcnow() - timedelta(hours=hours_ago)``.
+    The timestamp is computed as ``now(timezone.utc) - timedelta(hours=hours_ago)``.
     """
     for input_t, output_t, hours_ago in records:
-        ts = (datetime.utcnow() - timedelta(hours=hours_ago)).isoformat()
+        ts = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours_ago)).isoformat()
         usage = make_token_usage(
             user_id=user_id,
             input_tokens=input_t,

@@ -9,7 +9,7 @@ Covers:
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 # Set required env vars before any app imports.
@@ -75,7 +75,7 @@ async def _insert_saved_query(
 ) -> str:
     """Insert a saved query and return its id."""
     query_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO saved_queries (id, user_id, name, query, is_pinned, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?)",

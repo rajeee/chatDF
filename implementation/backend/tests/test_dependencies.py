@@ -5,7 +5,7 @@ Tests: spec/backend/test.md#DEPS-1 through DEPS-8
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import aiosqlite
@@ -187,7 +187,7 @@ async def test_get_current_user_expired_session_raises_401(fresh_db):
     await _insert_user(fresh_db, user)
     expired_session = make_session(
         user_id=user["id"],
-        expires_at=(datetime.utcnow() - timedelta(hours=1)).isoformat(),
+        expires_at=(datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)).isoformat(),
     )
     await _insert_session(fresh_db, expired_session)
 

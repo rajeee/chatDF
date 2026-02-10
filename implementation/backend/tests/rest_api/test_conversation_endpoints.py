@@ -5,7 +5,7 @@ Tests: spec/backend/rest_api/test.md#CONV-EP-1 through CONV-EP-11
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -125,7 +125,7 @@ async def test_create_conversation_returns_201(authed_client, fresh_db, test_use
 @pytest.mark.integration
 async def test_list_conversations_sorted_by_updated_at(authed_client, fresh_db, test_user):
     """GET /conversations returns sorted list with dataset_count."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Seed 3 conversations with different updated_at times
     conv_old = make_conversation(
@@ -192,7 +192,7 @@ async def test_list_conversations_includes_last_message_preview(
     await insert_conversation(fresh_db, conv)
 
     # Add two messages: the newer one's content should appear as the preview
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     msg_old = make_message(
         conversation_id=conv["id"],
         role="user",
@@ -242,7 +242,7 @@ async def test_list_conversations_includes_message_count(
     authed_client, fresh_db, test_user
 ):
     """GET /conversations returns message_count for each conversation."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     conv_with_msgs = make_conversation(
         user_id=test_user["id"], title="With Messages"

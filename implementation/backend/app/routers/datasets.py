@@ -17,7 +17,7 @@ import json
 import logging
 import math
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -245,7 +245,7 @@ async def upload_dataset(
     schema_json = json.dumps(columns)
     table_name = await dataset_service._next_table_name(db, conversation_id)
     dataset_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     file_size_bytes = len(content)
     stored_url = f"file://{local_path}"
 

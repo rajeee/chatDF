@@ -14,7 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -48,7 +48,7 @@ async def save_query(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> SavedQueryResponse:
     query_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO saved_queries (id, user_id, name, query, result_json, execution_time_ms, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (query_id, user["id"], body.name, body.query, body.result_json, body.execution_time_ms, body.folder, now),

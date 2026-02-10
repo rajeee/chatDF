@@ -13,7 +13,7 @@ import { MessageBubble } from "./MessageBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
-import { deleteMessage, forkConversation, branchConversation, redoMessage, exportConversationHtml } from "@/api/client";
+import { deleteMessage, forkConversation, redoMessage, exportConversationHtml } from "@/api/client";
 import { TokenUsage } from "./TokenUsage";
 
 const SCROLL_THRESHOLD = 100; // px from bottom to consider "at bottom"
@@ -197,7 +197,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
       if (!activeConversationId) return;
 
       try {
-        const result = await branchConversation(activeConversationId, messageId);
+        const result = await forkConversation(activeConversationId, messageId);
         // Invalidate conversations list to refresh sidebar
         await queryClient.invalidateQueries({ queryKey: ["conversations"] });
         // Switch to the new conversation

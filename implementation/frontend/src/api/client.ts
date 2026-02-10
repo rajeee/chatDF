@@ -426,29 +426,6 @@ export async function forkConversation(
 }
 
 // ---------------------------------------------------------------------------
-// Conversation branch
-// ---------------------------------------------------------------------------
-
-export interface BranchResponse {
-  id: string;
-  title: string;
-}
-
-/**
- * Create a new conversation branch from a specific message.
- * Copies all messages up to and including the specified message.
- */
-export async function branchConversation(
-  conversationId: string,
-  fromMessageId: string
-): Promise<BranchResponse> {
-  return apiPost<BranchResponse>(
-    `/conversations/${conversationId}/branch`,
-    { from_message_id: fromMessageId }
-  );
-}
-
-// ---------------------------------------------------------------------------
 // SQL explanation
 // ---------------------------------------------------------------------------
 

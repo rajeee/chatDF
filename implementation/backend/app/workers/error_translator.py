@@ -111,4 +111,62 @@ def _match_error_pattern(
             "or be used with an aggregate function."
         )
 
+    # 9. INTERVAL not supported
+    if "interval" in msg_lower:
+        return (
+            "Polars SQL doesn't support INTERVAL for date arithmetic. "
+            "Use strftime() for date formatting and filtering instead."
+        )
+
+    # 10. Ambiguous column reference
+    if "ambiguous" in msg_lower:
+        return (
+            "Ambiguous column reference. "
+            "Prefix the column with the table name "
+            "(e.g., table1.column_name) to resolve."
+        )
+
+    # 11. Overflow / integer overflow
+    if "overflow" in msg_lower:
+        return (
+            "Numeric overflow occurred. "
+            "Try casting the column to a larger type with "
+            "CAST(col AS BIGINT) or CAST(col AS FLOAT)."
+        )
+
+    # 12. No such function (specific variant)
+    if ("function" in msg_lower and "not found" in msg_lower) or (
+        "unknown function" in msg_lower
+    ):
+        return (
+            "Function not available in Polars SQL. "
+            "Common alternatives: use LENGTH() not LEN(), "
+            "SUBSTRING() not SUBSTR(), LOWER() not LCASE()."
+        )
+
+    # 13. REGEXP / RLIKE not supported
+    if "regex" in msg_lower or "rlike" in msg_lower or "regexp" in msg_lower:
+        return (
+            "Regular expressions are not supported in Polars SQL. "
+            "Use LIKE with % and _ wildcards instead."
+        )
+
+    # 14. String to number conversion
+    if "could not parse" in msg_lower or (
+        "conversion" in msg_lower and "string" in msg_lower
+    ):
+        return (
+            "Could not convert string to number. "
+            "Use CAST(column AS FLOAT) or CAST(column AS INTEGER) "
+            "to convert explicitly."
+        )
+
+    # 15. DISTINCT ON not supported
+    if "distinct on" in msg_lower:
+        return (
+            "DISTINCT ON is not supported in Polars SQL. "
+            "Use a window function: SELECT *, ROW_NUMBER() OVER "
+            "(PARTITION BY col ORDER BY ...) to get distinct rows per group."
+        )
+
     return None

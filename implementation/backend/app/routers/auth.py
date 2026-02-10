@@ -231,10 +231,10 @@ async def dev_login(
             )
 
         from uuid import uuid4
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         user_id = str(uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         await db.execute(
             "INSERT INTO users (id, google_id, email, name, avatar_url, created_at, last_login_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",

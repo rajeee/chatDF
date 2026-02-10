@@ -53,11 +53,6 @@ class ForkConversationRequest(BaseModel):
     message_id: str
 
 
-class BranchConversationRequest(BaseModel):
-    """Body for ``POST /conversations/{id}/branch``."""
-
-    from_message_id: str
-
 
 class RenameDatasetRequest(BaseModel):
     """Body for ``PATCH /conversations/{id}/datasets/{dataset_id}``."""

@@ -1,11 +1,11 @@
-"""Tests for conversation branch endpoint.
+"""Tests for conversation fork endpoint.
 
 Covers:
-- POST /conversations/{id}/branch -> branch from a middle message copies only messages up to that point
-- POST /conversations/{id}/branch -> branching copies datasets
-- POST /conversations/{id}/branch -> branching with invalid message ID returns 404
-- POST /conversations/{id}/branch -> the new conversation has correct title
-- POST /conversations/{id}/branch -> requires authentication
+- POST /conversations/{id}/fork -> fork from a middle message copies only messages up to that point
+- POST /conversations/{id}/fork -> forking copies datasets
+- POST /conversations/{id}/fork -> forking with invalid message ID returns 404
+- POST /conversations/{id}/fork -> the new conversation has correct title
+- POST /conversations/{id}/fork -> requires authentication
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 from uuid import uuid4  # noqa: E402
-from datetime import datetime  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
 
 from app.main import app  # noqa: E402
 from tests.conftest import SCHEMA_SQL  # noqa: E402
@@ -73,7 +73,7 @@ async def _create_conversation(
 ) -> str:
     """Insert a conversation and return its id."""
     conv_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?)",
@@ -93,7 +93,7 @@ async def _create_message(
     """Insert a message and return its id."""
     msg_id = str(uuid4())
     if created_at is None:
-        created_at = datetime.utcnow().isoformat()
+        created_at = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO messages (id, conversation_id, role, content, token_count, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?)",
@@ -111,7 +111,7 @@ async def _create_dataset(
 ) -> str:
     """Insert a dataset and return its id."""
     ds_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, loaded_at, column_descriptions) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -181,12 +181,12 @@ async def client(fresh_db):
 # =========================================================================
 
 
-class TestBranchConversation:
-    """POST /conversations/{id}/branch tests."""
+class TestForkConversation:
+    """POST /conversations/{id}/fork tests."""
 
     @pytest.mark.asyncio
-    async def test_branch_from_middle_message(self, authed_client, fresh_db, test_user):
-        """Branching from a middle message copies only messages up to that point."""
+    async def test_fork_from_middle_message(self, authed_client, fresh_db, test_user):
+        """Forking from a middle message copies only messages up to that point."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "Original Chat")
 
         msg1_id = await _create_message(
@@ -202,19 +202,19 @@ class TestBranchConversation:
             fresh_db, conv_id, "assistant", "Fourth message", "2025-01-01T10:00:15"
         )
 
-        # Branch from message 2 (the first assistant response)
+        # Fork from message 2 (the first assistant response)
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg2_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg2_id},
         )
         assert response.status_code == 201
         data = response.json()
-        branch_id = data["id"]
+        fork_id = data["id"]
 
         # Verify only 2 messages were copied (msg1 and msg2)
         cursor = await fresh_db.execute(
             "SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at",
-            (branch_id,),
+            (fork_id,),
         )
         rows = await cursor.fetchall()
         assert len(rows) == 2
@@ -224,8 +224,8 @@ class TestBranchConversation:
         assert rows[1]["role"] == "assistant"
 
     @pytest.mark.asyncio
-    async def test_branch_copies_datasets(self, authed_client, fresh_db, test_user):
-        """Branching copies all datasets from the source conversation."""
+    async def test_fork_copies_datasets(self, authed_client, fresh_db, test_user):
+        """Forking copies all datasets from the source conversation."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "Data Chat")
 
         msg_id = await _create_message(
@@ -237,16 +237,16 @@ class TestBranchConversation:
         await _create_dataset(fresh_db, conv_id, "https://example.com/b.csv", "dataset_b")
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg_id},
         )
         assert response.status_code == 201
-        branch_id = response.json()["id"]
+        fork_id = response.json()["id"]
 
         # Verify datasets were copied
         cursor = await fresh_db.execute(
             "SELECT name, url FROM datasets WHERE conversation_id = ? ORDER BY name",
-            (branch_id,),
+            (fork_id,),
         )
         rows = await cursor.fetchall()
         assert len(rows) == 2
@@ -256,60 +256,59 @@ class TestBranchConversation:
         assert rows[1]["url"] == "https://example.com/b.csv"
 
     @pytest.mark.asyncio
-    async def test_branch_invalid_message_id(self, authed_client, fresh_db, test_user):
-        """Branching with an invalid message ID returns 404."""
+    async def test_fork_invalid_message_id(self, authed_client, fresh_db, test_user):
+        """Forking with an invalid message ID returns 404."""
         conv_id = await _create_conversation(fresh_db, test_user["id"])
         await _create_message(fresh_db, conv_id, "user", "Hello")
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": "nonexistent-msg-id"},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": "nonexistent-msg-id"},
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_branch_correct_title(self, authed_client, fresh_db, test_user):
-        """The new conversation has the correct 'Branch of ...' title."""
+    async def test_fork_correct_title(self, authed_client, fresh_db, test_user):
+        """The new conversation has the correct 'Fork of ...' title."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "My Analysis")
 
         msg_id = await _create_message(fresh_db, conv_id, "user", "Hello")
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg_id},
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["title"] == "Branch of My Analysis"
+        assert data["title"] == "Fork of My Analysis"
 
     @pytest.mark.asyncio
-    async def test_branch_empty_title(self, authed_client, fresh_db, test_user):
-        """When source conversation has empty title, branch uses default title."""
+    async def test_fork_empty_title(self, authed_client, fresh_db, test_user):
+        """When source conversation has empty title, fork uses default title."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "")
 
         msg_id = await _create_message(fresh_db, conv_id, "user", "Hello")
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg_id},
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["title"] == "Branched conversation"
+        assert data["title"] == "Forked conversation"
 
     @pytest.mark.asyncio
-    async def test_branch_requires_auth(self, client, fresh_db):
-        """Branch endpoint requires authentication."""
-        # We can't create a conversation without auth, so just use a fake id
+    async def test_fork_requires_auth(self, client, fresh_db):
+        """Fork endpoint requires authentication."""
         response = await client.post(
-            "/conversations/fake-id/branch",
-            json={"from_message_id": "some-msg"},
+            "/conversations/fake-id/fork",
+            json={"message_id": "some-msg"},
         )
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_branch_from_last_message(self, authed_client, fresh_db, test_user):
-        """Branching from the last message copies all messages."""
+    async def test_fork_from_last_message(self, authed_client, fresh_db, test_user):
+        """Forking from the last message copies all messages."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "Full Copy")
 
         msg1_id = await _create_message(
@@ -323,23 +322,23 @@ class TestBranchConversation:
         )
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg3_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg3_id},
         )
         assert response.status_code == 201
-        branch_id = response.json()["id"]
+        fork_id = response.json()["id"]
 
         cursor = await fresh_db.execute(
             "SELECT COUNT(*) AS cnt FROM messages WHERE conversation_id = ?",
-            (branch_id,),
+            (fork_id,),
         )
         row = await cursor.fetchone()
         assert row["cnt"] == 3
 
     @pytest.mark.asyncio
-    async def test_branch_from_first_message(self, authed_client, fresh_db, test_user):
-        """Branching from the first message copies only that one message."""
-        conv_id = await _create_conversation(fresh_db, test_user["id"], "Single Branch")
+    async def test_fork_from_first_message(self, authed_client, fresh_db, test_user):
+        """Forking from the first message copies only that one message."""
+        conv_id = await _create_conversation(fresh_db, test_user["id"], "Single Fork")
 
         msg1_id = await _create_message(
             fresh_db, conv_id, "user", "First", "2025-01-01T10:00:00"
@@ -352,37 +351,37 @@ class TestBranchConversation:
         )
 
         response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg1_id},
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg1_id},
         )
         assert response.status_code == 201
-        branch_id = response.json()["id"]
+        fork_id = response.json()["id"]
 
         cursor = await fresh_db.execute(
             "SELECT content FROM messages WHERE conversation_id = ?",
-            (branch_id,),
+            (fork_id,),
         )
         rows = await cursor.fetchall()
         assert len(rows) == 1
         assert rows[0]["content"] == "First"
 
     @pytest.mark.asyncio
-    async def test_branch_appears_in_conversation_list(
+    async def test_fork_appears_in_conversation_list(
         self, authed_client, fresh_db, test_user
     ):
-        """Branched conversation appears in the conversation list."""
+        """Forked conversation appears in the conversation list."""
         conv_id = await _create_conversation(fresh_db, test_user["id"], "Source")
         msg_id = await _create_message(fresh_db, conv_id, "user", "Hello")
 
-        branch_response = await authed_client.post(
-            f"/conversations/{conv_id}/branch",
-            json={"from_message_id": msg_id},
+        fork_response = await authed_client.post(
+            f"/conversations/{conv_id}/fork",
+            json={"message_id": msg_id},
         )
-        assert branch_response.status_code == 201
-        branch_id = branch_response.json()["id"]
+        assert fork_response.status_code == 201
+        fork_id = fork_response.json()["id"]
 
         list_response = await authed_client.get("/conversations")
         assert list_response.status_code == 200
         conversations = list_response.json()["conversations"]
         ids = [c["id"] for c in conversations]
-        assert branch_id in ids
+        assert fork_id in ids

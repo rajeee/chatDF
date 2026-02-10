@@ -15,7 +15,7 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import aiosqlite
@@ -96,7 +96,7 @@ async def expired_ws_session(ws_db, ws_user):
     """A session whose ``expires_at`` is 1 hour in the past."""
     session = make_session(
         user_id=ws_user["id"],
-        expires_at=(datetime.utcnow() - timedelta(hours=1)).isoformat(),
+        expires_at=(datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)).isoformat(),
     )
     await _insert_session(ws_db, session)
     return session

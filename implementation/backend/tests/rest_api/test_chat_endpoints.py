@@ -5,7 +5,7 @@ Tests: spec/backend/rest_api/test.md#CHAT-EP-1 through CHAT-EP-6
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -62,7 +62,7 @@ def mock_chat_processing(fresh_db):
     async def fake_process_message(db, conversation_id, user_id, content, ws_send, pool=None):
         # Simulate step 3 of process_message: persist user message
         msg_id = str(uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         await db.execute(
             "INSERT INTO messages "
             "(id, conversation_id, role, content, sql_query, token_count, created_at) "

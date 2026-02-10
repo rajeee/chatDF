@@ -10,7 +10,7 @@ Tests:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -95,7 +95,7 @@ async def test_pin_conversation(authed_client, fresh_db, conversation_owned):
 @pytest.mark.integration
 async def test_pinned_conversations_appear_first(authed_client, fresh_db, test_user):
     """GET /conversations returns pinned conversations before unpinned ones."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create an older pinned conversation
     conv_pinned = make_conversation(

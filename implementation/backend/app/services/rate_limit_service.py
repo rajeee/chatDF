@@ -11,7 +11,7 @@ Provides:
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -70,7 +70,7 @@ async def check_limit(db: aiosqlite.Connection, user_id: str) -> RateLimitStatus
         if time.time() < expiry:
             return result
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     window_start = (now - timedelta(hours=24)).isoformat()
 
     cursor = await db.execute(
@@ -126,7 +126,7 @@ async def record_usage(
 
     Implements: spec/backend/rate_limiting/plan.md#recording-usage
     """
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     usage_id = str(uuid4())
 
     await db.execute(

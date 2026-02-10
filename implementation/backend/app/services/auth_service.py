@@ -13,7 +13,7 @@ Provides:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import aiosqlite
@@ -53,7 +53,7 @@ async def mark_key_used(db: aiosqlite.Connection, key: str, user_id: str) -> Non
     """Set ``used_by`` and ``used_at`` on the referral key."""
     await db.execute(
         "UPDATE referral_keys SET used_by = ?, used_at = ? WHERE key = ?",
-        (user_id, datetime.utcnow().isoformat(), key),
+        (user_id, datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), key),
     )
     await db.commit()
 
@@ -71,7 +71,7 @@ async def create_session(db: aiosqlite.Connection, user_id: str) -> str:
     Expiry is set to ``SESSION_DURATION_DAYS`` from now.
     """
     token = str(uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     expires_at = now + timedelta(days=SESSION_DURATION_DAYS)
 
     await db.execute(
@@ -95,7 +95,7 @@ async def validate_session(
     if not session_token:
         return None
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     cursor = await db.execute(
         "SELECT s.id AS session_id, s.expires_at, "
@@ -183,7 +183,7 @@ async def google_callback(
         user_id = existing_user["id"]
         await db.execute(
             "UPDATE users SET last_login_at = ? WHERE id = ?",
-            (datetime.utcnow().isoformat(), user_id),
+            (datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), user_id),
         )
         await db.commit()
 
@@ -215,7 +215,7 @@ async def google_callback(
 
     # ---- Create new user ----
     user_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "INSERT INTO users (id, google_id, email, name, avatar_url, created_at, last_login_at) "

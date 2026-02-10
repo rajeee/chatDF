@@ -17,7 +17,7 @@ Endpoints:
 - DELETE /conversations/{conversation_id}/messages/{message_id} -> delete_message
 - POST /conversations/{conversation_id}/stop     -> stop_generation
 - GET  /conversations/{conversation_id}/token-usage -> get_token_usage
-- POST /conversations/{conversation_id}/branch   -> branch_conversation
+- POST /conversations/{conversation_id}/fork      -> fork_conversation
 """
 
 from __future__ import annotations
@@ -37,7 +37,6 @@ from fastapi.responses import StreamingResponse
 
 from app.dependencies import get_conversation, get_current_user, get_db
 from app.models import (
-    BranchConversationRequest,
     ClearAllResponse,
     ConversationDetailResponse,
     ConversationListResponse,
@@ -84,7 +83,7 @@ async def create_conversation(
 ) -> ConversationResponse:
     """Create a new empty conversation for the authenticated user."""
     conv_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
@@ -169,7 +168,7 @@ async def import_conversation(
 
     # --- Create conversation ---
     conv_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
@@ -946,7 +945,7 @@ async def rename_conversation(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
     """Rename a conversation."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
@@ -973,7 +972,7 @@ async def pin_conversation(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
     """Pin or unpin a conversation."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "UPDATE conversations SET is_pinned = ?, updated_at = ? WHERE id = ?",
@@ -1067,7 +1066,7 @@ async def send_message(
     msg_id = str(uuid4())
 
     # Update conversation updated_at
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "UPDATE conversations SET updated_at = ? WHERE id = ?",
         (now, conv_id),
@@ -1223,7 +1222,7 @@ async def fork_conversation(
 
     # Create new conversation
     fork_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     fork_title = f"Fork of {conversation['title']}" if conversation["title"] else "Forked conversation"
 
     await db.execute(
@@ -1296,118 +1295,6 @@ async def fork_conversation(
 
 
 # ---------------------------------------------------------------------------
-# POST /conversations/{conversation_id}/branch
-# ---------------------------------------------------------------------------
-
-
-@router.post("/{conversation_id}/branch", status_code=201)
-async def branch_conversation(
-    body: BranchConversationRequest,
-    conversation: dict = Depends(get_conversation),
-    user: dict = Depends(get_current_user),
-    db: aiosqlite.Connection = Depends(get_db),
-) -> dict:
-    """Create a new conversation branch from any message in the chat.
-
-    Similar to fork but uses 'Branch of ...' naming.  Copies all messages
-    up to and including from_message_id and copies all datasets from the
-    source conversation.
-    """
-    conv_id = conversation["id"]
-
-    # Verify from_message_id belongs to this conversation
-    cursor = await db.execute(
-        "SELECT id, created_at FROM messages WHERE id = ? AND conversation_id = ?",
-        (body.from_message_id, conv_id),
-    )
-    message_row = await cursor.fetchone()
-    if message_row is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Message not found in this conversation",
-        )
-
-    branch_until_timestamp = message_row["created_at"]
-
-    # Create new conversation
-    branch_id = str(uuid4())
-    now = datetime.utcnow().isoformat()
-    branch_title = (
-        f"Branch of {conversation['title']}"
-        if conversation["title"]
-        else "Branched conversation"
-    )
-
-    await db.execute(
-        "INSERT INTO conversations (id, user_id, title, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (branch_id, user["id"], branch_title, now, now),
-    )
-
-    # Copy messages up to and including from_message_id (ordered by created_at)
-    cursor = await db.execute(
-        "SELECT id, role, content, sql_query, reasoning, token_count, created_at "
-        "FROM messages WHERE conversation_id = ? AND created_at <= ? "
-        "ORDER BY created_at",
-        (conv_id, branch_until_timestamp),
-    )
-    messages_to_copy = await cursor.fetchall()
-
-    for msg in messages_to_copy:
-        new_msg_id = str(uuid4())
-        await db.execute(
-            "INSERT INTO messages (id, conversation_id, role, content, sql_query, reasoning, token_count, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                new_msg_id,
-                branch_id,
-                msg["role"],
-                msg["content"],
-                msg["sql_query"],
-                msg["reasoning"],
-                msg["token_count"],
-                msg["created_at"],
-            ),
-        )
-
-    # Copy all datasets from source conversation
-    cursor = await db.execute(
-        "SELECT url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes, column_descriptions "
-        "FROM datasets WHERE conversation_id = ?",
-        (conv_id,),
-    )
-    datasets_to_copy = await cursor.fetchall()
-
-    for ds in datasets_to_copy:
-        new_ds_id = str(uuid4())
-        await db.execute(
-            "INSERT INTO datasets (id, conversation_id, url, name, row_count, column_count, schema_json, status, error_message, loaded_at, file_size_bytes, column_descriptions) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                new_ds_id,
-                branch_id,
-                ds["url"],
-                ds["name"],
-                ds["row_count"],
-                ds["column_count"],
-                ds["schema_json"],
-                ds["status"],
-                ds["error_message"],
-                ds["loaded_at"],
-                ds["file_size_bytes"],
-                ds["column_descriptions"] or "{}",
-            ),
-        )
-
-    await db.commit()
-
-    return {
-        "id": branch_id,
-        "title": branch_title,
-    }
-
-
-# ---------------------------------------------------------------------------
 # POST /conversations/{conversation_id}/share
 # ---------------------------------------------------------------------------
 
@@ -1443,7 +1330,7 @@ async def share_conversation(
 
     # Generate new share token
     token = secrets.token_urlsafe(16)
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "UPDATE conversations SET share_token = ?, shared_at = ? WHERE id = ?",
@@ -1550,7 +1437,7 @@ async def run_query(
                     body.sql,
                     round(elapsed_ms, 2),
                     result.get("message", "Query execution failed"),
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 ),
             )
             await db.commit()
@@ -1594,7 +1481,7 @@ async def run_query(
                 body.sql,
                 round(elapsed_ms, 2),
                 total_rows,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             ),
         )
         await db.commit()

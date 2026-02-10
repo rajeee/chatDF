@@ -7,7 +7,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import aiosqlite
 from fastapi import APIRouter, Depends
@@ -39,7 +39,7 @@ async def _ensure_settings(db: aiosqlite.Connection, user_id: str) -> dict:
         return existing
 
     # Insert defaults
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     await db.execute(
         "INSERT INTO user_settings (user_id, dev_mode, selected_model, updated_at) "
         "VALUES (?, ?, ?, ?)",
@@ -99,7 +99,7 @@ async def update_settings(
     # Apply updates
     new_dev_mode = body.dev_mode if body.dev_mode is not None else bool(current["dev_mode"])
     new_model = body.selected_model if body.selected_model is not None else current["selected_model"]
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     await db.execute(
         "UPDATE user_settings SET dev_mode = ?, selected_model = ?, updated_at = ? "

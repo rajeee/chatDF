@@ -10,7 +10,7 @@ Provides:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import aiosqlite
 import pytest_asyncio
@@ -92,7 +92,7 @@ async def used_referral_key(fresh_db, test_user):
     """A referral key that has already been redeemed by ``test_user``."""
     key = make_referral_key(
         used_by=test_user["id"],
-        used_at=datetime.utcnow().isoformat(),
+        used_at=datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     )
     await _insert_referral_key(fresh_db, key)
     return key
@@ -103,7 +103,7 @@ async def expired_session(fresh_db, test_user):
     """A session whose ``expires_at`` is 1 hour in the past."""
     session = make_session(
         user_id=test_user["id"],
-        expires_at=(datetime.utcnow() - timedelta(hours=1)).isoformat(),
+        expires_at=(datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)).isoformat(),
     )
     await _insert_session(fresh_db, session)
     return session

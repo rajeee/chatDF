@@ -10,7 +10,7 @@ import { useDatasetStore } from "@/stores/datasetStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 /** Map parquet type strings to user-friendly display labels. */
-function mapType(rawType: string): string {
+export function mapType(rawType: string): string {
   switch (rawType) {
     case "String":
     case "Utf8":
@@ -31,12 +31,12 @@ function mapType(rawType: string): string {
   }
 }
 
-interface Column {
+export interface Column {
   name: string;
   type: string;
 }
 
-function parseColumns(schemaJson: string): Column[] {
+export function parseColumns(schemaJson: string): Column[] {
   try {
     const parsed = JSON.parse(schemaJson);
     if (Array.isArray(parsed)) {

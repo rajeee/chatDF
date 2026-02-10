@@ -103,6 +103,7 @@ def _make_stream_result(
     tool_calls_made: int = 0,
     reasoning: str | None = None,
     sql_executions: list | None = None,
+    tool_call_trace: list | None = None,
 ) -> MagicMock:
     """Create a mock StreamResult."""
     result = MagicMock()
@@ -112,6 +113,7 @@ def _make_stream_result(
     result.tool_calls_made = tool_calls_made
     result.reasoning = reasoning
     result.sql_executions = sql_executions if sql_executions is not None else []
+    result.tool_call_trace = tool_call_trace
     return result
 
 
@@ -216,10 +218,11 @@ class TestProcessMessageHappyPath:
         mock_rl.record_usage.assert_awaited_once()
 
         # WS events: query_status("generating") + chat_complete
-        ws_calls = [call.args for call in ws_send.call_args_list]
-        event_types = [c[0] for c in ws_calls]
-        assert "query_status" in event_types
-        assert "chat_complete" in event_types
+        # ws_send is now called with a single dict arg containing a "type" field
+        ws_calls = [call.args[0] for call in ws_send.call_args_list]
+        event_types = [c["type"] for c in ws_calls]
+        assert "qs" in event_types   # query_status compressed
+        assert "cc" in event_types   # chat_complete compressed
 
         # Result is the assistant message dict
         assert result["role"] == "assistant"
@@ -443,10 +446,10 @@ class TestRateLimitWarning:
                 pool=mock_pool,
             )
 
-        # Check that rate_limit_warning was sent
-        ws_calls = [call.args for call in ws_send.call_args_list]
-        event_types = [c[0] for c in ws_calls]
-        assert "rate_limit_warning" in event_types
+        # Check that rate_limit_warning was sent (compressed type: rlw)
+        ws_calls = [call.args[0] for call in ws_send.call_args_list]
+        event_types = [c["type"] for c in ws_calls]
+        assert "rlw" in event_types
 
     @pytest.mark.asyncio
     async def test_pre_check_warning_sent(
@@ -491,9 +494,9 @@ class TestRateLimitWarning:
                 pool=mock_pool,
             )
 
-        ws_calls = [call.args for call in ws_send.call_args_list]
-        event_types = [c[0] for c in ws_calls]
-        assert "rate_limit_warning" in event_types
+        ws_calls = [call.args[0] for call in ws_send.call_args_list]
+        event_types = [c["type"] for c in ws_calls]
+        assert "rlw" in event_types  # rate_limit_warning compressed
 
 
 # ---------------------------------------------------------------------------
@@ -580,9 +583,9 @@ class TestRateLimitExceeded:
                     pool=mock_pool,
                 )
 
-        ws_calls = [call.args for call in ws_send.call_args_list]
-        event_types = [c[0] for c in ws_calls]
-        assert "rate_limit_exceeded" in event_types
+        ws_calls = [call.args[0] for call in ws_send.call_args_list]
+        event_types = [c["type"] for c in ws_calls]
+        assert "rle" in event_types  # rate_limit_exceeded compressed
 
     @pytest.mark.asyncio
     async def test_exceeded_clears_active_set(
@@ -636,6 +639,8 @@ class TestErrorHandling:
         user, conv = user_and_conv
         rate_status = _make_rate_limit_status()
 
+        from app.services.llm_service import GeminiRateLimitError
+
         with (
             patch("app.services.chat_service.rate_limit_service") as mock_rl,
             patch("app.services.chat_service.llm_service") as mock_llm,
@@ -645,6 +650,7 @@ class TestErrorHandling:
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=RuntimeError("Gemini API failure"))
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
+            mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.services.chat_service import process_message
@@ -660,9 +666,9 @@ class TestErrorHandling:
                     pool=mock_pool,
                 )
 
-        ws_calls = [call.args for call in ws_send.call_args_list]
-        event_types = [c[0] for c in ws_calls]
-        assert "chat_error" in event_types
+        ws_calls = [call.args[0] for call in ws_send.call_args_list]
+        event_types = [c["type"] for c in ws_calls]
+        assert "ce" in event_types  # chat_error compressed
 
     @pytest.mark.asyncio
     async def test_llm_error_clears_active_set(
@@ -671,6 +677,8 @@ class TestErrorHandling:
         """Conversation should be removed from active set on error."""
         user, conv = user_and_conv
         rate_status = _make_rate_limit_status()
+
+        from app.services.llm_service import GeminiRateLimitError
 
         with (
             patch("app.services.chat_service.rate_limit_service") as mock_rl,
@@ -681,6 +689,7 @@ class TestErrorHandling:
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=RuntimeError("fail"))
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
+            mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.services import chat_service

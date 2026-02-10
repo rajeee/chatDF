@@ -25,11 +25,10 @@ class TestParquetMagicNumber:
         assert result["valid"] is True
         assert result.get("error") is None
 
-    def test_invalid_file_not_parquet(self, not_parquet_url):
-        """Non-parquet file fails validation with appropriate error."""
+    def test_csv_file_accepted_as_valid(self, not_parquet_url):
+        """CSV file passes validation since CSV is now a supported format."""
         result = fetch_and_validate(not_parquet_url)
-        assert result["valid"] is False
-        assert "not a valid parquet file" in result["error"].lower()
+        assert result["valid"] is True
 
     def test_empty_parquet_still_valid(self, empty_parquet_url):
         """Empty parquet (0 rows) is still a valid parquet file."""

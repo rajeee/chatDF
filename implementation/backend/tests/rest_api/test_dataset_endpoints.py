@@ -175,13 +175,14 @@ async def test_add_dataset_duplicate_url_returns_400(
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_add_dataset_at_limit_returns_400(authed_client, fresh_db, conversation_owned, mock_worker_pool):
-    """POST dataset when conversation already has 5 datasets returns 400."""
+    """POST dataset when conversation already has 50 datasets returns 400."""
     from app.main import app
+    from app.services.dataset_service import MAX_DATASETS_PER_CONVERSATION
 
     app.state.worker_pool = mock_worker_pool
 
-    # Seed 5 datasets
-    for i in range(5):
+    # Seed MAX_DATASETS_PER_CONVERSATION datasets
+    for i in range(MAX_DATASETS_PER_CONVERSATION):
         ds = make_dataset(
             conversation_id=conversation_owned["id"],
             url=f"https://example.com/data{i}.parquet",
@@ -195,7 +196,7 @@ async def test_add_dataset_at_limit_returns_400(authed_client, fresh_db, convers
         json={"url": "https://example.com/data_new.parquet"},
     )
 
-    assert_error_response(response, 400, "Maximum 5 datasets reached")
+    assert_error_response(response, 400, f"Maximum {MAX_DATASETS_PER_CONVERSATION} datasets reached")
 
 
 # ---------------------------------------------------------------------------

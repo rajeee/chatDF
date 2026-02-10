@@ -10,6 +10,22 @@ Provides:
 
 from __future__ import annotations
 
+import os
+
+# Set test-appropriate env vars BEFORE any app imports to prevent
+# pydantic-settings from reading production values from .env.
+os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
+os.environ.setdefault("GOOGLE_CLIENT_ID", "test-google-client-id")
+os.environ.setdefault("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+os.environ["CORS_ORIGINS"] = "http://localhost:5173"
+
+# Clear the settings singleton cache so env vars take effect
+try:
+    from app.config import get_settings
+    get_settings.cache_clear()
+except ImportError:
+    pass
+
 from unittest.mock import AsyncMock
 
 import aiosqlite

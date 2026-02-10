@@ -139,7 +139,7 @@ async def test_conversations_table_structure(fresh_db):
 async def test_messages_table_structure(fresh_db):
     """SCHEMA-6: Messages table has correct columns."""
     cols = await _get_columns(fresh_db, "messages")
-    assert len(cols) == 8
+    assert len(cols) == 11
     _assert_column(cols, "id", "TEXT", notnull=0, pk=1)
     _assert_column(cols, "conversation_id", "TEXT", notnull=1)
     _assert_column(cols, "role", "TEXT", notnull=1)
@@ -148,6 +148,9 @@ async def test_messages_table_structure(fresh_db):
     _assert_column(cols, "reasoning", "TEXT", notnull=0)
     _assert_column(cols, "token_count", "INTEGER", notnull=1)
     _assert_column(cols, "created_at", "TEXT", notnull=1)
+    _assert_column(cols, "input_tokens", "INTEGER", notnull=1)
+    _assert_column(cols, "output_tokens", "INTEGER", notnull=1)
+    _assert_column(cols, "tool_call_trace", "TEXT", notnull=0)
 
 
 # ---------------------------------------------------------------------------

@@ -163,10 +163,16 @@ async def test_send_message_with_parquet_url(
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_send_message_rate_limited_returns_429(
+async def test_send_message_rate_limited_returns_200_ack(
     authed_client, fresh_db, test_user, conversation_owned
 ):
-    """POST message when user has exceeded token limit returns 429."""
+    """POST message when user has exceeded token limit still returns 200 ack.
+
+    Since send_message runs process_message as a background task via
+    asyncio.create_task(), the HTTP handler always returns an immediate
+    acknowledgment.  Rate-limit errors surface asynchronously via WebSocket
+    (chat_error event), not as an HTTP 429.
+    """
     from app.exceptions import RateLimitError
 
     conv_id = conversation_owned["id"]
@@ -181,9 +187,10 @@ async def test_send_message_rate_limited_returns_429(
             json={"content": "more analysis please"},
         )
 
-    assert response.status_code == 429
+    # The endpoint returns 200 immediately; the error is handled in the background task
+    assert response.status_code == 200
     body = response.json()
-    assert "error" in body
+    assert body["status"] == "processing"
 
 
 # ---------------------------------------------------------------------------

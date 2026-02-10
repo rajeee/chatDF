@@ -84,9 +84,17 @@ class MockWebSocket {
 globalThis.WebSocket = MockWebSocket;
 
 // Start MSW server before all tests.
-// onUnhandledRequest: "error" ensures no unintended API calls slip through.
+// Use a custom callback so WebSocket upgrade requests (ws://) are silently
+// bypassed while all other unhandled HTTP requests still raise errors.
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "error" });
+  server.listen({
+    onUnhandledRequest(request, print) {
+      if (request.url.startsWith("ws://") || request.url.startsWith("wss://")) {
+        return;
+      }
+      print.error();
+    },
+  });
 });
 
 // After each test:

@@ -301,10 +301,18 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
                   }}
                 >
                   {/* Entry header — click to expand */}
-                  <button
+                  <div
                     data-testid="query-history-entry-toggle"
-                    className="w-full flex items-start gap-1.5 px-2 py-1.5 text-left hover:opacity-80 transition-opacity"
+                    role="button"
+                    tabIndex={0}
+                    className="w-full flex items-start gap-1.5 px-2 py-1.5 text-left hover:opacity-80 transition-opacity cursor-pointer"
                     onClick={() => handleToggleExpand(entry)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleToggleExpand(entry);
+                      }
+                    }}
                   >
                     {/* Status icon */}
                     <span className="mt-0.5 shrink-0">
@@ -391,7 +399,7 @@ export function QueryHistoryPanel({ onRunAgain }: QueryHistoryPanelProps) {
                     >
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
-                  </button>
+                  </div>
 
                   {/* Expanded detail */}
                   {isExpanded && (

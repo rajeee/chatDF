@@ -10,15 +10,6 @@ describe("KeyboardShortcutsModal", () => {
     useUiStore.setState({ shortcutsModalOpen: false });
   });
 
-  it("DEBUG: store has closeShortcutsModal", () => {
-    const state = useUiStore.getState();
-    console.log("Store keys:", Object.keys(state));
-    console.log("closeShortcutsModal:", typeof state.closeShortcutsModal);
-    console.log("openShortcutsModal:", typeof state.openShortcutsModal);
-    console.log("shortcutsModalOpen:", state.shortcutsModalOpen);
-    expect(state.closeShortcutsModal).toBeDefined();
-  });
-
   it("does not render when closed", () => {
     render(<KeyboardShortcutsModal />);
     expect(screen.queryByTestId("keyboard-shortcuts-modal")).not.toBeInTheDocument();

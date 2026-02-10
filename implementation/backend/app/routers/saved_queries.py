@@ -21,6 +21,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 
 from app.dependencies import get_current_user, get_db
+from app.exceptions import NotFoundError
 from app.models import (
     SaveQueryRequest,
     SavedQueryListResponse,
@@ -120,8 +121,6 @@ async def update_query_folder(
     )
     row = await cursor.fetchone()
     if not row:
-        from app.exceptions import NotFoundError
-
         raise NotFoundError("Saved query not found")
     await db.execute(
         "UPDATE saved_queries SET folder = ? WHERE id = ?",
@@ -144,8 +143,6 @@ async def toggle_pin(
     )
     row = await cursor.fetchone()
     if not row:
-        from app.exceptions import NotFoundError
-
         raise NotFoundError("Saved query not found")
     new_pinned = 0 if row["is_pinned"] else 1
     await db.execute(
@@ -179,8 +176,6 @@ async def share_saved_query(
     )
     row = await cursor.fetchone()
     if not row:
-        from app.exceptions import NotFoundError
-
         raise NotFoundError("Saved query not found")
 
     # Reuse existing token if already shared
@@ -209,8 +204,6 @@ async def unshare_saved_query(
     )
     row = await cursor.fetchone()
     if not row:
-        from app.exceptions import NotFoundError
-
         raise NotFoundError("Saved query not found")
 
     await db.execute(
@@ -233,8 +226,6 @@ async def delete_saved_query(
     )
     row = await cursor.fetchone()
     if not row:
-        from app.exceptions import NotFoundError
-
         raise NotFoundError("Saved query not found")
     await db.execute("DELETE FROM saved_queries WHERE id = ?", (query_id,))
     await db.commit()

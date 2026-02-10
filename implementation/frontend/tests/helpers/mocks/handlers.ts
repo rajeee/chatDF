@@ -104,4 +104,25 @@ export const handlers = [
   http.get("/usage", () => {
     return HttpResponse.json(createUsageStats());
   }),
+
+  // Settings endpoint
+  http.get("/settings", () => {
+    return HttpResponse.json({ dev_mode: false, selected_model: "gemini-2.0-flash" });
+  }),
+
+  // Saved queries endpoint
+  http.get("/saved-queries", () => {
+    return HttpResponse.json({ queries: [] });
+  }),
+
+  // Token usage endpoint
+  http.get("/conversations/:id/token-usage", () => {
+    return HttpResponse.json({
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      total_tokens: 0,
+      total_cost: 0,
+      request_count: 0,
+    });
+  }),
 ];

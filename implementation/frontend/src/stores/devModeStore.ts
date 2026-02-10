@@ -4,11 +4,8 @@ import { persist } from "zustand/middleware";
 interface DevModeState {
   devMode: boolean;
   selectedModel: string;
-  promptPreviewOpen: boolean;
   setDevMode: (enabled: boolean) => void;
   setSelectedModel: (model: string) => void;
-  openPromptPreview: () => void;
-  closePromptPreview: () => void;
 }
 
 export const useDevModeStore = create<DevModeState>()(
@@ -16,11 +13,8 @@ export const useDevModeStore = create<DevModeState>()(
     (set) => ({
       devMode: true, // ON by default
       selectedModel: "gemini-2.5-flash",
-      promptPreviewOpen: false,
       setDevMode: (enabled) => set({ devMode: enabled }),
       setSelectedModel: (model) => set({ selectedModel: model }),
-      openPromptPreview: () => set({ promptPreviewOpen: true }),
-      closePromptPreview: () => set({ promptPreviewOpen: false }),
     }),
     {
       name: "chatdf-dev-mode",

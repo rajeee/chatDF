@@ -212,3 +212,56 @@ class TestSchemaDeduplication:
         # "value" matches name but NOT type -> full output
         assert "value: Float64" in processed_section
         assert "same as raw_data.value" not in processed_section
+
+
+class TestNewPolarsDialectHints:
+    """Verify new Polars SQL dialect hints added in iteration 136."""
+
+    def test_prompt_mentions_trim(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "TRIM()" in prompt
+
+    def test_prompt_mentions_replace(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "REPLACE(" in prompt
+
+    def test_prompt_mentions_round(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "ROUND(" in prompt
+
+    def test_prompt_mentions_abs_ceil_floor(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "ABS()" in prompt
+        assert "CEIL()" in prompt
+        assert "FLOOR()" in prompt
+
+    def test_prompt_mentions_count_distinct(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "COUNT(DISTINCT" in prompt
+
+    def test_prompt_mentions_no_implicit_cast(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Implicit type conversion" in prompt
+
+    def test_prompt_mentions_boolean_values(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "true/false" in prompt
+
+    def test_prompt_mentions_no_left_right(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "LEFT(" in prompt and "RIGHT(" in prompt
+        assert "SUBSTRING" in prompt
+
+    def test_prompt_has_type_casting_example(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Type casting and conversion" in prompt
+        assert "CAST(price_text AS FLOAT)" in prompt
+
+    def test_prompt_warns_against_left_right(self, sample_datasets):
+        """Common mistakes section should mention LEFT/RIGHT."""
+        prompt = build_system_prompt(sample_datasets)
+        assert "Do NOT use LEFT()" in prompt
+
+    def test_prompt_warns_against_string_int_compare(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "compare string columns to integers" in prompt

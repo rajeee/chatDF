@@ -107,6 +107,57 @@ def _download_to_local(url: str) -> str:
     return _download_and_cache(url)
 
 
+def _validate_url_safety(url: str) -> dict | None:
+    """Validate URL for safety — reject private/internal networks and non-HTTP schemes.
+
+    Returns None if URL is safe, or an error dict if it should be rejected.
+    """
+    from urllib.parse import urlparse
+    import ipaddress
+    import socket
+
+    # Allow file:// URLs (for uploaded files)
+    if url.startswith("file://"):
+        return None
+
+    parsed = urlparse(url)
+
+    # Only allow http and https schemes
+    if parsed.scheme not in ("http", "https"):
+        return {
+            "valid": False,
+            "error": f"Unsupported URL scheme '{parsed.scheme}'. Only HTTP and HTTPS URLs are supported.",
+            "error_type": "validation",
+        }
+
+    # Reject URLs without a host
+    if not parsed.hostname:
+        return {
+            "valid": False,
+            "error": "Invalid URL: no hostname specified.",
+            "error_type": "validation",
+        }
+
+    # Reject private/internal IP addresses (SSRF prevention)
+    # Skip in test environments (CHATDF_ALLOW_PRIVATE_URLS=1)
+    if not os.environ.get("CHATDF_ALLOW_PRIVATE_URLS"):
+        try:
+            # Resolve hostname to IP
+            resolved_ip = socket.gethostbyname(parsed.hostname)
+            ip = ipaddress.ip_address(resolved_ip)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return {
+                    "valid": False,
+                    "error": "URLs pointing to internal/private networks are not allowed.",
+                    "error_type": "validation",
+                }
+        except (socket.gaierror, ValueError):
+            # DNS resolution failed — let the download handle it
+            pass
+
+    return None
+
+
 def fetch_and_validate(url: str) -> dict:
     """Download file header and check if valid data file (parquet or CSV).
 
@@ -127,6 +178,12 @@ def fetch_and_validate(url: str) -> dict:
     """
     resolved, is_local = _resolve_url(url)
     is_csv = _is_csv_file(resolved if is_local else url)
+
+    # Safety validation for remote URLs
+    if not is_local:
+        safety_error = _validate_url_safety(url)
+        if safety_error is not None:
+            return safety_error
 
     # Local file validation (uploaded files)
     if is_local:

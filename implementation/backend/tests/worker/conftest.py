@@ -92,6 +92,14 @@ def _generate_parquet_files():
     _generate_fixtures()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _allow_private_urls():
+    """Allow private/loopback URLs during tests (local HTTP fixture server)."""
+    os.environ["CHATDF_ALLOW_PRIVATE_URLS"] = "1"
+    yield
+    os.environ.pop("CHATDF_ALLOW_PRIVATE_URLS", None)
+
+
 @pytest.fixture(scope="session")
 def parquet_dir() -> Path:
     """Path to the test parquet fixtures directory."""

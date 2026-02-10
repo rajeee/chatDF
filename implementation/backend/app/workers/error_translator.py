@@ -265,6 +265,67 @@ def _match_error_pattern(
             "with compatible types. Use UNION ALL instead of UNION if deduplication is not needed."
         )
 
+    # 28. LEFT/RIGHT function not supported
+    if ("left" in msg_lower or "right" in msg_lower) and "not found" in msg_lower:
+        return (
+            "LEFT() and RIGHT() functions are not available in Polars SQL. "
+            "Use SUBSTRING(column, start, length) instead. "
+            "For LEFT(col, 3): SUBSTRING(col, 1, 3). "
+            "For RIGHT(col, 3): SUBSTRING(col, LENGTH(col) - 2, 3)."
+        )
+
+    # 29. Boolean type error (comparing bool to int)
+    if "boolean" in msg_lower and ("compare" in msg_lower or "cast" in msg_lower or "type" in msg_lower):
+        return (
+            "Boolean type error. Polars uses true/false (not 1/0) for booleans. "
+            "Use `col = true` or `col = false` instead of comparing to integers."
+        )
+
+    # 30. Empty result / no rows
+    if "empty" in msg_lower and ("dataframe" in msg_lower or "result" in msg_lower):
+        return (
+            "The query returned no results. "
+            "Try broadening your WHERE clause or checking the data values."
+        )
+
+    # 31. Schema mismatch on UNION/JOIN
+    if "schema" in msg_lower and ("mismatch" in msg_lower or "differ" in msg_lower):
+        return (
+            "Schema mismatch — the tables have incompatible column types. "
+            "Use CAST() to align column types before joining or combining tables."
+        )
+
+    # 32. CONCAT function not available
+    if "concat" in msg_lower and "not found" in msg_lower:
+        return (
+            "CONCAT() is not available in Polars SQL. "
+            "Use the || operator instead: col1 || ' ' || col2"
+        )
+
+    # 33. DATE_TRUNC not available
+    if "date_trunc" in msg_lower:
+        return (
+            "DATE_TRUNC is not available in Polars SQL. "
+            "Use strftime() instead: strftime('%Y-%m', date_col) for month truncation, "
+            "strftime('%Y', date_col) for year."
+        )
+
+    # 34. LCASE / UCASE not available
+    if "lcase" in msg_lower or "ucase" in msg_lower:
+        return (
+            "LCASE()/UCASE() are not available in Polars SQL. "
+            "Use LOWER() and UPPER() instead."
+        )
+
+    # 35. Nested aggregate error
+    if "nested" in msg_lower and ("aggregate" in msg_lower or "agg" in msg_lower):
+        return (
+            "Nested aggregate functions are not allowed. "
+            "Use a subquery or CTE: "
+            "WITH sub AS (SELECT ... COUNT(*) AS cnt FROM ... GROUP BY ...) "
+            "SELECT AVG(cnt) FROM sub"
+        )
+
     # Generic fallback for unrecognized errors
     return (
         "The query encountered an error. "

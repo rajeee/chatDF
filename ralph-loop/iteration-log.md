@@ -139,3 +139,4 @@ Track each improvement cycle: what was done, what was learned.
 | 133 | 2026-02-10 | 118 new tests: data_worker helpers (89), highlightText (10), tableUtils (19) | hardening | 1475 frontend pass (+29 new), 999/999 backend (+89 new) | 95c2694 |
 | 134 | 2026-02-10 | 253 new tests: export endpoints, stores, hooks, SQL formatter | hardening | 1742 frontend pass (+143 new), 1023/1023 backend (+24 new) | 125cf35, 60c1062 |
 | 135 | 2026-02-10 | 100+ new tests: SuggestedPrompts, QueryHistoryDropdown, AppShell, useEditableCodeMirror | hardening | 2638 frontend pass (+100 new), 1724/1724 backend | 4cb8bb9, 017d1ad |
+| 136 | 2026-02-10 | Harden LLM prompt (10 SQL hints, type casting example), 8 new error patterns, SSRF prevention | hardening | 2638 frontend pass, 1782/1782 backend (+58 new) | e1cb7dc |

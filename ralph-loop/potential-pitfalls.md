@@ -11,3 +11,5 @@
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 - **Track ALL requestAnimationFrame IDs**: Any RAF callback that calls setState must have its ID stored in a ref so it can be cancelled on unmount. Orphaned RAFs cause errors in tests and memory leaks in production.
+- **SSRF via dataset URLs**: Users can submit arbitrary URLs. The `_validate_url_safety` function rejects private/loopback IPs and non-HTTP schemes. Ensure this check stays in `fetch_and_validate` and is not bypassed outside test environments.
+- **Error translator pattern shadowing**: New patterns added at the bottom may be shadowed by earlier patterns that match more broadly. Always test that new patterns actually fire with realistic error messages.

@@ -1713,19 +1713,39 @@ async def prompt_preview(
             for decl in tool.function_declarations:
                 tool_names.append(decl.name)
 
-    # Estimate tokens: total chars // 4
-    total_chars = len(system_prompt)
+    # Token estimation helper (chars / 4)
+    def est_tokens(text: str) -> int:
+        return len(text) // 4
+
+    system_tokens = est_tokens(system_prompt)
+
+    message_tokens = []
     for msg in formatted_messages:
-        total_chars += len(msg.get("content", ""))
-    total_chars += len(body.content)
-    estimated_tokens = total_chars // 4
+        content = msg.get("content", "")
+        message_tokens.append({
+            "role": msg["role"],
+            "tokens": est_tokens(content),
+        })
+
+    tools_text = " ".join(tool_names)
+    tools_tokens = est_tokens(tools_text)
+    new_msg_tokens = est_tokens(body.content)
+
+    total = system_tokens + sum(m["tokens"] for m in message_tokens) + tools_tokens + new_msg_tokens
 
     return PromptPreviewResponse(
         system_prompt=system_prompt,
         messages=formatted_messages,
         tools=tool_names,
         new_message=body.content,
-        estimated_tokens=estimated_tokens,
+        estimated_tokens=total,
+        token_breakdown={
+            "system_prompt": system_tokens,
+            "messages": message_tokens,
+            "tools": tools_tokens,
+            "new_message": new_msg_tokens,
+            "total": total,
+        },
     )
 
 

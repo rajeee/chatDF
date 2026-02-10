@@ -407,5 +407,6 @@ class PromptPreviewResponse(BaseModel):
     tools: list[str]
     new_message: str
     estimated_tokens: int
+    token_breakdown: dict = {}
 
 

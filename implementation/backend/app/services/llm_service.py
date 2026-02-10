@@ -248,7 +248,12 @@ def build_system_prompt(datasets: list[dict]) -> str:
 
     if datasets:
         parts.append("\n## Available Datasets\n")
-        for ds in datasets:
+
+        # Build reference column index from the first dataset for deduplication
+        reference_table: str | None = None
+        reference_columns: dict[str, str] = {}  # col_name -> col_type
+
+        for ds_index, ds in enumerate(datasets):
             name = ds["name"]
             schema_raw = ds.get("schema_json", "[]")
             row_count = ds.get("row_count", 0)
@@ -268,6 +273,14 @@ def build_system_prompt(datasets: list[dict]) -> str:
             else:
                 column_descriptions = column_descriptions_raw or {}
 
+            # Save first dataset as reference for schema deduplication
+            if ds_index == 0:
+                reference_table = name
+                for col in columns:
+                    col_name = col.get("name", "unknown")
+                    col_type = col.get("type", "unknown")
+                    reference_columns[col_name] = col_type
+
             parts.append(f"### Table: {name}")
             parts.append(f"Row count: {row_count}")
             parts.append("Columns:")
@@ -276,6 +289,18 @@ def build_system_prompt(datasets: list[dict]) -> str:
                 col_type = col.get("type", "unknown")
                 col_desc = column_descriptions.get(col_name, "")
                 sample_values = col.get("sample_values", [])
+
+                # For subsequent datasets, abbreviate columns that match the
+                # reference table (same name and type) to save context tokens.
+                if (
+                    ds_index > 0
+                    and col_name in reference_columns
+                    and reference_columns[col_name] == col_type
+                ):
+                    parts.append(
+                        f"  - {col_name}: same as {reference_table}.{col_name}"
+                    )
+                    continue
 
                 line = f"  - {col_name}: {col_type}"
                 if col_desc:

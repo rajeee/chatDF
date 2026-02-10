@@ -2,12 +2,21 @@ import { useState, useCallback } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { apiPost } from "@/api/client";
 
+interface TokenBreakdown {
+  system_prompt: number;
+  messages: Array<{ role: string; tokens: number }>;
+  tools: number;
+  new_message: number;
+  total: number;
+}
+
 interface PromptPreviewData {
   system_prompt: string;
   messages: Array<{ role: string; content: string }>;
   tools: string[];
   new_message: string;
   estimated_tokens: number;
+  token_breakdown?: TokenBreakdown;
 }
 
 interface PromptPreviewModalProps {
@@ -22,6 +31,7 @@ export function PromptPreviewModal({ open, onClose, inputValue }: PromptPreviewM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"system" | "history" | "tools">("system");
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   const fetchPreview = useCallback(async () => {
     if (!activeConversationId || !inputValue.trim()) return;
@@ -54,6 +64,19 @@ export function PromptPreviewModal({ open, onClose, inputValue }: PromptPreviewM
     return String(n);
   };
 
+  const bd = data?.token_breakdown;
+  const messagesTotalTokens = bd ? bd.messages.reduce((sum, m) => sum + m.tokens, 0) : 0;
+
+  // Bar segment data for the stacked visualization
+  const barSegments = bd && bd.total > 0
+    ? [
+        { label: "System", value: bd.system_prompt, opacity: 1.0 },
+        { label: "Messages", value: messagesTotalTokens, opacity: 0.7 },
+        { label: "Tools", value: bd.tools, opacity: 0.45 },
+        { label: "New msg", value: bd.new_message, opacity: 0.25 },
+      ]
+    : [];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -74,15 +97,106 @@ export function PromptPreviewModal({ open, onClose, inputValue }: PromptPreviewM
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Prompt Preview</h2>
             {data && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--color-accent)/10", color: "var(--color-accent)" }}>
-                ~{formatTokens(data.estimated_tokens)} tokens
-              </span>
+              <button
+                onClick={() => setBreakdownOpen((v) => !v)}
+                className="text-xs px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
+                style={{ backgroundColor: "var(--color-accent)", color: "white", opacity: 0.85 }}
+                title="Click to toggle token breakdown"
+              >
+                ~{formatTokens(data.estimated_tokens)} tokens {breakdownOpen ? "\u25B2" : "\u25BC"}
+              </button>
             )}
           </div>
           <button onClick={onClose} className="p-1 opacity-50 hover:opacity-100 transition-opacity" aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
+
+        {/* Token Breakdown (collapsible) */}
+        {data && bd && breakdownOpen && (
+          <div
+            className="px-4 py-3 border-b"
+            style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg)" }}
+            data-testid="token-breakdown"
+          >
+            {/* Stacked horizontal bar */}
+            {bd.total > 0 && (
+              <div
+                className="flex rounded overflow-hidden mb-2"
+                style={{ height: "8px", backgroundColor: "var(--color-border)" }}
+              >
+                {barSegments.map((seg) =>
+                  seg.value > 0 ? (
+                    <div
+                      key={seg.label}
+                      title={`${seg.label}: ${formatTokens(seg.value)}`}
+                      style={{
+                        width: `${(seg.value / bd.total) * 100}%`,
+                        backgroundColor: "var(--color-accent)",
+                        opacity: seg.opacity,
+                      }}
+                    />
+                  ) : null
+                )}
+              </div>
+            )}
+
+            {/* Itemized list */}
+            <div className="space-y-1" style={{ color: "var(--color-text)", fontSize: "11px", lineHeight: "1.4" }}>
+              <div className="flex justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: "var(--color-accent)", opacity: 1.0 }} />
+                  System prompt
+                </span>
+                <span className="tabular-nums opacity-70">{formatTokens(bd.system_prompt)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: "var(--color-accent)", opacity: 0.7 }} />
+                  Messages ({bd.messages.length} turn{bd.messages.length !== 1 ? "s" : ""})
+                </span>
+                <span className="tabular-nums opacity-70">{formatTokens(messagesTotalTokens)}</span>
+              </div>
+
+              {/* Per-message sub-items */}
+              {bd.messages.length > 0 && (
+                <div className="pl-5 space-y-0.5" style={{ opacity: 0.6 }}>
+                  {bd.messages.map((m, i) => (
+                    <div key={i} className="flex justify-between">
+                      <span>{m.role}</span>
+                      <span className="tabular-nums">{formatTokens(m.tokens)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: "var(--color-accent)", opacity: 0.45 }} />
+                  Tools
+                </span>
+                <span className="tabular-nums opacity-70">{formatTokens(bd.tools)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: "var(--color-accent)", opacity: 0.25 }} />
+                  New message
+                </span>
+                <span className="tabular-nums opacity-70">{formatTokens(bd.new_message)}</span>
+              </div>
+
+              <div
+                className="flex justify-between font-semibold pt-1 mt-1 border-t"
+                style={{ borderColor: "var(--color-border)" }}
+              >
+                <span>Total</span>
+                <span className="tabular-nums">{formatTokens(bd.total)}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b px-4" style={{ borderColor: "var(--color-border)" }}>

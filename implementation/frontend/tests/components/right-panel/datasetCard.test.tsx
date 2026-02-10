@@ -7,13 +7,15 @@
 // DC-REMOVE-1: Remove with confirmation for loaded datasets
 // DC-CLICK-1: Click on loaded card opens schema modal
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   renderWithProviders,
   screen,
   userEvent,
   waitFor,
+  act,
 } from "../../helpers/render";
+import { cleanup } from "@testing-library/react";
 import { resetAllStores, type Dataset } from "../../helpers/stores";
 import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore } from "@/stores/datasetStore";
@@ -38,6 +40,14 @@ beforeEach(() => {
   resetAllStores();
   // Reset window.confirm mock
   vi.restoreAllMocks();
+});
+
+afterEach(async () => {
+  // Flush pending timers (exit animation 250ms, retry reset 300ms, copy reset 1500ms)
+  // to prevent setState after jsdom teardown
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 1600));
+  });
 });
 
 describe("DC-LOAD-1: Loading state shows progress bar", () => {

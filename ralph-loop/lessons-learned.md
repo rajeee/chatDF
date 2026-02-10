@@ -9,3 +9,5 @@
 - **Polars SQLContext supports cross-table JOINs natively**: No need for DuckDB — Polars registers multiple lazy frames and handles JOINs, UNIONs, and subqueries in its SQL execution engine.
 - **Fake timers prevent post-teardown errors**: When source code uses `setTimeout` that accesses DOM, test teardown can race with pending timers. Use `vi.useFakeTimers()` in beforeEach and `vi.useRealTimers()` in afterEach.
 - **MSW `onUnhandledRequest` custom callback for WebSocket**: Use a callback instead of `"error"` string to selectively bypass WS URLs while keeping strict HTTP enforcement.
+- **Background task failures must notify clients**: `asyncio.create_task()` swallows exceptions silently. Always send a WS error event in the exception handler so the frontend doesn't wait forever.
+- **SAVEPOINT for multi-statement deletes**: When deleting multiple rows that must be atomic, wrap in `SAVEPOINT`/`RELEASE`/`ROLLBACK TO` to prevent partial state on failure.

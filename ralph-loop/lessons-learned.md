@@ -6,3 +6,5 @@
 - **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. Implement your own retry loop — the SDK's built-in retry isn't surfaced through exceptions.
 - **Polars SQLContext supports cross-table JOINs natively**: No need for DuckDB — Polars registers multiple lazy frames and handles JOINs, UNIONs, and subqueries in its SQL execution engine.
 - **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), reference the first table's column definition instead of repeating it — saves hundreds of tokens per shared column.
+- **File rename breaks test imports**: When renaming a utility file (e.g., `jsonExport.ts` → `exportJson.ts`), always search for and update all test imports. The test file itself may need function name updates if the API changed.
+- **Parallel subagent test writing is highly effective**: Dispatching 4 independent test-writing subagents in parallel produces 143 tests in one iteration. Key: give each subagent the full source code and mocking patterns.

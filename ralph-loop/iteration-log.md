@@ -137,3 +137,4 @@ Track each improvement cycle: what was done, what was learned.
 | 131 | 2026-02-10 | Fix RAF leak, stale temp cleanup, 5 error patterns, periodic cache cleanup | hardening | 1410 frontend pass (0 errors!), 897/897 backend (+28 new) | 23a1258 |
 | 132 | 2026-02-10 | Remove dead devModeStore code, 49 new tests (bulk ops, profile, RunSqlPanel) | hardening | 1446 frontend pass (+36 new), 910/910 backend (+13 new) | cd4d2e9 |
 | 133 | 2026-02-10 | 118 new tests: data_worker helpers (89), highlightText (10), tableUtils (19) | hardening | 1475 frontend pass (+29 new), 999/999 backend (+89 new) | 95c2694 |
+| 134 | 2026-02-10 | 253 new tests: export endpoints, stores, hooks, SQL formatter | hardening | 1742 frontend pass (+143 new), 1023/1023 backend (+24 new) | 125cf35, 60c1062 |

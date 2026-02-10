@@ -1101,6 +1101,14 @@ async def send_message(
             _logger.exception(
                 "Background process_message failed for conversation %s", conv_id
             )
+            try:
+                await ws_send({
+                    "type": "chat_error",
+                    "conversation_id": conv_id,
+                    "error": "An unexpected error occurred while processing your message. Please try again.",
+                })
+            except Exception:
+                _logger.warning("Failed to send chat_error WS event for conversation %s", conv_id)
 
     asyncio.create_task(_background_process())
 
@@ -1766,9 +1774,16 @@ async def redo_message(
 
     # 4. Delete the assistant message and the preceding user message
     #    (process_message will re-create the user message)
-    await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
-    await db.execute("DELETE FROM messages WHERE id = ?", (user_msg_row["id"],))
-    await db.commit()
+    #    Use a SAVEPOINT so both deletes are atomic.
+    await db.execute("SAVEPOINT redo_delete")
+    try:
+        await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+        await db.execute("DELETE FROM messages WHERE id = ?", (user_msg_row["id"],))
+        await db.execute("RELEASE SAVEPOINT redo_delete")
+        await db.commit()
+    except Exception:
+        await db.execute("ROLLBACK TO SAVEPOINT redo_delete")
+        raise HTTPException(status_code=500, detail="Failed to delete messages for redo")
 
     # 5. Re-send through LLM flow (same pattern as send_message)
     connection_manager = getattr(request.app.state, "connection_manager", None)
@@ -1795,6 +1810,14 @@ async def redo_message(
                 conv_id,
                 message_id,
             )
+            try:
+                await ws_send({
+                    "type": "chat_error",
+                    "conversation_id": conv_id,
+                    "error": "An unexpected error occurred while retrying your message. Please try again.",
+                })
+            except Exception:
+                _logger.warning("Failed to send chat_error WS event for redo in conversation %s", conv_id)
 
     asyncio.create_task(_background_redo())
 

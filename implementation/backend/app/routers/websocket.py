@@ -9,10 +9,13 @@ Provides:
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.services import auth_service
+
+_logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -44,8 +47,7 @@ async def _heartbeat(websocket: WebSocket) -> None:
             await asyncio.sleep(HEARTBEAT_INTERVAL)
             await websocket.send_json({"type": "ping"})
     except Exception:
-        # Connection closed or errored — task exits, disconnect handles cleanup
-        pass
+        _logger.debug("Heartbeat stopped for WebSocket connection: %s", type(websocket).__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +108,7 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         pass
     except Exception:
-        pass
+        _logger.debug("WebSocket receive loop ended unexpectedly")
     finally:
         # --- Cleanup ---
         heartbeat_task.cancel()

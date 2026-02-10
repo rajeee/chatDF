@@ -3,13 +3,12 @@
 // Card component for a single dataset entry.
 // Three states: loading (progress bar), ready (name + dims), error (retry).
 
-import { memo, useMemo, useState } from "react";
+import { memo, useState } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { LoadingETA } from "./LoadingETA";
-import { CorrelationMatrix } from "./CorrelationMatrix";
 
 interface DatasetCardProps {
   dataset: Dataset;
@@ -64,36 +63,6 @@ export function getColumnTypeSummary(schemaJson: string): string {
   }
 }
 
-const NUMERIC_TYPE_PREFIXES = ["Int", "UInt", "Float"];
-
-/**
- * Count the number of numeric columns in a dataset schema JSON string.
- * The schema_json is either a JSON array of {name, type} objects,
- * or a JSON object mapping name -> type.
- */
-export function countNumericColumns(schemaJson: string): number {
-  try {
-    const parsed = JSON.parse(schemaJson);
-    if (Array.isArray(parsed)) {
-      // Array of {name, type} objects
-      return parsed.filter(
-        (col: { type?: string }) =>
-          col.type && NUMERIC_TYPE_PREFIXES.some((p) => col.type!.startsWith(p))
-      ).length;
-    }
-    if (parsed && typeof parsed === "object") {
-      // Object mapping name -> type
-      return Object.values(parsed).filter((type) =>
-        typeof type === "string" &&
-        NUMERIC_TYPE_PREFIXES.some((p) => (type as string).startsWith(p))
-      ).length;
-    }
-    return 0;
-  } catch {
-    return 0;
-  }
-}
-
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -109,10 +78,6 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const numericColumnCount = useMemo(
-    () => countNumericColumns(dataset.schema_json),
-    [dataset.schema_json]
-  );
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
@@ -295,15 +260,6 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
-          {conversationId && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <CorrelationMatrix
-                conversationId={conversationId}
-                datasetId={dataset.id}
-                numericColumnCount={numericColumnCount}
-              />
-            </div>
-          )}
         </div>
       )}
 

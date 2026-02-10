@@ -414,8 +414,3 @@ class PromptPreviewResponse(BaseModel):
     estimated_tokens: int
 
 
-class CorrelationResponse(BaseModel):
-    """Response for ``GET /conversations/{id}/datasets/{dataset_id}/correlations``."""
-
-    columns: list[str]
-    matrix: list[list[float | None]]

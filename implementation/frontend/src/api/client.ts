@@ -493,27 +493,6 @@ export async function generateSql(
 }
 
 // ---------------------------------------------------------------------------
-// Correlation matrix
-// ---------------------------------------------------------------------------
-
-export interface CorrelationResponse {
-  columns: string[];
-  matrix: (number | null)[][];
-}
-
-/**
- * Fetch the pairwise Pearson correlation matrix for numeric columns in a dataset.
- */
-export async function getCorrelations(
-  conversationId: string,
-  datasetId: string
-): Promise<CorrelationResponse> {
-  return apiGet<CorrelationResponse>(
-    `/conversations/${conversationId}/datasets/${datasetId}/correlations`
-  );
-}
-
-// ---------------------------------------------------------------------------
 // HTML conversation export
 // ---------------------------------------------------------------------------
 

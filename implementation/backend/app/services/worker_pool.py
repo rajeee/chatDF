@@ -18,7 +18,6 @@ from concurrent.futures import ProcessPoolExecutor
 from app.services.query_cache import QueryCache
 from app.services import persistent_cache
 from app.workers.data_worker import (
-    compute_correlations as _compute_correlations_fn,
     execute_query as _execute_query,
     extract_schema as _extract_schema,
     fetch_and_validate as _fetch_and_validate,
@@ -125,9 +124,6 @@ class WorkerPool:
         return await _profile_column(
             self._pool, url, table_name, column_name, column_type
         )
-
-    async def compute_correlations(self, url: str) -> dict:
-        return await _compute_correlations(self._pool, url)
 
     def shutdown(self) -> None:
         self._pool.terminate()
@@ -333,30 +329,3 @@ async def _profile_column(
         }
 
 
-async def _compute_correlations(pool: multiprocessing.pool.Pool, url: str) -> dict:
-    """Run compute_correlations in a worker process.
-
-    Args:
-        pool: The multiprocessing pool.
-        url: Parquet file URL.
-
-    Returns:
-        Result dict from compute_correlations, or error dict on failure.
-    """
-    try:
-        loop = asyncio.get_event_loop()
-        async_result = pool.apply_async(_compute_correlations_fn, (url,))
-        result = await loop.run_in_executor(None, async_result.get, QUERY_TIMEOUT)
-        return result
-    except multiprocessing.TimeoutError:
-        return {
-            "error_type": "timeout",
-            "message": "Correlation computation timed out",
-            "details": f"Timeout after {QUERY_TIMEOUT}s for URL: {url}",
-        }
-    except Exception as exc:
-        return {
-            "error_type": "internal",
-            "message": f"Unexpected error during correlation computation: {exc}",
-            "details": str(exc),
-        }

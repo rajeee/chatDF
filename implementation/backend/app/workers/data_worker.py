@@ -4,17 +4,18 @@ Implements: spec/backend/worker/plan.md#worker-functions
 
 These functions are module-level (picklable) and run in worker processes.
 They receive and return plain dicts/lists -- no Pydantic models cross
-the process boundary. No imports from ``app/`` -- fully self-contained.
+the process boundary. Only imports from ``app.workers.file_cache``.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import tempfile
 import time
 import urllib.error
 import urllib.request
+
+from app.workers.file_cache import download_and_cache as _download_and_cache
 
 MAX_RESULT_ROWS = 1000
 MAX_QUERY_ROWS = 10000  # Auto-LIMIT cap for SELECT queries without LIMIT
@@ -96,34 +97,14 @@ def _resolve_url(url: str) -> tuple[str, bool]:
     return url, False
 
 
-def _download_to_tempfile(url: str) -> str:
-    """Download a URL to a temporary file and return the path.
+def _download_to_local(url: str) -> str:
+    """Download a URL (with caching) and return a local file path.
 
-    The caller is responsible for deleting the file when done.
-    Preserves the file extension from the URL for correct format detection.
+    Uses the file cache so repeated downloads of the same URL are served
+    from disk.  The returned path is owned by the cache and must NOT be
+    deleted by the caller.
     """
-    with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
-        # Detect suffix from URL
-        suffix = ".parquet"
-        lower = url.lower()
-        if lower.endswith('.csv.gz'):
-            suffix = ".csv.gz"
-        elif lower.endswith('.csv') or '.csv' in lower:
-            suffix = ".csv"
-        elif lower.endswith('.tsv') or '.tsv' in lower:
-            suffix = ".tsv"
-        fd, path = tempfile.mkstemp(suffix=suffix)
-        try:
-            with os.fdopen(fd, "wb") as f:
-                while True:
-                    chunk = response.read(65536)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-        except Exception:
-            os.unlink(path)
-            raise
-    return path
+    return _download_and_cache(url)
 
 
 def fetch_and_validate(url: str) -> dict:
@@ -239,6 +220,46 @@ def fetch_and_validate(url: str) -> dict:
         }
 
 
+def _collect_sample_values(lazy_frame, columns: list[dict], max_samples: int = 5) -> list[dict]:
+    """Collect sample non-null unique values for each column.
+
+    Fetches a small number of rows and extracts distinct non-null values
+    per column.  Returns the columns list with added ``sample_values`` keys.
+
+    Args:
+        lazy_frame: A Polars LazyFrame.
+        columns: List of column info dicts (``{"name": ..., "type": ...}``).
+        max_samples: Maximum number of sample values per column.
+
+    Returns:
+        The same *columns* list, each dict augmented with a ``sample_values``
+        key (list of strings).
+    """
+    try:
+        # Fetch up to 100 rows to get diverse sample values
+        sample_df = lazy_frame.head(100).collect()
+        for col_info in columns:
+            col_name = col_info["name"]
+            try:
+                series = sample_df[col_name].drop_nulls().unique().head(max_samples)
+                sample_vals = []
+                for val in series.to_list():
+                    s = str(val)
+                    # Truncate very long sample values
+                    if len(s) > 80:
+                        s = s[:77] + "..."
+                    sample_vals.append(s)
+                col_info["sample_values"] = sample_vals
+            except Exception:
+                col_info["sample_values"] = []
+    except Exception:
+        # If sampling fails entirely, return columns without sample_values
+        for col_info in columns:
+            if "sample_values" not in col_info:
+                col_info["sample_values"] = []
+    return columns
+
+
 def extract_schema(url: str) -> dict:
     """Read data file schema without loading full data.
 
@@ -248,12 +269,12 @@ def extract_schema(url: str) -> dict:
 
     Uses Polars scan_parquet/scan_csv with HTTP URL directly (range requests
     for parquet) to read schema without downloading the full file. Falls back
-    to downloading to a temp file if direct URL access fails.
+    to downloading to a cached local file if direct URL access fails.
 
     For ``file://`` URIs (uploaded files), reads the local file directly.
 
     Returns:
-        {"columns": [{"name": str, "type": str}, ...], "row_count": int}
+        {"columns": [{"name": str, "type": str, "sample_values": list[str]}, ...], "row_count": int}
         On error: {"error_type": str, "message": str, "details": str | None}
     """
     try:
@@ -270,6 +291,7 @@ def extract_schema(url: str) -> dict:
                 for name, dtype in schema.items()
             ]
             row_count = lazy_frame.select(pl.len()).collect().item()
+            columns = _collect_sample_values(lazy_frame, columns)
             return {"columns": columns, "row_count": row_count}
 
         # Try direct URL access first (uses HTTP range requests for parquet — fast)
@@ -281,23 +303,22 @@ def extract_schema(url: str) -> dict:
                 for name, dtype in schema.items()
             ]
             row_count = lazy_frame.select(pl.len()).collect().item()
+            columns = _collect_sample_values(lazy_frame, columns)
             return {"columns": columns, "row_count": row_count}
         except Exception:
             pass
 
-        # Fallback: download to temp file
-        tmp_path = _download_to_tempfile(url)
-        try:
-            lazy_frame = _scan_data_file(tmp_path)
-            schema = lazy_frame.collect_schema()
-            columns = [
-                {"name": name, "type": str(dtype)}
-                for name, dtype in schema.items()
-            ]
-            row_count = lazy_frame.select(pl.len()).collect().item()
-            return {"columns": columns, "row_count": row_count}
-        finally:
-            os.unlink(tmp_path)
+        # Fallback: download (cached) to local file
+        cached_path = _download_to_local(url)
+        lazy_frame = _scan_data_file(cached_path)
+        schema = lazy_frame.collect_schema()
+        columns = [
+            {"name": name, "type": str(dtype)}
+            for name, dtype in schema.items()
+        ]
+        row_count = lazy_frame.select(pl.len()).collect().item()
+        columns = _collect_sample_values(lazy_frame, columns)
+        return {"columns": columns, "row_count": row_count}
 
     except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
         error_msg = str(exc)
@@ -333,7 +354,6 @@ def profile_columns(url: str) -> dict:
         {"profiles": [{"name": str, ...}, ...]}
         On error: {"error": str}
     """
-    tmp_path = None
     try:
         import polars as pl
 
@@ -349,9 +369,9 @@ def profile_columns(url: str) -> dict:
                 lazy_frame = _scan_data_file(url)
                 lazy_frame.collect_schema()  # verify access
             except Exception:
-                # Fallback: download to temp file
-                tmp_path = _download_to_tempfile(url)
-                lazy_frame = _scan_data_file(tmp_path)
+                # Fallback: download (cached) to local file
+                cached_path = _download_to_local(url)
+                lazy_frame = _scan_data_file(cached_path)
 
         # Collect, sampling if needed
         df = lazy_frame.collect()
@@ -411,9 +431,6 @@ def profile_columns(url: str) -> dict:
 
     except Exception as exc:
         return {"error": str(exc)}
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
 
 
 def profile_column(url: str, table_name: str, column_name: str, column_type: str) -> dict:
@@ -429,7 +446,6 @@ def profile_column(url: str, table_name: str, column_name: str, column_type: str
         {"stats": {...}} with type-appropriate statistics.
         On error: {"error": str}
     """
-    tmp_path = None
     try:
         import polars as pl
 
@@ -442,8 +458,8 @@ def profile_column(url: str, table_name: str, column_name: str, column_type: str
                 lf = _scan_data_file(url)
                 lf.collect_schema()  # verify access
             except Exception:
-                tmp_path = _download_to_tempfile(url)
-                lf = _scan_data_file(tmp_path)
+                cached_path = _download_to_local(url)
+                lf = _scan_data_file(cached_path)
 
         col = pl.col(column_name)
         dtype_str = column_type
@@ -542,9 +558,6 @@ def profile_column(url: str, table_name: str, column_name: str, column_type: str
 
     except Exception as e:
         return {"error": str(e)}
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
 
 
 def compute_correlations(url: str) -> dict:
@@ -562,7 +575,6 @@ def compute_correlations(url: str) -> dict:
         {"columns": list[str], "matrix": list[list[float|None]]}
         On error: {"error": str}
     """
-    tmp_path = None
     try:
         import json
         import math
@@ -577,8 +589,8 @@ def compute_correlations(url: str) -> dict:
             try:
                 df = _read_data_file(url)
             except Exception:
-                tmp_path = _download_to_tempfile(url)
-                df = _read_data_file(tmp_path)
+                cached_path = _download_to_local(url)
+                df = _read_data_file(cached_path)
 
         # Select only numeric columns
         numeric_dtypes = (
@@ -616,9 +628,6 @@ def compute_correlations(url: str) -> dict:
 
     except Exception as exc:
         return {"error": str(exc)}
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
 
 
 def execute_query(sql: str, datasets: list[dict]) -> dict:
@@ -643,7 +652,6 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
         On error: {"error_type": str, "message": str, "details": str | None, "execution_time_ms": float}
     """
     start_time = time.perf_counter()
-    tmp_paths = []
     try:
         import polars as pl
 
@@ -661,9 +669,8 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
                     lf.collect_schema()  # force metadata read to verify access
                     ctx.register(dataset["table_name"], lf)
                 except Exception:
-                    tmp_path = _download_to_tempfile(dataset["url"])
-                    tmp_paths.append(tmp_path)
-                    lf = _scan_data_file(tmp_path)
+                    cached_path = _download_to_local(dataset["url"])
+                    lf = _scan_data_file(cached_path)
                     ctx.register(dataset["table_name"], lf)
 
         # Auto-inject LIMIT for SELECT queries that don't have one
@@ -708,7 +715,3 @@ def execute_query(sql: str, datasets: list[dict]) -> dict:
             "details": error_msg,
             "execution_time_ms": execution_time_ms,
         }
-    finally:
-        for path in tmp_paths:
-            if os.path.exists(path):
-                os.unlink(path)

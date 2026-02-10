@@ -21,6 +21,7 @@ from app.config import get_settings
 from app.services import worker_pool
 from app.services import dataset_service
 from app.services import ws_messages
+from app.workers.error_translator import translate_polars_error
 
 logger = logging.getLogger(__name__)
 
@@ -274,10 +275,16 @@ def build_system_prompt(datasets: list[dict]) -> str:
                 col_name = col.get("name", "unknown")
                 col_type = col.get("type", "unknown")
                 col_desc = column_descriptions.get(col_name, "")
+                sample_values = col.get("sample_values", [])
+
+                line = f"  - {col_name}: {col_type}"
                 if col_desc:
-                    parts.append(f"  - {col_name}: {col_type} -- {col_desc}")
-                else:
-                    parts.append(f"  - {col_name}: {col_type}")
+                    line += f" -- {col_desc}"
+                if sample_values:
+                    # Format sample values with quotes for strings
+                    formatted = ", ".join(f'"{v}"' for v in sample_values[:5])
+                    line += f" (samples: {formatted})"
+                parts.append(line)
             parts.append("")
 
         parts.append("## Instructions")
@@ -294,6 +301,58 @@ def build_system_prompt(datasets: list[dict]) -> str:
         parts.append(
             "- Use the execute_sql tool to run SQL queries against the datasets."
         )
+        parts.append("")
+        parts.append("## Polars SQL Dialect Notes")
+        parts.append("IMPORTANT: Polars SQL differs from PostgreSQL/MySQL. Follow these rules:")
+        parts.append("- No ILIKE: use `LOWER(col) LIKE LOWER('%pattern%')` for case-insensitive matching")
+        parts.append("- No DATE_TRUNC: use `strftime('%Y-%m', date_col)` for month truncation, `strftime('%Y', date_col)` for year, etc.")
+        parts.append("- No DATE_PART: use `EXTRACT(YEAR FROM date_col)` or `strftime('%Y', date_col)` instead")
+        parts.append("- No CONCAT(): use the `||` operator for string concatenation (e.g., `col1 || ' ' || col2`)")
+        parts.append("- No COALESCE in some contexts: use `CASE WHEN col IS NULL THEN default ELSE col END` instead")
+        parts.append("- CAST syntax: `CAST(col AS INTEGER)`, `CAST(col AS FLOAT)`, `CAST(col AS VARCHAR)`")
+        parts.append("- LIMIT and OFFSET are both supported")
+        parts.append("- Use single quotes for string literals, double quotes for identifiers")
+        parts.append("- GROUP BY and ORDER BY support column position numbers (e.g., `GROUP BY 1, 2`)")
+        parts.append("- Window functions are supported: ROW_NUMBER(), RANK(), SUM() OVER(), etc.")
+        parts.append("- Read-only queries only: no CREATE TABLE, INSERT, UPDATE, or DELETE")
+        parts.append("")
+        parts.append("## Example Query Patterns")
+        parts.append("Here are correct Polars SQL query patterns to follow:")
+        parts.append("")
+        parts.append("### Aggregation with GROUP BY")
+        parts.append("```sql")
+        parts.append("SELECT category, COUNT(*) AS cnt, AVG(amount) AS avg_amount")
+        parts.append("FROM table1")
+        parts.append("GROUP BY 1")
+        parts.append("ORDER BY cnt DESC")
+        parts.append("LIMIT 20")
+        parts.append("```")
+        parts.append("")
+        parts.append("### Date-based filtering with strftime")
+        parts.append("```sql")
+        parts.append("SELECT strftime('%Y-%m', created_at) AS month, SUM(revenue) AS total_revenue")
+        parts.append("FROM table1")
+        parts.append("WHERE created_at >= '2023-01-01'")
+        parts.append("GROUP BY 1")
+        parts.append("ORDER BY 1")
+        parts.append("```")
+        parts.append("")
+        parts.append("### Case-insensitive string matching")
+        parts.append("```sql")
+        parts.append("SELECT *")
+        parts.append("FROM table1")
+        parts.append("WHERE LOWER(city) LIKE LOWER('%new york%')")
+        parts.append("LIMIT 100")
+        parts.append("```")
+        parts.append("")
+        parts.append("### Window function")
+        parts.append("```sql")
+        parts.append("SELECT name, department, salary,")
+        parts.append("  RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_rank")
+        parts.append("FROM table1")
+        parts.append("ORDER BY department, dept_rank")
+        parts.append("LIMIT 100")
+        parts.append("```")
         parts.append("")
         parts.append("## Visualization Guidelines")
         parts.append("")
@@ -353,6 +412,19 @@ def build_system_prompt(datasets: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _has_sql_results(msg: dict) -> bool:
+    """Check if a message contains SQL query results.
+
+    Assistant messages with a non-empty ``sql_query`` field contain SQL
+    execution results which are more valuable context for the LLM than
+    plain text messages.
+    """
+    if msg.get("role") != "assistant":
+        return False
+    sql_query = msg.get("sql_query")
+    return bool(sql_query and sql_query.strip() and sql_query.strip() != "null")
+
+
 def prune_context(
     messages: list[dict],
     max_messages: int = 50,
@@ -362,7 +434,8 @@ def prune_context(
 
     Keeps system messages (role="system") always. Then keeps the most recent
     ``max_messages`` user/assistant messages. Finally, if estimated token count
-    exceeds ``max_tokens``, removes oldest messages until under budget.
+    exceeds ``max_tokens``, removes oldest plain-text messages first, then
+    oldest SQL-result messages, to preferentially retain SQL context.
 
     Args:
         messages: Full list of message dicts with ``role`` and ``content``.
@@ -387,8 +460,20 @@ def prune_context(
     def _estimate_tokens(msgs: list[dict]) -> int:
         return sum(len(m.get("content", "")) for m in msgs) // 4
 
+    # Phase 1: Remove oldest plain-text messages first (no SQL results)
     while non_system_msgs and _estimate_tokens(system_msgs + non_system_msgs) > max_tokens:
-        non_system_msgs.pop(0)
+        # Find the oldest non-SQL message to remove
+        plain_idx = None
+        for i, m in enumerate(non_system_msgs):
+            if not _has_sql_results(m):
+                plain_idx = i
+                break
+
+        if plain_idx is not None:
+            non_system_msgs.pop(plain_idx)
+        else:
+            # Phase 2: No plain-text messages left; remove oldest SQL message
+            non_system_msgs.pop(0)
 
     return system_msgs + non_system_msgs
 
@@ -398,6 +483,29 @@ def prune_context(
 # Implements: spec/backend/llm/plan.md#streaming-response-handler
 # Implements: spec/backend/llm/plan.md#tool-call-execution-flow
 # ---------------------------------------------------------------------------
+
+
+def _extract_available_columns(datasets: list[dict]) -> list[str]:
+    """Extract a flat list of column names from all datasets.
+
+    Parses ``schema_json`` (JSON string or list of column dicts) from each
+    dataset and collects column names for use in error translation.
+    """
+    columns: list[str] = []
+    for ds in datasets:
+        schema_raw = ds.get("schema_json", "[]")
+        if isinstance(schema_raw, str):
+            try:
+                schema = json.loads(schema_raw)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        else:
+            schema = schema_raw or []
+        for col in schema:
+            col_name = col.get("name") if isinstance(col, dict) else None
+            if col_name:
+                columns.append(col_name)
+    return columns
 
 
 def _messages_to_contents(messages: list[dict]) -> list[types.Content]:
@@ -614,10 +722,13 @@ async def stream_chat(
                 if "error_type" in query_result or "error" in query_result:
                     sql_retry_count += 1
                     error_msg = query_result.get("message", query_result.get("error", "Unknown error"))
-                    tool_result_str = f"Error executing SQL: {error_msg}"
+                    # Translate raw Polars error to user-friendly message
+                    available_cols = _extract_available_columns(datasets)
+                    friendly_error = translate_polars_error(error_msg, available_cols)
+                    tool_result_str = f"Error executing SQL: {friendly_error}"
                     result.sql_executions.append(SqlExecution(
                         query=query,
-                        error=error_msg,
+                        error=friendly_error,
                         execution_time_ms=query_result.get("execution_time_ms"),
                     ))
 

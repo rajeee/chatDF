@@ -245,7 +245,8 @@ async def get_datasets(
     """Return all datasets for *conversation_id*, ordered by loaded_at."""
     cursor = await db.execute(
         "SELECT id, conversation_id, url, name, row_count, column_count, "
-        "schema_json, status, error_message, loaded_at, file_size_bytes "
+        "schema_json, status, error_message, loaded_at, file_size_bytes, "
+        "column_descriptions "
         "FROM datasets WHERE conversation_id = ? ORDER BY loaded_at",
         (conversation_id,),
     )

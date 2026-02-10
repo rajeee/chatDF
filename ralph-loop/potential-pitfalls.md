@@ -4,7 +4,6 @@
 - **Bun WS proxy**: Bun doesn't support http-proxy WebSocket upgrades. Never proxy WS through Vite dev server.
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
 - **Background task failures are silent**: `asyncio.create_task()` swallows exceptions. Always send a WS error event in the exception handler so the frontend doesn't wait forever.
-- **Stale temp files from atomic rename**: When using write-to-temp → `os.replace`, process crashes leave `.download_` prefixed temp files. Add periodic cleanup based on mtime age.
 
 ## Frontend
 - **WS events before HTTP responses**: Backend sends WS events before returning HTTP response. Must handle gracefully (check existence, add if missing).
@@ -12,5 +11,3 @@
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 - **Track ALL requestAnimationFrame IDs**: Any RAF callback that calls setState must have its ID stored in a ref so it can be cancelled on unmount. Orphaned RAFs cause errors in tests and memory leaks in production.
 - **SSRF via dataset URLs**: Users can submit arbitrary URLs. The `_validate_url_safety` function rejects private/loopback IPs and non-HTTP schemes. Ensure this check stays in `fetch_and_validate` and is not bypassed outside test environments.
-- **Error translator pattern shadowing**: Patterns are checked top-to-bottom. New patterns at the bottom may be shadowed by earlier broad matches. Always test new patterns fire with realistic error messages.
-- **SSRF prevention needs test bypass**: URL safety checks that reject private IPs break tests using local HTTP fixture servers (127.0.0.1). Use env var (`CHATDF_ALLOW_PRIVATE_URLS=1`) in worker conftest to bypass.

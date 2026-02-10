@@ -132,3 +132,4 @@ Track each improvement cycle: what was done, what was learned.
 | 126 | 2026-02-10 | Harden LLM prompt, error translator, fix theme test leak, improve E2E tests | hardening | 1411 frontend pass (0 errors), 800/800 backend | 86c1bf8 |
 | 127 | 2026-02-10 | Fix DOM nesting, consolidate imports, add MSW handlers, 42 new saved query tests | hardening | 1410 frontend pass, 842/842 backend | 81d27c3 |
 | 128 | 2026-02-10 | 16 endpoint tests, WS error notifications, transactional redo, WS logging | hardening | 1410 frontend pass, 858/858 backend (+16 new) | 8ea1a2c |
+| 129 | 2026-02-10 | Schema deduplication for multi-dataset prompts, token breakdown in Dev Mode | work.md final tasks | 1410 frontend pass, 862/862 backend (+4 new) | 4c41e47 |

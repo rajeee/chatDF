@@ -11,3 +11,4 @@
 - **MSW `onUnhandledRequest` custom callback for WebSocket**: Use a callback instead of `"error"` string to selectively bypass WS URLs while keeping strict HTTP enforcement.
 - **Background task failures must notify clients**: `asyncio.create_task()` swallows exceptions silently. Always send a WS error event in the exception handler so the frontend doesn't wait forever.
 - **SAVEPOINT for multi-statement deletes**: When deleting multiple rows that must be atomic, wrap in `SAVEPOINT`/`RELEASE`/`ROLLBACK TO` to prevent partial state on failure.
+- **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), referencing the first table's column definition instead of repeating it can save hundreds of tokens per shared column. Implement as a reference dict from the first dataset, then check subsequent datasets against it.

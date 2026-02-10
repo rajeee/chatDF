@@ -6,3 +6,5 @@
 - **Gemini SDK ClientError**: Use `.code == 429` to detect rate limits. Implement your own retry loop — the SDK's built-in retry isn't surfaced through exceptions.
 - **Polars SQLContext supports cross-table JOINs natively**: No need for DuckDB — Polars registers multiple lazy frames and handles JOINs, UNIONs, and subqueries in its SQL execution engine.
 - **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), reference the first table's column definition instead of repeating it — saves hundreds of tokens per shared column.
+- **CodeMirror testing in jsdom**: Mock all `@codemirror/*` modules entirely — CodeMirror requires real DOM measurements that jsdom doesn't support. Use `vi.hoisted()` for shared mock state referenced by `vi.mock()` factories.
+- **Frontend test coverage at 95%+**: After iteration 135, only `useCodeMirror.ts` (50 lines, read-only variant) remains untested. All stores, utilities, and 58/59 components have test files. Backend is 100% covered.

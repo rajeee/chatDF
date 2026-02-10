@@ -133,3 +133,5 @@ Track each improvement cycle: what was done, what was learned.
 | 127 | 2026-02-10 | Fix DOM nesting, consolidate imports, add MSW handlers, 42 new saved query tests | hardening | 1410 frontend pass, 842/842 backend | 81d27c3 |
 | 128 | 2026-02-10 | 16 endpoint tests, WS error notifications, transactional redo, WS logging | hardening | 1410 frontend pass, 858/858 backend (+16 new) | 8ea1a2c |
 | 129 | 2026-02-10 | Schema deduplication for multi-dataset prompts, token breakdown in Dev Mode | work.md final tasks | 1410 frontend pass, 862/862 backend (+4 new) | 4c41e47 |
+| 130 | 2026-02-10 | Harden file cache (Content-Length pre-check, persistent dir), 5 new error patterns, LLM perf tips | hardening | 1410 frontend pass, 869/869 backend (+7 new) | 72e2428 |
+| 131 | 2026-02-10 | Fix RAF leak, stale temp cleanup, 5 error patterns, periodic cache cleanup | hardening | 1410 frontend pass (0 errors!), 897/897 backend (+28 new) | 23a1258 |

@@ -313,3 +313,63 @@ class TestGenericFallback:
     def test_empty_string(self):
         result = translate_polars_error("")
         assert result == ""
+
+
+# ---------------------------------------------------------------------------
+# New patterns (18-22)
+# ---------------------------------------------------------------------------
+
+
+class TestGroupByOutOfRange:
+    """Pattern 18: GROUP BY position out of range."""
+
+    def test_group_by_position_out_of_range(self):
+        raw = "group by position 5 is not in select list"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "GROUP BY position number is out of range", raw)
+
+
+class TestDuplicateColumn:
+    """Pattern 19: duplicate column name."""
+
+    def test_duplicate_column(self):
+        raw = "duplicate column name 'id' in result set"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "Duplicate column name", raw)
+
+
+class TestLikeTypeError:
+    """Pattern 20: LIKE on non-string column."""
+
+    def test_like_cannot_apply(self):
+        raw = "cannot apply LIKE operator to Int64 column"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "LIKE can only be used with text columns", raw)
+
+    def test_like_invalid_type(self):
+        raw = "LIKE: invalid type for comparison"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "CAST(column AS VARCHAR)", raw)
+
+
+class TestSubqueryCTE:
+    """Pattern 21: subquery/CTE errors."""
+
+    def test_cte_error(self):
+        raw = "CTE name 'x' is already defined"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "CTE error", raw)
+
+    def test_subquery_must_have_alias(self):
+        raw = "subquery in FROM must have an alias"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "subquery has an alias", raw)
+
+
+class TestOrderByNotInSelect:
+    """Pattern 22: ORDER BY column not in SELECT."""
+
+    def test_order_by_not_in_select(self):
+        raw = "ORDER BY column 'age' not in SELECT list"
+        result = translate_polars_error(raw)
+        _assert_friendly(result, "ORDER BY column not found in SELECT", raw)

@@ -22,7 +22,12 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-CACHE_DIR = os.environ.get("CHATDF_CACHE_DIR", "/tmp/chatdf_cache")
+# Use XDG_CACHE_HOME if available, fall back to ~/.cache, then /tmp
+_default_cache = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
+    "chatdf",
+)
+CACHE_DIR = os.environ.get("CHATDF_CACHE_DIR", _default_cache)
 MAX_CACHE_BYTES = int(os.environ.get("CHATDF_MAX_CACHE_BYTES", str(1024 ** 3)))  # 1 GB
 MAX_FILE_BYTES = int(os.environ.get("CHATDF_MAX_FILE_BYTES", str(500 * 1024 ** 2)))  # 500 MB
 DOWNLOAD_TIMEOUT = 300  # seconds
@@ -118,6 +123,7 @@ def get_cached(url: str) -> str | None:
         try:
             # Touch access time for LRU tracking
             os.utime(path, None)
+            logger.debug("Cache hit: %s → %s", url[:80], path)
         except OSError:
             pass
         return path
@@ -150,6 +156,23 @@ def download_and_cache(url: str) -> str:
         suffix=_suffix_for_url(url),
     )
     try:
+        # Pre-check Content-Length with HEAD request to reject oversized files early
+        try:
+            head_req = urllib.request.Request(url, method="HEAD")
+            head_resp = urllib.request.urlopen(head_req, timeout=30)
+            content_length = head_resp.headers.get("Content-Length")
+            if content_length and int(content_length) > MAX_FILE_BYTES:
+                raise ValueError(
+                    f"Remote file is {int(content_length) / (1024 ** 2):.0f} MB, "
+                    f"exceeds size limit ({MAX_FILE_BYTES / (1024 ** 2):.0f} MB). "
+                    f"Download aborted."
+                )
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            if isinstance(exc, ValueError):
+                raise  # Re-raise size limit errors
+            # HEAD request failed — proceed with download (size checked per-chunk)
+            pass
+
         total_written = 0
         with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
             with os.fdopen(fd, "wb") as f:
@@ -171,6 +194,7 @@ def download_and_cache(url: str) -> str:
         # same file concurrently -- that's fine, last-writer wins and the
         # content is identical.
         os.replace(tmp_path, final_path)
+        logger.info("Cached download: %s → %s (%.1f MB)", url[:80], final_path, total_written / 1024 / 1024)
         tmp_path = None  # Prevent cleanup
 
         # Run eviction *after* placing the new file

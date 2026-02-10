@@ -187,6 +187,45 @@ def _match_error_pattern(
             "Verify both tables have the join column and use CAST() if types differ."
         )
 
+    # 18. GROUP BY position out of range
+    if re.search(r"group\s+by\s+position\s+\d+\s+is\s+not\s+in\s+select", msg_lower) or \
+       "group by column" in msg_lower and "out of range" in msg_lower:
+        return (
+            "GROUP BY position number is out of range. "
+            "Verify the column position numbers match your SELECT clause. "
+            "For example, GROUP BY 1 refers to the first column in SELECT."
+        )
+
+    # 19. Duplicate column name in result
+    if "duplicate" in msg_lower and "column" in msg_lower:
+        return (
+            "Duplicate column name in query results. "
+            "Use aliases to give each column a unique name: "
+            "SELECT a.id AS a_id, b.id AS b_id ..."
+        )
+
+    # 20. LIKE pattern type error (non-string column)
+    if "like" in msg_lower and ("cannot apply" in msg_lower or "invalid type" in msg_lower):
+        return (
+            "LIKE can only be used with text columns. "
+            "Cast the column to text first: CAST(column AS VARCHAR) LIKE '%pattern%'"
+        )
+
+    # 21. Nested subquery / CTE naming error
+    if "cte" in msg_lower or ("subquery" in msg_lower and "must have" in msg_lower):
+        return (
+            "Subquery or CTE error. Make sure every subquery has an alias "
+            "(e.g., SELECT * FROM (SELECT ...) AS subquery_name) and "
+            "every CTE has a unique name."
+        )
+
+    # 22. ORDER BY column not in SELECT (strict mode)
+    if "order by" in msg_lower and "not in" in msg_lower and "select" in msg_lower:
+        return (
+            "ORDER BY column not found in SELECT. "
+            "Either add the column to your SELECT clause or use a column position number."
+        )
+
     # Generic fallback for unrecognized errors
     return (
         "The query encountered an error. "

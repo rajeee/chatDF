@@ -141,3 +141,4 @@ Track each improvement cycle: what was done, what was learned.
 | 135 | 2026-02-10 | 100+ new tests: SuggestedPrompts, QueryHistoryDropdown, AppShell, useEditableCodeMirror | hardening | 2638 frontend pass (+100 new), 1724/1724 backend | 4cb8bb9, 017d1ad |
 | 136 | 2026-02-10 | Harden LLM prompt (10 SQL hints, type casting example), 8 new error patterns, SSRF prevention | hardening | 2638 frontend pass, 1782/1782 backend (+58 new) | e1cb7dc |
 | 137 | 2026-02-11 | Fix OOM: reduce Polars test SQL sizes (9.5GB→safe), remove dead LoadingStates, 58 ChatArea tests, backend edge-case tests | hardening | 2684+ frontend, backend 48 edge pass | ac1473c, c732a93 |
+| 138 | 2026-02-11 | Harden error translator (8 fixes + 9 new patterns), deduplicate schema utils, 72 new backend tests | hardening | 2716 frontend (1 flaky), 2090/2090 backend | 447e493 |

@@ -4,7 +4,7 @@
 // Sets chatStore.activeConversationId.
 // Fetches conversation detail (messages + datasets) on switch.
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/api/client";
 import { useChatStore, parseSqlExecutions, type Message } from "@/stores/chatStore";
@@ -33,25 +33,35 @@ export function useConversation() {
     staleTime: 30_000, // 30s
   });
 
-  // When conversation data loads, populate stores (must run in useEffect,
-  // not during render, to avoid setState-during-render infinite loops)
+  // Track which conversation we already populated to avoid duplicate work
+  const populatedRef = useRef<string | null>(null);
+
+  // Reset populated ref when switching conversations so data reloads
+  useEffect(() => {
+    populatedRef.current = null;
+  }, [activeConversationId]);
+
+  // When conversation data loads, populate stores in a single batched update
   useEffect(() => {
     if (!conversation || !activeConversationId) return;
+    // Skip if we already populated this exact conversation
+    if (populatedRef.current === activeConversationId) return;
+    populatedRef.current = activeConversationId;
 
-    const chatState = useChatStore.getState();
-    // Only populate if messages are empty (first load or switch)
-    if (chatState.messages.length === 0 && conversation.messages.length > 0) {
-      for (const msg of conversation.messages) {
-        chatState.addMessage({
-          ...msg,
-          sql_executions: msg.sql_executions ?? parseSqlExecutions(msg.sql_query),
-          reasoning: msg.reasoning ?? null,
-        });
-      }
+    // Batch all messages into a single store update (not one-by-one)
+    if (conversation.messages.length > 0) {
+      const prepared = conversation.messages.map((msg) => ({
+        ...msg,
+        sql_executions: msg.sql_executions ?? parseSqlExecutions(msg.sql_query),
+        reasoning: msg.reasoning ?? null,
+      }));
+      useChatStore.getState().loadMessages(prepared);
+    } else {
+      useChatStore.getState().loadMessages([]);
     }
-    // Populate datasets for this conversation (merge with existing store)
+
+    // Populate datasets for this conversation
     if (conversation.datasets.length > 0) {
-      const datasetState = useDatasetStore.getState();
       const convDatasets = conversation.datasets.map((ds) => ({
         ...ds,
         conversation_id: conversation.id,
@@ -59,7 +69,7 @@ export function useConversation() {
         schema_json: ds.schema_json ?? "{}",
         error_message: ds.error_message ?? null,
       }));
-      datasetState.setConversationDatasets(conversation.id, convDatasets);
+      useDatasetStore.getState().setConversationDatasets(conversation.id, convDatasets);
     }
   }, [conversation, activeConversationId]);
 

@@ -118,6 +118,7 @@ interface ChatState {
 interface ChatActions {
   setActiveConversation: (id: string | null) => void;
   addMessage: (message: Message) => void;
+  loadMessages: (messages: Message[]) => void;
   appendStreamToken: (token: string) => void;
   appendReasoningToken: (token: string) => void;
   setStreaming: (isStreaming: boolean, messageId?: string) => void;
@@ -186,6 +187,9 @@ export const useChatStore = create<ChatState & ChatActions>()((set) => ({
     set((state) => ({
       messages: [...state.messages, message],
     })),
+
+  loadMessages: (messages) =>
+    set({ messages, isLoadingMessages: false }),
 
   appendStreamToken: (token) =>
     set((state) => ({

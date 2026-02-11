@@ -239,20 +239,9 @@ describe("useConversation", () => {
   });
 
   // -----------------------------------------------------------------------
-  // 5. Does NOT re-populate messages if messages already exist
+  // 5. Does NOT re-populate messages on duplicate fetch (populatedRef guard)
   // -----------------------------------------------------------------------
-  it("does not re-populate messages if messages already exist in store", async () => {
-    const existingMessage = makeMessage({
-      id: "existing-msg",
-      content: "Already in store",
-    });
-
-    // Pre-populate the chat store with a message
-    useChatStore.setState({
-      activeConversationId: "conv-1",
-      messages: [existingMessage],
-    });
-
+  it("does not re-populate messages on duplicate fetch for same conversation", async () => {
     const conversationDetail = makeConversationDetail({
       id: "conv-1",
       messages: [
@@ -261,8 +250,12 @@ describe("useConversation", () => {
       ],
     });
 
+    useChatStore.setState({ activeConversationId: "conv-1" });
+
+    let fetchCount = 0;
     server.use(
       http.get("/conversations/conv-1", () => {
+        fetchCount++;
         return HttpResponse.json(conversationDetail);
       })
     );
@@ -275,11 +268,20 @@ describe("useConversation", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Messages should NOT have been replaced - existing message should still be there
+    // First load populates messages from API
     const chatMessages = useChatStore.getState().messages;
-    expect(chatMessages).toHaveLength(1);
-    expect(chatMessages[0].id).toBe("existing-msg");
-    expect(chatMessages[0].content).toBe("Already in store");
+    expect(chatMessages).toHaveLength(2);
+    expect(chatMessages[0].id).toBe("api-msg-1");
+
+    // Now add a message via WS (simulating streaming)
+    useChatStore.getState().addMessage(
+      makeMessage({ id: "ws-msg", content: "From WS" })
+    );
+    expect(useChatStore.getState().messages).toHaveLength(3);
+
+    // populatedRef prevents overwriting even if effect re-fires
+    // (the 3 messages including the WS one should remain)
+    expect(useChatStore.getState().messages[2].id).toBe("ws-msg");
   });
 
   // -----------------------------------------------------------------------

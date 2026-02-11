@@ -4,7 +4,7 @@
 // Sets chatStore.activeConversationId.
 // Fetches conversation detail (messages + datasets) on switch.
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/api/client";
 import { useChatStore, parseSqlExecutions, type Message } from "@/stores/chatStore";
@@ -33,14 +33,11 @@ export function useConversation() {
     staleTime: 30_000, // 30s
   });
 
-  // When conversation data loads, populate stores
-  const prevConvIdRef = useChatStore(
-    (state) => state.activeConversationId
-  );
-  if (
-    conversation &&
-    prevConvIdRef === activeConversationId
-  ) {
+  // When conversation data loads, populate stores (must run in useEffect,
+  // not during render, to avoid setState-during-render infinite loops)
+  useEffect(() => {
+    if (!conversation || !activeConversationId) return;
+
     const chatState = useChatStore.getState();
     // Only populate if messages are empty (first load or switch)
     if (chatState.messages.length === 0 && conversation.messages.length > 0) {
@@ -64,7 +61,7 @@ export function useConversation() {
       }));
       datasetState.setConversationDatasets(conversation.id, convDatasets);
     }
-  }
+  }, [conversation, activeConversationId]);
 
   const switchConversation = useCallback(
     (conversationId: string | null) => {

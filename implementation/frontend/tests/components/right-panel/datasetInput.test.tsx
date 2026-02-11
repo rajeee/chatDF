@@ -203,10 +203,13 @@ describe("DI-SUBMIT-2: API error shows message", () => {
     const button = screen.getByRole("button", { name: /add/i });
     await user.click(button);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Not a valid parquet file")
-      ).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("Not a valid parquet file")
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 });

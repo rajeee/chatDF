@@ -64,6 +64,18 @@ export default defineConfig({
         target: API_TARGET,
         changeOrigin: true,
       },
+      "/settings": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/query-history": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/api": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
     },
   },
 });

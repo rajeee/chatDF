@@ -11,28 +11,7 @@ import { useDatasetStore, type ColumnProfile } from "@/stores/datasetStore";
 import { apiGet, apiPost, apiPatch } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-
-/** Map parquet type strings to user-friendly display labels. */
-function mapType(rawType: string): string {
-  switch (rawType) {
-    case "String":
-    case "Utf8":
-      return "Text";
-    case "Int32":
-    case "Int64":
-      return "Integer";
-    case "Float32":
-    case "Float64":
-      return "Decimal";
-    case "Date":
-    case "DateTime":
-      return "Date";
-    case "Boolean":
-      return "Boolean";
-    default:
-      return rawType;
-  }
-}
+import { mapType, parseColumns, type Column } from "@/utils/schemaUtils";
 
 /** Renders a small inline SVG icon based on the mapped column type. */
 function TypeIcon({ type }: { type: string }) {
@@ -262,27 +241,6 @@ function ColumnStatCard({
       </div>
     </div>
   );
-}
-
-interface Column {
-  name: string;
-  type: string;
-}
-
-function parseColumns(schemaJson: string): Column[] {
-  try {
-    const parsed = JSON.parse(schemaJson);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    // Handle wrapped format: {"columns": [...]}
-    if (parsed && Array.isArray(parsed.columns)) {
-      return parsed.columns;
-    }
-    return [];
-  } catch {
-    return [];
-  }
 }
 
 export function SchemaModal() {

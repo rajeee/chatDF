@@ -3,7 +3,7 @@ import {
   parseColumns,
   computeSchemaDiff,
   mapType,
-} from "@/components/right-panel/SchemaDiffModal";
+} from "@/utils/schemaUtils";
 
 // ---------------------------------------------------------------------------
 // parseColumns

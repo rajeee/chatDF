@@ -8,49 +8,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-
-/** Map parquet type strings to user-friendly display labels. */
-function mapType(rawType: string): string {
-  switch (rawType) {
-    case "String":
-    case "Utf8":
-      return "Text";
-    case "Int32":
-    case "Int64":
-      return "Integer";
-    case "Float32":
-    case "Float64":
-      return "Decimal";
-    case "Date":
-    case "DateTime":
-      return "Date";
-    case "Boolean":
-      return "Boolean";
-    default:
-      return rawType;
-  }
-}
-
-interface Column {
-  name: string;
-  type: string;
-}
-
-function parseColumns(schemaJson: string): Column[] {
-  try {
-    const parsed = JSON.parse(schemaJson);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    // Handle wrapped format: {"columns": [...]}
-    if (parsed && Array.isArray(parsed.columns)) {
-      return parsed.columns;
-    }
-    return [];
-  } catch {
-    return [];
-  }
-}
+import { mapType, parseColumns } from "@/utils/schemaUtils";
 
 function formatNumber(n: number): string {
   return new Intl.NumberFormat().format(n);

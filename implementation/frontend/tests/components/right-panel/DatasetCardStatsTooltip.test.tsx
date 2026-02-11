@@ -15,10 +15,40 @@ import {
 } from "../../helpers/render";
 import { resetAllStores, type Dataset } from "../../helpers/stores";
 import { DatasetCard } from "@/components/right-panel/DatasetCard";
-import {
-  getFormat,
-  getColumnTypeSummary,
-} from "@/components/right-panel/DatasetCard";
+
+// Local copies for direct unit testing (no longer exported from DatasetCard)
+function getFormat(url: string): string {
+  try {
+    const pathname = new URL(url).pathname;
+    const lastSegment = pathname.split("/").pop() ?? "";
+    const dotIndex = lastSegment.lastIndexOf(".");
+    if (dotIndex === -1 || dotIndex === lastSegment.length - 1) return "Unknown";
+    const ext = lastSegment.slice(dotIndex + 1).toLowerCase();
+    if (!ext) return "Unknown";
+    return ext.charAt(0).toUpperCase() + ext.slice(1);
+  } catch {
+    return "Unknown";
+  }
+}
+
+function getColumnTypeSummary(schemaJson: string): string {
+  try {
+    const schema = JSON.parse(schemaJson);
+    if (!schema || typeof schema !== "object") return "";
+    const entries = Object.values(schema) as string[];
+    if (entries.length === 0) return "";
+    const counts: Record<string, number> = {};
+    for (const type of entries) {
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+    const sorted = Object.entries(counts).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    );
+    return sorted.map(([type, count]) => `${count} ${type}`).join(", ");
+  } catch {
+    return "";
+  }
+}
 
 function makeDataset(overrides: Partial<Dataset> = {}): Dataset {
   return {

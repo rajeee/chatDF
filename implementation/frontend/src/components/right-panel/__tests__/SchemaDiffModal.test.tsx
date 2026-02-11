@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { SchemaDiffModal, computeSchemaDiff } from "../SchemaDiffModal";
+import { SchemaDiffModal } from "../SchemaDiffModal";
+import { computeSchemaDiff } from "@/utils/schemaUtils";
 
 // Mock state
 let mockSchemaDiffDatasetIds: [string, string] | null = null;

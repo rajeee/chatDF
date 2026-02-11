@@ -27,7 +27,7 @@ function getHostname(url: string): string {
   }
 }
 
-export function getFormat(url: string): string {
+function getFormat(url: string): string {
   try {
     const pathname = new URL(url).pathname;
     const lastSegment = pathname.split("/").pop() ?? "";
@@ -42,7 +42,7 @@ export function getFormat(url: string): string {
   }
 }
 
-export function getColumnTypeSummary(schemaJson: string): string {
+function getColumnTypeSummary(schemaJson: string): string {
   try {
     const schema = JSON.parse(schemaJson);
     if (!schema || typeof schema !== "object") return "";
@@ -63,7 +63,7 @@ export function getColumnTypeSummary(schemaJson: string): string {
   }
 }
 
-export function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

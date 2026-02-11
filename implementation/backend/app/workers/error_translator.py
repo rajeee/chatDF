@@ -48,12 +48,12 @@ def _match_error_pattern(
 
     # 1. Column not found
     col_match = re.search(
-        r'column\s+"([^"]+)"\s+not\s+found',
+        r'(?:column\s+"([^"]+)"\s+not\s+found|unable\s+to\s+find\s+column\s+"([^"]+)")',
         error_message,
         re.IGNORECASE,
     )
     if col_match or "columnnotfounderror" in msg_lower:
-        col_name = col_match.group(1) if col_match else "unknown"
+        col_name = (col_match.group(1) or col_match.group(2)) if col_match else "unknown"
         if available_columns:
             cols_str = ", ".join(available_columns)
             return (
@@ -76,8 +76,8 @@ def _match_error_pattern(
             "Try using CAST() to convert columns to matching types."
         )
 
-    # 4. Table not found
-    if re.search(r"table\s.*not\s+found", msg_lower):
+    # 4. Table / relation not found
+    if re.search(r"(?:table|relation)\s.*(?:not\s+found|was\s+not\s+found)", msg_lower):
         return (
             "Table not found. "
             "Make sure to use the dataset name as shown in the schema."
@@ -97,9 +97,10 @@ def _match_error_pattern(
             "Add a CASE WHEN to handle zero values."
         )
 
-    # 7. Function not found
+    # 7. Function not found / unsupported function
     if (
         re.search(r"function\s.*not\s+found", msg_lower)
+        or re.search(r"unsupported\s+function", msg_lower)
         or "invalidoperationerror" in msg_lower
     ):
         return (
@@ -154,9 +155,13 @@ def _match_error_pattern(
             "Use LIKE with % and _ wildcards instead."
         )
 
-    # 14. String to number conversion
-    if "could not parse" in msg_lower or (
-        "conversion" in msg_lower and "string" in msg_lower
+    # 14. String to number conversion / CAST failure
+    if (
+        "could not parse" in msg_lower
+        or (
+            "conversion" in msg_lower and "string" in msg_lower
+        )
+        or re.search(r"conversion\s+from\s+`\w+`\s+to\s+`\w+`\s+failed", msg_lower)
     ):
         return (
             "Could not convert string to number. "
@@ -188,8 +193,11 @@ def _match_error_pattern(
         )
 
     # 18. GROUP BY position out of range
-    if re.search(r"group\s+by\s+position\s+\d+\s+is\s+not\s+in\s+select", msg_lower) or \
-       "group by column" in msg_lower and "out of range" in msg_lower:
+    if (
+        re.search(r"group\s+by\s+position\s+\d+\s+is\s+not\s+in\s+select", msg_lower)
+        or ("group by column" in msg_lower and "out of range" in msg_lower)
+        or re.search(r"group\s+by\s+ordinal\s+value\s+must\s+refer\s+to\s+a\s+valid\s+column", msg_lower)
+    ):
         return (
             "GROUP BY position number is out of range. "
             "Verify the column position numbers match your SELECT clause. "
@@ -197,22 +205,29 @@ def _match_error_pattern(
         )
 
     # 19. Duplicate column name in result
-    if "duplicate" in msg_lower and "column" in msg_lower:
+    if "duplicate" in msg_lower and ("column" in msg_lower or "output name" in msg_lower):
         return (
             "Duplicate column name in query results. "
             "Use aliases to give each column a unique name: "
             "SELECT a.id AS a_id, b.id AS b_id ..."
         )
 
-    # 20. LIKE pattern type error (non-string column)
-    if "like" in msg_lower and ("cannot apply" in msg_lower or "invalid type" in msg_lower):
+    # 20. LIKE pattern type error (non-string column) / type expectation error
+    if (
+        ("like" in msg_lower and ("cannot apply" in msg_lower or "invalid type" in msg_lower))
+        or re.search(r"expected\s+string\s+type,\s+got", msg_lower)
+    ):
         return (
             "LIKE can only be used with text columns. "
             "Cast the column to text first: CAST(column AS VARCHAR) LIKE '%pattern%'"
         )
 
-    # 21. Nested subquery / CTE naming error
-    if "cte" in msg_lower or ("subquery" in msg_lower and "must have" in msg_lower):
+    # 21. Nested subquery / CTE / derived table alias error
+    if (
+        "cte" in msg_lower
+        or ("subquery" in msg_lower and "must have" in msg_lower)
+        or "derived tables must have aliases" in msg_lower
+    ):
         return (
             "Subquery or CTE error. Make sure every subquery has an alias "
             "(e.g., SELECT * FROM (SELECT ...) AS subquery_name) and "
@@ -324,6 +339,76 @@ def _match_error_pattern(
             "Use a subquery or CTE: "
             "WITH sub AS (SELECT ... COUNT(*) AS cnt FROM ... GROUP BY ...) "
             "SELECT AVG(cnt) FROM sub"
+        )
+
+    # 36. DML/DDL statement not supported (INSERT, UPDATE, DELETE, CREATE, ALTER, DROP)
+    if "statement type is not supported" in msg_lower:
+        return (
+            "Only SELECT queries are supported. "
+            "Polars SQL does not support INSERT, UPDATE, DELETE, CREATE, ALTER, or DROP statements. "
+            "Use SELECT queries to analyze and retrieve data."
+        )
+
+    # 37. LIMIT/OFFSET validation error
+    if "non-numeric arguments for limit" in msg_lower or "non-numeric arguments for offset" in msg_lower:
+        return (
+            "LIMIT and OFFSET must be positive integers. "
+            "Use whole numbers: e.g., LIMIT 10 OFFSET 20."
+        )
+
+    # 38. IN clause type mismatch ('is_in' cannot check)
+    if "is_in" in msg_lower and "cannot check" in msg_lower:
+        return (
+            "Type mismatch in IN clause. "
+            "The values in IN (...) must match the column type. "
+            "Use CAST() to convert: e.g., WHERE CAST(col AS VARCHAR) IN ('a', 'b')."
+        )
+
+    # 39. Multiple tables in FROM (implicit join not supported)
+    if "multiple tables in from clause" in msg_lower:
+        return (
+            "Comma-separated tables in FROM are not supported. "
+            "Use explicit JOIN syntax instead: "
+            "SELECT * FROM t1 JOIN t2 ON t1.id = t2.id"
+        )
+
+    # 40. TOP N syntax (SQL Server style)
+    if "top" in msg_lower and "clause" in msg_lower and "limit" in msg_lower:
+        return (
+            "TOP is not supported in Polars SQL. "
+            "Use LIMIT instead: SELECT * FROM table LIMIT 10."
+        )
+
+    # 41. Unsupported datatype in CAST
+    if re.search(r"datatype\s+.+is\s+not\s+(?:currently\s+)?supported", msg_lower):
+        return (
+            "Unsupported data type in CAST. "
+            "Use standard Polars types: INTEGER, BIGINT, FLOAT, DOUBLE, "
+            "VARCHAR, BOOLEAN, DATE, TIMESTAMP."
+        )
+
+    # 42. Sort / ORDER BY length mismatch
+    if "sort expressions must have same length" in msg_lower:
+        return (
+            "ORDER BY error. The sort expression produces a different number "
+            "of rows than the query. Avoid using aggregate functions in ORDER BY "
+            "without a GROUP BY clause."
+        )
+
+    # 43. HAVING clause outside GROUP BY (specific Polars phrasing)
+    if "having clause not valid outside of group by" in msg_lower:
+        return (
+            "HAVING clause error. "
+            "HAVING can only be used with GROUP BY. "
+            "Use WHERE to filter individual rows instead."
+        )
+
+    # 44. UNION requires equal column count (specific Polars phrasing)
+    if "union requires equal number of columns" in msg_lower:
+        return (
+            "UNION error -- each SELECT must return the same number of columns. "
+            "Use UNION BY NAME to combine tables with different column names, "
+            "or adjust your SELECT statements to return matching columns."
         )
 
     # Generic fallback for unrecognized errors

@@ -5,7 +5,10 @@
  * 1. Load app, authenticate via dev-login, verify main UI renders
  * 2. Paste a dataset URL → dataset loads → schema appears
  * 3. Conversation CRUD via API (create, rename, pin/unpin, delete)
- * 4. Export via API (CSV, conversation JSON, conversation HTML)
+ * 4. Export via API (CSV, XLSX, conversation JSON, conversation HTML)
+ * 5. Dataset API lifecycle (create conversation, add dataset, verify, clean up)
+ * 6. Health endpoint
+ * 7. Settings API (get, update, verify, reset)
  *
  * NOTE: Chat/LLM tests require a real Gemini API key and are skipped
  * when running against a test backend with a dummy key.
@@ -382,5 +385,168 @@ test.describe("Core Journey: Export", () => {
 
     // Clean up
     await page.request.delete(`${BACKEND_URL}/conversations/${conv.id}`);
+  });
+
+  test("XLSX export endpoint produces a valid Excel file", async ({ page }) => {
+    // POST to /export/xlsx with sample data
+    const xlsxResp = await page.request.post(`${BACKEND_URL}/export/xlsx`, {
+      data: {
+        columns: ["id", "name", "value"],
+        rows: [
+          [1, "alpha", 10.5],
+          [2, "beta", 20.3],
+          [3, "gamma", 30.1],
+        ],
+        filename: "e2e-test-xlsx-export",
+      },
+    });
+    expect(xlsxResp.ok()).toBe(true);
+
+    // Verify response headers indicate an XLSX download
+    const contentType = xlsxResp.headers()["content-type"];
+    expect(contentType).toContain(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const disposition = xlsxResp.headers()["content-disposition"];
+    expect(disposition).toContain(".xlsx");
+
+    // Verify the response body is non-empty binary content
+    const body = await xlsxResp.body();
+    expect(body.byteLength).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test: Dataset API lifecycle
+// ---------------------------------------------------------------------------
+
+test.describe("Core Journey: Dataset API", () => {
+  test.beforeEach(async ({ page }) => {
+    await devLogin(page);
+  });
+
+  test("full dataset lifecycle via API", async ({ page }) => {
+    test.setTimeout(60_000);
+
+    // Step 1: Create a conversation
+    const createResp = await page.request.post(`${BACKEND_URL}/conversations`);
+    expect(createResp.ok()).toBe(true);
+    const conv = await createResp.json();
+    const convId = conv.id;
+
+    try {
+      // Step 2: Add a dataset by URL
+      const addResp = await page.request.post(
+        `${BACKEND_URL}/conversations/${convId}/datasets`,
+        {
+          data: {
+            url: "https://huggingface.co/datasets/scikit-learn/iris/resolve/main/Iris.parquet",
+          },
+        }
+      );
+      expect(addResp.ok()).toBe(true);
+      expect(addResp.status()).toBe(201);
+      const ack = await addResp.json();
+      expect(ack.dataset_id).toBeTruthy();
+      expect(ack.status).toBe("loading");
+
+      // Step 3: Poll the conversation detail until the dataset is ready
+      let datasets: Array<{
+        id: string;
+        name: string;
+        status: string;
+        schema_json: string;
+        row_count: number;
+      }> = [];
+      const maxAttempts = 30;
+      for (let i = 0; i < maxAttempts; i++) {
+        await page.waitForTimeout(1_000);
+        const detailResp = await page.request.get(
+          `${BACKEND_URL}/conversations/${convId}`
+        );
+        expect(detailResp.ok()).toBe(true);
+        const detail = await detailResp.json();
+        datasets = detail.datasets;
+        if (
+          datasets.length > 0 &&
+          datasets.some((d) => d.status === "ready")
+        ) {
+          break;
+        }
+      }
+
+      // Step 4: Verify the dataset appears in the list with expected fields
+      expect(datasets.length).toBeGreaterThan(0);
+      const dataset = datasets.find((d) => d.id === ack.dataset_id);
+      expect(dataset).toBeTruthy();
+      expect(dataset!.id).toBeTruthy();
+      expect(dataset!.name).toBeTruthy();
+      expect(dataset!.status).toBe("ready");
+      expect(dataset!.schema_json).toBeTruthy();
+      expect(dataset!.row_count).toBeGreaterThan(0);
+    } finally {
+      // Clean up: delete the conversation (which removes datasets too)
+      await page.request.delete(`${BACKEND_URL}/conversations/${convId}`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test: Health endpoint
+// ---------------------------------------------------------------------------
+
+test.describe("Core Journey: Health", () => {
+  test("health endpoint returns ok", async ({ page }) => {
+    const resp = await page.request.get(`${BACKEND_URL}/health`);
+    expect(resp.ok()).toBe(true);
+    expect(resp.status()).toBe(200);
+
+    const body = await resp.json();
+    expect(body.status).toBe("ok");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test: Settings API
+// ---------------------------------------------------------------------------
+
+test.describe("Core Journey: Settings API", () => {
+  test.beforeEach(async ({ page }) => {
+    await devLogin(page);
+  });
+
+  test("get, update, and verify settings", async ({ page }) => {
+    // Step 1: GET /settings — verify endpoint works and returns JSON
+    const getResp = await page.request.get(`${BACKEND_URL}/settings`);
+    expect(getResp.ok()).toBe(true);
+    const settings = await getResp.json();
+    expect(typeof settings).toBe("object");
+    expect(settings).toHaveProperty("dev_mode");
+    expect(settings).toHaveProperty("selected_model");
+
+    // Save original values so we can restore them
+    const originalModel = settings.selected_model;
+
+    // Step 2: PUT /settings to change selected_model
+    const updateResp = await page.request.put(`${BACKEND_URL}/settings`, {
+      data: { selected_model: "gemini-2.0-flash" },
+    });
+    expect(updateResp.ok()).toBe(true);
+    const updated = await updateResp.json();
+    expect(updated.selected_model).toBe("gemini-2.0-flash");
+
+    // Step 3: GET /settings again and verify the change persisted
+    const verifyResp = await page.request.get(`${BACKEND_URL}/settings`);
+    expect(verifyResp.ok()).toBe(true);
+    const verified = await verifyResp.json();
+    expect(verified.selected_model).toBe("gemini-2.0-flash");
+
+    // Step 4: Reset to original value
+    const resetResp = await page.request.put(`${BACKEND_URL}/settings`, {
+      data: { selected_model: originalModel },
+    });
+    expect(resetResp.ok()).toBe(true);
+    const reset = await resetResp.json();
+    expect(reset.selected_model).toBe(originalModel);
   });
 });

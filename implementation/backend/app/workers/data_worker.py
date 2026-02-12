@@ -229,6 +229,15 @@ def fetch_and_validate(url: str) -> dict:
         resp = urllib.request.urlopen(req, timeout=HEAD_REQUEST_TIMEOUT)
         content_length = resp.headers.get("Content-Length")
         file_size_bytes = int(content_length) if content_length else None
+
+        # Reject oversized remote files early (before download)
+        if file_size_bytes is not None and file_size_bytes > 500 * 1024 * 1024:
+            size_mb = file_size_bytes / (1024 * 1024)
+            return {
+                "valid": False,
+                "error": f"File is too large ({size_mb:.0f} MB). Maximum supported size is 500 MB.",
+                "error_type": "validation",
+            }
     except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError) as exc:
         error_msg = str(exc)
         if isinstance(exc, urllib.error.HTTPError):

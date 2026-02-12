@@ -265,3 +265,13 @@ class TestNewPolarsDialectHints:
     def test_prompt_warns_against_string_int_compare(self, sample_datasets):
         prompt = build_system_prompt(sample_datasets)
         assert "compare string columns to integers" in prompt
+
+
+class TestNewFewShotPatterns:
+    """Verify new few-shot example query patterns are present in the system prompt."""
+
+    def test_new_few_shot_patterns_present(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "BETWEEN" in prompt
+        assert "Conditional aggregation" in prompt
+        assert "String search with multiple patterns" in prompt

@@ -36,6 +36,12 @@
   /* Smooth scrolling for better UX */
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    overflow-x: hidden;
+    width: 100%;
   }
 
   .dark {

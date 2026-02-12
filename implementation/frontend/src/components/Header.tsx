@@ -15,6 +15,7 @@ const statusConfig: Record<ConnectionStatus, { color: string; label: string }> =
 };
 
 export function Header() {
+  const toggleLeftPanel = useUiStore((s) => s.toggleLeftPanel);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const connectionStatus = useConnectionStore((s) => s.status);
   const { color, label } = statusConfig[connectionStatus];
@@ -34,6 +35,20 @@ export function Header() {
       }}
     >
       <div className="flex items-center gap-2">
+        {/* Sidebar toggle — mobile only (on desktop the sidebar has its own toggle) */}
+        <button
+          data-testid="toggle-left-panel-mobile"
+          onClick={toggleLeftPanel}
+          className="lg:hidden p-1.5 rounded hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+          aria-label="Toggle sidebar"
+          title="Toggle sidebar"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
         <span className="text-lg font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>
           ChatDF
         </span>

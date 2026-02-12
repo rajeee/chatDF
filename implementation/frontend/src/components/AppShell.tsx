@@ -57,7 +57,7 @@ export function AppShell() {
   return (
     <div
       data-testid="app-shell"
-      className="flex flex-col min-h-screen safe-area-top safe-area-left safe-area-right"
+      className="flex flex-col min-h-screen safe-area-top safe-area-left safe-area-right overflow-x-hidden"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
       {/* Skip-to-content link for keyboard/screen-reader users */}

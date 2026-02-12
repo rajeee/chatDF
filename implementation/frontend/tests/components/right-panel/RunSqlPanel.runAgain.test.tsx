@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { RunSqlPanel } from "@/components/right-panel/RunSqlPanel";
 import { useUiStore } from "@/stores/uiStore";
+import { useDevModeStore } from "@/stores/devModeStore";
 
 // Mock apiPost and other API functions
 vi.mock("@/api/client", () => ({
@@ -65,6 +66,7 @@ describe("RunSqlPanel pendingSql (Run Again)", () => {
     vi.clearAllMocks();
     // Reset pendingSql to null
     useUiStore.setState({ pendingSql: null });
+    useDevModeStore.setState({ devMode: true });
   });
 
   it("populates textarea and expands panel when pendingSql is set", async () => {

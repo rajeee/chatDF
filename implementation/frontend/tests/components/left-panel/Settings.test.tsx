@@ -11,7 +11,7 @@ import { renderWithProviders, screen, waitFor, userEvent } from "../../helpers/r
 import { resetAllStores } from "../../helpers/stores";
 import { server } from "../../helpers/mocks/server";
 import { useChatStore } from "@/stores/chatStore";
-import { Settings } from "@/components/left-panel/Settings";
+import { SettingsModal } from "@/components/left-panel/SettingsModal";
 
 // In-memory localStorage stub (jsdom localStorage is unreliable)
 function createMockLocalStorage() {
@@ -97,7 +97,7 @@ afterEach(() => {
 
 describe("ST-1: Theme toggle", () => {
   it("renders theme toggle with three options", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     expect(screen.getByTestId("theme-light")).toBeInTheDocument();
     expect(screen.getByTestId("theme-dark")).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("clicking dark adds dark class to document", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByTestId("theme-dark"));
 
@@ -115,7 +115,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("clicking light removes dark class from document", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     // First set dark, then switch to light
     await user.click(screen.getByTestId("theme-dark"));
@@ -127,7 +127,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("persists theme choice to localStorage", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByTestId("theme-dark"));
 
@@ -137,14 +137,14 @@ describe("ST-1: Theme toggle", () => {
 
 describe("ST-2: Clear all conversations", () => {
   it("renders clear all conversations button", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     expect(screen.getByText("Clear all conversations")).toBeInTheDocument();
   });
 
   it("clicking clear shows confirmation dialog", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByText("Clear all conversations"));
 
@@ -165,7 +165,7 @@ describe("ST-2: Clear all conversations", () => {
     useChatStore.setState({ activeConversationId: "conv-1" });
 
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByText("Clear all conversations"));
     await user.click(screen.getByText("Delete All"));
@@ -178,7 +178,7 @@ describe("ST-2: Clear all conversations", () => {
 
   it("cancelling confirmation closes the dialog", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByText("Clear all conversations"));
     expect(screen.getByText("Delete All")).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe("ST-2: Clear all conversations", () => {
 describe("ST-3: About modal", () => {
   it("opens about modal when About link is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByText("About"));
 
@@ -202,7 +202,7 @@ describe("ST-3: About modal", () => {
 
   it("closes about modal when close button is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal onClose={() => {}} />);
 
     await user.click(screen.getByText("About"));
     expect(screen.getByTestId("about-modal")).toBeInTheDocument();

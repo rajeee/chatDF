@@ -26,9 +26,6 @@ import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { LiveRegion } from "./LiveRegion";
 import { SkeletonMessages } from "./SkeletonMessages";
 import { FollowupSuggestions } from "./FollowupSuggestions";
-import { ShareDialog } from "./ShareDialog";
-import { SavedQueries } from "./SavedQueries";
-import { ConversationTemplates } from "./ConversationTemplates";
 
 export function ChatArea() {
   const queryClient = useQueryClient();
@@ -197,16 +194,6 @@ export function ChatArea() {
     [handleSend]
   );
 
-  // Run a saved query by inserting it into the chat input and auto-sending
-  const handleRunQuery = useCallback((query: string) => {
-    chatInputRef.current?.setInputValue(query);
-    setTimeout(() => chatInputRef.current?.sendMessage(), 50);
-  }, []);
-
-  // Share dialog state
-  const [shareOpen, setShareOpen] = useState(false);
-  const shareContainerRef = useRef<HTMLDivElement>(null);
-
   return (
     <section
       id="main-content"
@@ -220,76 +207,6 @@ export function ChatArea() {
 
       {/* Constrained-width inner container */}
       <div className="flex flex-col w-full max-w-3xl flex-1">
-        {/* Share + Download buttons - visible when conversation has messages */}
-        {hasMessages && activeConversationId && (
-          <div className="flex justify-end gap-1 px-2 sm:px-4 pt-2">
-            {/* Download JSON button */}
-            <button
-              data-testid="download-conversation-btn"
-              className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
-              style={{ color: "var(--color-text)" }}
-              onClick={() => {
-                window.open(`/conversations/${activeConversationId}/export`, "_blank");
-              }}
-              title="Download conversation as JSON"
-              aria-label="Download conversation as JSON"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
-
-            {/* Share button */}
-            <div className="relative" ref={shareContainerRef}>
-              <button
-                data-testid="share-btn"
-                className="p-1.5 rounded text-xs opacity-40 hover:opacity-100 hover:bg-gray-500/10 active:scale-90 transition-all duration-150"
-                style={{ color: "var(--color-text)" }}
-                onClick={() => setShareOpen((o) => !o)}
-                title="Share conversation"
-                aria-label="Share conversation"
-                aria-expanded={shareOpen}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                </svg>
-              </button>
-              {shareOpen && (
-                <ShareDialog
-                  conversationId={activeConversationId}
-                  onClose={() => setShareOpen(false)}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Main content area - conditional rendering */}
         <div className="flex-1 flex flex-col">
           {showOnboarding && (
@@ -301,10 +218,6 @@ export function ChatArea() {
               <SuggestedPrompts
                 datasets={datasets}
                 onSendPrompt={handleSend}
-              />
-              <ConversationTemplates
-                onSendMessage={handleSend}
-                datasetCount={datasets.filter((d) => d.status === "ready").length}
               />
             </div>
           )}
@@ -325,14 +238,13 @@ export function ChatArea() {
         {/* Follow-up suggestion chips */}
         <FollowupSuggestions onSendPrompt={handleSend} />
 
-        {/* Saved queries + Chat input - sticky at bottom */}
+        {/* Chat input - sticky at bottom */}
         <div
           className="sticky bottom-0 safe-area-bottom"
           style={{
             backgroundColor: "var(--color-bg)",
           }}
         >
-          <SavedQueries onRunQuery={handleRunQuery} />
           <div
             className="p-2 sm:p-4 border-t"
             style={{

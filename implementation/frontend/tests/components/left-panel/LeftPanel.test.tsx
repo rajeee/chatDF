@@ -3,10 +3,7 @@
 // LP-1: Renders collapsed state when leftPanelOpen is false
 // LP-2: Renders expanded state when leftPanelOpen is true
 // LP-3: Shows hamburger button in collapsed state
-// LP-4: Shows Chats and Bookmarks tabs in expanded state
-// LP-5: Default view is conversations (ChatHistory visible)
-// LP-6: Clicking Bookmarks tab switches to BookmarkPanel
-// LP-7: Clicking Chats tab switches back to ChatHistory
+// LP-5: Default view shows ChatHistory
 // LP-8: Toggle button calls toggleLeftPanel
 // LP-9: Resize handle exists in expanded state
 // LP-10: Panel width matches leftPanelWidth from store
@@ -20,16 +17,8 @@ vi.mock("@/components/left-panel/ChatHistory", () => ({
   ChatHistory: () => <div data-testid="mock-chat-history">ChatHistory</div>,
 }));
 
-vi.mock("@/components/left-panel/BookmarkPanel", () => ({
-  BookmarkPanel: () => <div data-testid="mock-bookmark-panel">BookmarkPanel</div>,
-}));
-
 vi.mock("@/components/left-panel/Settings", () => ({
   Settings: () => <div data-testid="mock-settings">Settings</div>,
-}));
-
-vi.mock("@/components/left-panel/UsageStats", () => ({
-  UsageStats: () => <div data-testid="mock-usage-stats">UsageStats</div>,
 }));
 
 vi.mock("@/components/left-panel/Account", () => ({
@@ -79,19 +68,8 @@ describe("LP-1: Renders collapsed state when leftPanelOpen is false", () => {
     render(<LeftPanel />);
 
     expect(screen.queryByTestId("mock-chat-history")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-bookmark-panel")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mock-settings")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-usage-stats")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mock-account")).not.toBeInTheDocument();
-  });
-
-  it("does not render tabs in collapsed state", () => {
-    setUiState({ leftPanelOpen: false });
-
-    render(<LeftPanel />);
-
-    expect(screen.queryByTestId("left-panel-tab-conversations")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("left-panel-tab-bookmarks")).not.toBeInTheDocument();
   });
 });
 
@@ -114,7 +92,6 @@ describe("LP-2: Renders expanded state when leftPanelOpen is true", () => {
 
     expect(screen.getByTestId("mock-chat-history")).toBeInTheDocument();
     expect(screen.getByTestId("mock-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-usage-stats")).toBeInTheDocument();
     expect(screen.getByTestId("mock-account")).toBeInTheDocument();
   });
 });
@@ -140,28 +117,6 @@ describe("LP-3: Shows hamburger button in collapsed state", () => {
   });
 });
 
-describe("LP-4: Shows Chats and Bookmarks tabs in expanded state", () => {
-  it("renders Chats tab", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const chatsTab = screen.getByTestId("left-panel-tab-conversations");
-    expect(chatsTab).toBeInTheDocument();
-    expect(chatsTab).toHaveTextContent("Chats");
-  });
-
-  it("renders Bookmarks tab", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const bookmarksTab = screen.getByTestId("left-panel-tab-bookmarks");
-    expect(bookmarksTab).toBeInTheDocument();
-    expect(bookmarksTab).toHaveTextContent("Bookmarks");
-  });
-});
-
 describe("LP-5: Default view is conversations (ChatHistory visible)", () => {
   it("shows ChatHistory by default", () => {
     setUiState({ leftPanelOpen: true });
@@ -169,91 +124,6 @@ describe("LP-5: Default view is conversations (ChatHistory visible)", () => {
     render(<LeftPanel />);
 
     expect(screen.getByTestId("mock-chat-history")).toBeInTheDocument();
-    expect(screen.queryByTestId("mock-bookmark-panel")).not.toBeInTheDocument();
-  });
-
-  it("Chats tab has active styling by default", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const chatsTab = screen.getByTestId("left-panel-tab-conversations");
-    // Active tab has accent background color and opacity 1
-    expect(chatsTab.style.backgroundColor).toBe("var(--color-accent)");
-    expect(chatsTab.style.opacity).toBe("1");
-  });
-});
-
-describe("LP-6: Clicking Bookmarks tab switches to BookmarkPanel", () => {
-  it("shows BookmarkPanel after clicking Bookmarks tab", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const bookmarksTab = screen.getByTestId("left-panel-tab-bookmarks");
-    fireEvent.click(bookmarksTab);
-
-    expect(screen.getByTestId("mock-bookmark-panel")).toBeInTheDocument();
-    expect(screen.queryByTestId("mock-chat-history")).not.toBeInTheDocument();
-  });
-
-  it("Bookmarks tab gets active styling after click", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const bookmarksTab = screen.getByTestId("left-panel-tab-bookmarks");
-    fireEvent.click(bookmarksTab);
-
-    expect(bookmarksTab.style.backgroundColor).toBe("var(--color-accent)");
-    expect(bookmarksTab.style.opacity).toBe("1");
-  });
-
-  it("Chats tab loses active styling after switching to Bookmarks", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    const bookmarksTab = screen.getByTestId("left-panel-tab-bookmarks");
-    fireEvent.click(bookmarksTab);
-
-    const chatsTab = screen.getByTestId("left-panel-tab-conversations");
-    expect(chatsTab.style.backgroundColor).toBe("transparent");
-    expect(chatsTab.style.opacity).toBe("0.6");
-  });
-});
-
-describe("LP-7: Clicking Chats tab switches back to ChatHistory", () => {
-  it("shows ChatHistory again after switching back from Bookmarks", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    // Switch to bookmarks first
-    const bookmarksTab = screen.getByTestId("left-panel-tab-bookmarks");
-    fireEvent.click(bookmarksTab);
-    expect(screen.getByTestId("mock-bookmark-panel")).toBeInTheDocument();
-
-    // Switch back to chats
-    const chatsTab = screen.getByTestId("left-panel-tab-conversations");
-    fireEvent.click(chatsTab);
-
-    expect(screen.getByTestId("mock-chat-history")).toBeInTheDocument();
-    expect(screen.queryByTestId("mock-bookmark-panel")).not.toBeInTheDocument();
-  });
-
-  it("Chats tab gets active styling after switching back", () => {
-    setUiState({ leftPanelOpen: true });
-
-    render(<LeftPanel />);
-
-    // Switch to bookmarks, then back to chats
-    fireEvent.click(screen.getByTestId("left-panel-tab-bookmarks"));
-    fireEvent.click(screen.getByTestId("left-panel-tab-conversations"));
-
-    const chatsTab = screen.getByTestId("left-panel-tab-conversations");
-    expect(chatsTab.style.backgroundColor).toBe("var(--color-accent)");
-    expect(chatsTab.style.opacity).toBe("1");
   });
 });
 

@@ -1,6 +1,6 @@
 // Implements: spec/frontend/plan.md#layout-implementation (RightPanel container)
 //
-// Container for DatasetInput + DatasetCard list, with a History tab.
+// Container for DatasetInput + DatasetCard list, with Discover and Pinned tabs.
 // Resizable via drag handle on left edge.
 // Below 1024px (lg): renders as fixed overlay from right side, toggled via Header button.
 // On desktop (>=1024px): always visible inline panel with resize handle.
@@ -19,11 +19,8 @@ import { DatasetCatalog } from "./DatasetCatalog";
 import { SchemaModal } from "./SchemaModal";
 import { PreviewModal } from "./PreviewModal";
 import { ComparisonModal } from "./ComparisonModal";
-import { QueryResultComparisonModal } from "./QueryResultComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
-import { SchemaDiffModal } from "./SchemaDiffModal";
 import { RunSqlPanel } from "./RunSqlPanel";
-import { QueryHistoryPanel } from "./QueryHistoryPanel";
 import { DatasetDiscoveryPanel } from "./DatasetDiscoveryPanel";
 import { PinnedResultsPanel } from "./PinnedResultsPanel";
 
@@ -41,8 +38,6 @@ export function RightPanel() {
   const setRightPanelTab = useUiStore((s) => s.setRightPanelTab);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const openComparisonModal = useUiStore((s) => s.openComparisonModal);
-  const openSchemaDiffModal = useUiStore((s) => s.openSchemaDiffModal);
-  const setPendingSql = useUiStore((s) => s.setPendingSql);
   const readyDatasets = useMemo(
     () => datasets.filter((d) => d.status === "ready"),
     [datasets]
@@ -54,14 +49,6 @@ export function RightPanel() {
     onDismiss: toggleRightPanel,
     enabled: rightPanelOpen,
   });
-
-  const handleRunAgain = useCallback(
-    (sql: string) => {
-      setPendingSql(sql);
-      setRightPanelTab("datasets");
-    },
-    [setPendingSql, setRightPanelTab]
-  );
 
   const addDataset = useDatasetStore((s) => s.addDataset);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
@@ -217,12 +204,6 @@ export function RightPanel() {
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
               </svg>
             )},
-            { key: "history" as RightPanelTab, label: "History", icon: (
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            )},
             { key: "pinned" as RightPanelTab, label: "Pinned", icon: (
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2l0 5" />
@@ -324,34 +305,17 @@ export function RightPanel() {
                     </svg>
                     Compare
                   </button>
-                  <button
-                    data-testid="schema-diff-button"
-                    onClick={() =>
-                      openSchemaDiffModal([readyDatasets[0].id, readyDatasets[1].id])
-                    }
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium hover:brightness-110 active:scale-[0.98] transition-all duration-150"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text)",
-                    }}
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 3v18" />
-                      <path d="M3 12h18" />
-                      <path d="M5 5l14 14" />
-                    </svg>
-                    Schema Diff
-                  </button>
                 </div>
               )}
+              {datasets.length > 0 && conversationId && (
+                <RunSqlPanel conversationId={conversationId} />
+              )}
+            </>
+          )}
+
+          {rightPanelTab === "discover" && (
+            <>
+              <DatasetDiscoveryPanel />
               <DatasetSearch
                 onLoad={handleLoadFromSearch}
                 loading={searchLoading}
@@ -360,18 +324,7 @@ export function RightPanel() {
                 onLoad={handleLoadFromSearch}
                 loading={searchLoading}
               />
-              {datasets.length > 0 && conversationId && (
-                <RunSqlPanel conversationId={conversationId} />
-              )}
             </>
-          )}
-
-          {rightPanelTab === "discover" && (
-            <DatasetDiscoveryPanel />
-          )}
-
-          {rightPanelTab === "history" && (
-            <QueryHistoryPanel onRunAgain={handleRunAgain} />
           )}
 
           {rightPanelTab === "pinned" && (
@@ -382,8 +335,6 @@ export function RightPanel() {
       <SchemaModal />
       <PreviewModal />
       <ComparisonModal />
-      <SchemaDiffModal />
-      <QueryResultComparisonModal />
       <PresetSourcesModal />
     </aside>
   );

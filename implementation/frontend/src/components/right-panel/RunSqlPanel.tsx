@@ -1,31 +1,20 @@
-// RunSqlPanel — collapsible SQL editor in the right panel.
+// RunSqlPanel — collapsible SQL editor in the right panel (dev-mode only).
 // Users can type SQL queries and execute them against loaded datasets
 // using Cmd/Ctrl+Enter or the Run button.
 // Includes SQL autocomplete for keywords, table names, and column names.
 // Uses CodeMirror 6 for the SQL editor with syntax highlighting.
 
-import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
-import { apiPost, explainSql, generateSql } from "@/api/client";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { apiPost } from "@/api/client";
 import { useUiStore } from "@/stores/uiStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
-import { useSavedQueryStore } from "@/stores/savedQueryStore";
 import {
   useSqlAutocomplete,
-  parseSchema,
   type Suggestion,
 } from "@/hooks/useSqlAutocomplete";
 import { useToastStore } from "@/stores/toastStore";
-import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
-import { useChatStore } from "@/stores/chatStore";
-import { formatSql } from "@/utils/sqlFormatter";
-import { detectChartTypes } from "@/utils/chartDetection";
-import { generateQueryTemplates, type QueryTemplate } from "@/utils/queryTemplates";
+import { useDevModeStore } from "@/stores/devModeStore";
 
-const ChartVisualization = lazy(() =>
-  import("@/components/chat-area/ChartVisualization").then((m) => ({
-    default: m.ChartVisualization,
-  }))
-);
 import { useEditableCodeMirror } from "@/hooks/useEditableCodeMirror";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -46,76 +35,28 @@ interface RunSqlPanelProps {
 }
 
 export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
+  const devMode = useDevModeStore((s) => s.devMode);
+  if (!devMode) return null;
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [sql, setSql] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [nlQuestion, setNlQuestion] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<RunQueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [showSavePopover, setShowSavePopover] = useState(false);
-  const [saveName, setSaveName] = useState("");
-  const [saveFolder, setSaveFolder] = useState("");
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const savePopoverRef = useRef<HTMLDivElement>(null);
   const [resultCopied, setResultCopied] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [pinnedQueryId, setPinnedQueryId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isExplaining, setIsExplaining] = useState(false);
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [explanationExpanded, setExplanationExpanded] = useState(true);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
-  const [showChart, setShowChart] = useState(false);
   const [sortColumn, setSortColumn] = useState<number | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [showTemplates, setShowTemplates] = useState(false);
   const [resultFilter, setResultFilter] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
-  const templatesRef = useRef<HTMLDivElement>(null);
   const pendingSql = useUiStore((s) => s.pendingSql);
   const setPendingSql = useUiStore((s) => s.setPendingSql);
-  const openQueryResultComparison = useUiStore((s) => s.openQueryResultComparison);
   const addQuery = useQueryHistoryStore((s) => s.addQuery);
   const autocomplete = useSqlAutocomplete();
-
-  // Get datasets for the current conversation to generate templates
-  const activeConversationId = useChatStore((s) => s.activeConversationId);
-  const allDatasets = useDatasetStore((s) => s.datasets);
-  const conversationDatasets = useMemo(
-    () => filterDatasetsByConversation(allDatasets, activeConversationId),
-    [allDatasets, activeConversationId]
-  );
-
-  // Generate templates from datasets
-  const templates = useMemo(() => {
-    const readyDatasets = conversationDatasets.filter((d) => d.status === "ready");
-    if (readyDatasets.length === 0) return [];
-    const schemas = readyDatasets.map((d) => ({
-      tableName: d.name,
-      columns: parseSchema(d.schema_json).map((c) => ({
-        name: c.name,
-        type: c.type,
-      })),
-    }));
-    return generateQueryTemplates(schemas);
-  }, [conversationDatasets]);
-
-  // Click outside to close templates dropdown
-  useEffect(() => {
-    if (!showTemplates) return;
-    function handleClick(e: MouseEvent) {
-      if (templatesRef.current && !templatesRef.current.contains(e.target as Node)) {
-        setShowTemplates(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showTemplates]);
 
   // Debounce the result filter input (300ms)
   useEffect(() => {
@@ -128,10 +69,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   // Theme detection (same approach as SQLPanel.tsx)
   const isDark = document.documentElement.classList.contains("dark");
 
-  // Refs for callbacks passed to CodeMirror so the hook doesn't
-  // need to be recreated when executeQuery/handleFormat change.
+  // Ref for callback passed to CodeMirror so the hook doesn't
+  // need to be recreated when executeQuery changes.
   const executeQueryRef = useRef<() => void>(() => {});
-  const handleFormatRef = useRef<() => void>(() => {});
 
   const sortedRows = useMemo(() => {
     if (sortColumn == null || !result) return result?.rows ?? [];
@@ -183,11 +123,8 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setCurrentPage(1);
     setSortColumn(null);
     setSortDirection("asc");
-    setShowChart(false);
     setResultFilter("");
     setDebouncedFilter("");
-    setPinned(false);
-    setPinnedQueryId(null);
 
     try {
       const response = await apiPost<RunQueryResponse>(
@@ -250,13 +187,9 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     [autocomplete]
   );
 
-  // Stable wrappers that use refs to avoid recreating CodeMirror on callback changes
+  // Stable wrapper that uses ref to avoid recreating CodeMirror on callback changes
   const stableOnExecute = useCallback(() => {
     executeQueryRef.current();
-  }, []);
-
-  const stableOnFormat = useCallback(() => {
-    handleFormatRef.current();
   }, []);
 
   // Initialize CodeMirror editable editor
@@ -266,25 +199,12 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     isDark,
     onChange: handleEditorChange,
     onExecute: stableOnExecute,
-    onFormat: stableOnFormat,
   });
 
-  // handleFormat needs editor, so define it after the hook
-  const handleFormat = useCallback(() => {
-    if (!sql.trim()) return;
-    const formatted = formatSql(sql);
-    setSql(formatted);
-    editor.setValue(formatted);
-  }, [sql, editor]);
-
-  // Keep refs up to date
+  // Keep ref up to date
   useEffect(() => {
     executeQueryRef.current = executeQuery;
   }, [executeQuery]);
-
-  useEffect(() => {
-    handleFormatRef.current = handleFormat;
-  }, [handleFormat]);
 
   // Accept an autocomplete suggestion: update sql + cursor position via CodeMirror
   const acceptSuggestion = useCallback(
@@ -372,117 +292,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     },
     [autocomplete, acceptSuggestion]
   );
-
-  const handleOpenSavePopover = useCallback(() => {
-    const trimmed = sql.trim();
-    if (!trimmed) return;
-    const defaultName = trimmed.replace(/\s+/g, " ").slice(0, 50);
-    setSaveName(defaultName);
-    setSaveFolder("");
-    setShowNewFolder(false);
-    setShowSavePopover(true);
-  }, [sql]);
-
-  const handleSaveQuery = useCallback(async () => {
-    const trimmed = sql.trim();
-    if (!trimmed || !saveName.trim()) return;
-    try {
-      await useSavedQueryStore
-        .getState()
-        .saveQuery(saveName.trim(), trimmed, undefined, result?.execution_time_ms, saveFolder);
-      setSaved(true);
-      setShowSavePopover(false);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // silently fail
-    }
-  }, [sql, result, saveName, saveFolder]);
-
-  const handlePinResult = useCallback(async () => {
-    const trimmed = sql.trim();
-    if (!trimmed || !result) return;
-
-    if (pinned && pinnedQueryId) {
-      // Already pinned — unpin it
-      await useSavedQueryStore.getState().togglePin(pinnedQueryId);
-      setPinned(false);
-      setPinnedQueryId(null);
-      useToastStore.getState().success("Result unpinned");
-      return;
-    }
-
-    try {
-      const autoName = `Pinned: ${trimmed.replace(/\s+/g, " ").slice(0, 30)}`;
-      const saved = await useSavedQueryStore.getState().saveQuery(
-        autoName,
-        trimmed,
-        result
-          ? { columns: result.columns, rows: result.rows, total_rows: result.total_rows }
-          : undefined,
-        result?.execution_time_ms
-      );
-      await useSavedQueryStore.getState().togglePin(saved.id);
-      setPinned(true);
-      setPinnedQueryId(saved.id);
-      useToastStore.getState().success("Result pinned");
-    } catch {
-      // silently fail
-    }
-  }, [sql, result, pinned, pinnedQueryId]);
-
-  // Close save popover on click outside
-  useEffect(() => {
-    if (!showSavePopover) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (savePopoverRef.current && !savePopoverRef.current.contains(e.target as Node)) {
-        setShowSavePopover(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showSavePopover]);
-
-  const handleExplain = useCallback(async () => {
-    const trimmed = sql.trim();
-    if (!trimmed || isExplaining) return;
-
-    setIsExplaining(true);
-    try {
-      const response = await explainSql(conversationId, trimmed);
-      setExplanation(response.explanation);
-      setExplanationExpanded(true);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to explain query";
-      setExplanation(`Error: ${message}`);
-      setExplanationExpanded(true);
-    } finally {
-      setIsExplaining(false);
-    }
-  }, [sql, isExplaining, conversationId]);
-
-  const handleGenerateSql = useCallback(async () => {
-    const trimmed = nlQuestion.trim();
-    if (!trimmed || isGenerating) return;
-
-    setIsGenerating(true);
-    setError(null);
-    try {
-      const response = await generateSql(conversationId, trimmed);
-      setSql(response.sql);
-      editor.setValue(response.sql);
-      if (response.explanation) {
-        setExplanation(response.explanation);
-        setExplanationExpanded(true);
-      }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to generate SQL";
-      setError(message);
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [nlQuestion, isGenerating, conversationId, editor]);
 
   // Export results as CSV or XLSX via the backend export endpoints
   const handleExport = useCallback(
@@ -616,68 +425,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
 
       {isExpanded && (
         <div className="px-1 pb-2 space-y-2">
-          {/* Natural language to SQL input */}
-          <div className="flex gap-1.5">
-            <input
-              data-testid="nl-to-sql-input"
-              type="text"
-              className="flex-1 rounded border px-2 py-1.5 text-xs focus:outline-none focus:ring-1"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "var(--color-bg)",
-                color: "var(--color-text)",
-              }}
-              placeholder="Ask a question about your data..."
-              value={nlQuestion}
-              onChange={(e) => setNlQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleGenerateSql();
-                }
-              }}
-            />
-            <button
-              data-testid="nl-to-sql-generate"
-              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
-              style={{
-                backgroundColor: "var(--color-accent)",
-                color: "#fff",
-              }}
-              disabled={!nlQuestion.trim() || isGenerating}
-              onClick={handleGenerateSql}
-            >
-              {isGenerating ? (
-                <>
-                  <svg
-                    className="w-3 h-3 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" opacity="0.25" />
-                    <path d="M12 2a10 10 0 0 1 10 10" />
-                  </svg>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-3 h-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z" />
-                  </svg>
-                  Generate SQL
-                </>
-              )}
-            </button>
-          </div>
-
           {/* SQL CodeMirror editor with autocomplete */}
           <div className="relative">
             {/* Hidden input for test compatibility — keeps data-testid available */}
@@ -840,162 +587,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </>
               )}
             </button>
-            <button
-              data-testid="run-sql-explain"
-              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors disabled:opacity-50"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "transparent",
-                color: "var(--color-text)",
-              }}
-              disabled={!sql.trim() || isExecuting || isExplaining}
-              onClick={handleExplain}
-            >
-              {isExplaining ? (
-                <>
-                  <svg
-                    className="w-3 h-3 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" opacity="0.25" />
-                    <path d="M12 2a10 10 0 0 1 10 10" />
-                  </svg>
-                  Explaining...
-                </>
-              ) : (
-                "Explain"
-              )}
-            </button>
-            <button
-              data-testid="run-sql-format"
-              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors disabled:opacity-50"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "transparent",
-                color: "var(--color-text)",
-              }}
-              disabled={!sql.trim()}
-              onClick={handleFormat}
-              title={`Format SQL (${navigator.platform?.includes("Mac") ? "\u2318" : "Ctrl"}+Shift+F)`}
-            >
-              <svg
-                className="w-3 h-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="4 7 4 4 20 4 20 7" />
-                <line x1="9" y1="20" x2="15" y2="20" />
-                <line x1="12" y1="4" x2="12" y2="20" />
-              </svg>
-              Format
-            </button>
-            {/* Templates button + dropdown */}
-            {templates.length > 0 && (
-              <div ref={templatesRef} className="relative">
-                <button
-                  data-testid="run-sql-templates"
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border font-medium transition-colors"
-                  style={{
-                    borderColor: showTemplates ? "var(--color-accent)" : "var(--color-border)",
-                    backgroundColor: "transparent",
-                    color: showTemplates ? "var(--color-accent)" : "var(--color-text)",
-                  }}
-                  onClick={() => setShowTemplates((v) => !v)}
-                >
-                  <svg
-                    className="w-3 h-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
-                  Templates
-                </button>
-                {showTemplates && (
-                  <div
-                    data-testid="templates-dropdown"
-                    className="absolute left-0 z-50 mt-1 w-72 rounded border shadow-lg overflow-hidden"
-                    style={{
-                      backgroundColor: "var(--color-surface, var(--color-bg))",
-                      borderColor: "var(--color-border)",
-                    }}
-                  >
-                    <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
-                      {(["basic", "aggregation", "exploration", "join"] as const).map((category) => {
-                        const catTemplates = templates.filter((t) => t.category === category);
-                        if (catTemplates.length === 0) return null;
-                        const categoryLabel =
-                          category === "basic"
-                            ? "Basic"
-                            : category === "aggregation"
-                              ? "Aggregation"
-                              : category === "join"
-                                ? "Cross-Table"
-                                : "Exploration";
-                        return (
-                          <div key={category}>
-                            <div
-                              className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
-                              style={{
-                                color: "var(--color-text-muted)",
-                                backgroundColor: "var(--color-bg)",
-                              }}
-                            >
-                              {categoryLabel}
-                            </div>
-                            {catTemplates.map((tmpl, i) => (
-                              <button
-                                key={`${category}-${i}`}
-                                data-testid={`template-item-${category}-${i}`}
-                                className="w-full text-left px-2 py-1.5 text-xs transition-colors"
-                                style={{ color: "var(--color-text)" }}
-                                onMouseEnter={(e) => {
-                                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                                    "var(--color-accent-light, rgba(59,130,246,0.08))";
-                                }}
-                                onMouseLeave={(e) => {
-                                  (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-                                }}
-                                onClick={() => {
-                                  setSql(tmpl.sql);
-                                  editor.setValue(tmpl.sql);
-                                  setShowTemplates(false);
-                                  requestAnimationFrame(() => {
-                                    editor.focus();
-                                  });
-                                }}
-                              >
-                                <div className="font-medium">{tmpl.label}</div>
-                                <div
-                                  className="text-[10px]"
-                                  style={{ color: "var(--color-text-muted)" }}
-                                >
-                                  {tmpl.description}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             <span
               className="text-[10px] opacity-50"
               style={{ color: "var(--color-text-muted)" }}
@@ -1003,59 +594,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
               {navigator.platform?.includes("Mac") ? "\u2318" : "Ctrl"}+Enter
             </span>
           </div>
-
-          {/* Explanation display */}
-          {explanation && (
-            <div
-              data-testid="run-sql-explanation"
-              className="rounded border"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "var(--color-bg)",
-              }}
-            >
-              {/* Explanation header */}
-              <div
-                className="flex items-center justify-between px-2 py-1 cursor-pointer select-none"
-                style={{ color: "var(--color-text)" }}
-                onClick={() => setExplanationExpanded(!explanationExpanded)}
-              >
-                <span className="text-[10px] font-medium flex items-center gap-1">
-                  <svg
-                    className={`w-2.5 h-2.5 transition-transform duration-200 ${explanationExpanded ? "rotate-90" : ""}`}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                  Explanation
-                </span>
-                <button
-                  data-testid="run-sql-explanation-dismiss"
-                  className="text-[10px] px-1 py-0.5 rounded hover:opacity-70 transition-opacity"
-                  style={{ color: "var(--color-text-muted)" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExplanation(null);
-                  }}
-                  aria-label="Dismiss explanation"
-                >
-                  &times;
-                </button>
-              </div>
-              {/* Explanation body */}
-              {explanationExpanded && (
-                <div
-                  className="px-2 pb-2 text-xs whitespace-pre-wrap"
-                  style={{ color: "var(--color-text)", lineHeight: "1.5" }}
-                >
-                  {explanation}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Error display */}
           {error && (
@@ -1190,231 +728,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                     )}
                     XLSX
                   </button>
-                  {/* Save query button + popover */}
-                  <div className="relative">
-                    <button
-                      data-testid="run-sql-save"
-                      className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
-                      style={{ color: "var(--color-accent)" }}
-                      onClick={saved ? undefined : handleOpenSavePopover}
-                    >
-                      {saved ? "Saved!" : "Save Query"}
-                    </button>
-                    {showSavePopover && (
-                      <div
-                        ref={savePopoverRef}
-                        data-testid="save-query-popover"
-                        className="absolute right-0 top-full mt-1 z-50 w-64 rounded border shadow-lg p-2.5 space-y-2"
-                        style={{
-                          backgroundColor: "var(--color-surface, var(--color-bg))",
-                          borderColor: "var(--color-border)",
-                        }}
-                      >
-                        {/* Query name */}
-                        <div>
-                          <label
-                            className="block text-[10px] font-medium mb-0.5"
-                            style={{ color: "var(--color-text-muted)" }}
-                          >
-                            Name
-                          </label>
-                          <input
-                            data-testid="save-query-name"
-                            type="text"
-                            className="w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
-                            style={{
-                              borderColor: "var(--color-border)",
-                              backgroundColor: "var(--color-bg)",
-                              color: "var(--color-text)",
-                            }}
-                            value={saveName}
-                            onChange={(e) => setSaveName(e.target.value)}
-                            maxLength={100}
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSaveQuery();
-                              if (e.key === "Escape") setShowSavePopover(false);
-                            }}
-                          />
-                        </div>
-                        {/* Folder selector */}
-                        <div>
-                          <label
-                            className="block text-[10px] font-medium mb-0.5"
-                            style={{ color: "var(--color-text-muted)" }}
-                          >
-                            Folder
-                          </label>
-                          {showNewFolder ? (
-                            <div className="flex gap-1">
-                              <input
-                                data-testid="save-query-new-folder"
-                                type="text"
-                                className="flex-1 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
-                                style={{
-                                  borderColor: "var(--color-border)",
-                                  backgroundColor: "var(--color-bg)",
-                                  color: "var(--color-text)",
-                                }}
-                                placeholder="New folder name..."
-                                value={saveFolder}
-                                onChange={(e) => setSaveFolder(e.target.value)}
-                                maxLength={50}
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveQuery();
-                                  if (e.key === "Escape") {
-                                    setShowNewFolder(false);
-                                    setSaveFolder("");
-                                  }
-                                }}
-                              />
-                              <button
-                                className="text-[10px] px-1.5 rounded border hover:opacity-70"
-                                style={{
-                                  borderColor: "var(--color-border)",
-                                  color: "var(--color-text-muted)",
-                                }}
-                                onClick={() => {
-                                  setShowNewFolder(false);
-                                  setSaveFolder("");
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1">
-                              <select
-                                data-testid="save-query-folder-select"
-                                className="flex-1 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
-                                style={{
-                                  borderColor: "var(--color-border)",
-                                  backgroundColor: "var(--color-bg)",
-                                  color: "var(--color-text)",
-                                }}
-                                value={saveFolder}
-                                onChange={(e) => setSaveFolder(e.target.value)}
-                              >
-                                <option value="">Uncategorized</option>
-                                {useSavedQueryStore.getState().getFolders().map((f) => (
-                                  <option key={f} value={f}>{f}</option>
-                                ))}
-                              </select>
-                              <button
-                                data-testid="save-query-new-folder-btn"
-                                className="text-[10px] px-1.5 rounded border hover:opacity-70 whitespace-nowrap"
-                                style={{
-                                  borderColor: "var(--color-border)",
-                                  color: "var(--color-accent)",
-                                }}
-                                onClick={() => setShowNewFolder(true)}
-                              >
-                                + New
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {/* Save / Cancel */}
-                        <div className="flex justify-end gap-1.5">
-                          <button
-                            data-testid="save-query-cancel"
-                            className="px-2 py-1 text-[10px] rounded border hover:opacity-70"
-                            style={{
-                              borderColor: "var(--color-border)",
-                              color: "var(--color-text)",
-                              backgroundColor: "transparent",
-                            }}
-                            onClick={() => setShowSavePopover(false)}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            data-testid="save-query-confirm"
-                            className="px-2 py-1 text-[10px] rounded font-medium"
-                            style={{
-                              backgroundColor: "var(--color-accent)",
-                              color: "#fff",
-                            }}
-                            disabled={!saveName.trim()}
-                            onClick={handleSaveQuery}
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Pin result button */}
-                  <button
-                    data-testid="run-sql-pin"
-                    className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-70 transition-opacity"
-                    style={{ color: pinned ? "var(--color-text)" : "var(--color-accent)" }}
-                    onClick={handlePinResult}
-                  >
-                    {pinned ? "Unpin" : "Pin Result"}
-                  </button>
-                  {/* Visualize toggle button */}
-                  {detectChartTypes(result.columns, result.rows).length > 0 && (
-                    <button
-                      data-testid="run-sql-visualize"
-                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity"
-                      style={{
-                        borderColor: showChart ? "var(--color-accent)" : "var(--color-border)",
-                        color: showChart ? "var(--color-accent)" : "var(--color-text)",
-                        backgroundColor: "transparent",
-                      }}
-                      onClick={() => setShowChart((v) => !v)}
-                      title={showChart ? "Hide chart" : "Visualize results"}
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        viewBox="0 0 14 14"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                      >
-                        <rect x="1" y="6" width="3" height="7" rx="0.5" />
-                        <rect x="5.5" y="2" width="3" height="11" rx="0.5" />
-                        <rect x="10" y="4" width="3" height="9" rx="0.5" />
-                      </svg>
-                      {showChart ? "Hide" : "Chart"}
-                    </button>
-                  )}
-                  {/* Compare button */}
-                  <button
-                    data-testid="run-sql-compare"
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text)",
-                      backgroundColor: "transparent",
-                    }}
-                    onClick={() =>
-                      openQueryResultComparison({
-                        query: sql,
-                        columns: result.columns,
-                        rows: result.rows,
-                        total_rows: result.total_rows,
-                      })
-                    }
-                    title="Compare with another query result"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="18" y1="20" x2="18" y2="10" />
-                      <line x1="12" y1="20" x2="12" y2="4" />
-                      <line x1="6" y1="20" x2="6" y2="14" />
-                    </svg>
-                    Compare
-                  </button>
                 </div>
               </div>
 
@@ -1441,27 +754,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   <span className="text-blue-700 dark:text-blue-300">
                     Results limited to 10,000 rows. Add your own LIMIT clause to control this.
                   </span>
-                </div>
-              )}
-
-              {/* Chart visualization (when toggled) */}
-              {showChart && (
-                <div className="border-b" style={{ borderColor: "var(--color-border)" }}>
-                  <Suspense
-                    fallback={
-                      <div
-                        className="flex items-center justify-center py-8 text-xs opacity-50"
-                        style={{ color: "var(--color-text)" }}
-                      >
-                        Loading chart...
-                      </div>
-                    }
-                  >
-                    <ChartVisualization
-                      columns={result.columns}
-                      rows={result.rows}
-                    />
-                  </Suspense>
                 </div>
               )}
 

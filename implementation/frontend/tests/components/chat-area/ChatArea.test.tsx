@@ -15,7 +15,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderWithProviders, screen, act, waitFor } from "../../helpers/render";
-import { resetAllStores, setChatIdle, setDatasetsLoaded } from "../../helpers/stores";
+import { resetAllStores, setDatasetsLoaded } from "../../helpers/stores";
 import { useChatStore, type Message } from "@/stores/chatStore";
 import { useDatasetStore, type Dataset } from "@/stores/datasetStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -92,21 +92,6 @@ vi.mock("@/components/chat-area/FollowupSuggestions", () => ({
   FollowupSuggestions: (props: any) => <div data-testid="followup-suggestions" />,
 }));
 
-vi.mock("@/components/chat-area/ShareDialog", () => ({
-  ShareDialog: (props: any) => (
-    <div data-testid="share-dialog" data-conversation-id={props.conversationId} />
-  ),
-}));
-
-vi.mock("@/components/chat-area/SavedQueries", () => ({
-  SavedQueries: (props: any) => <div data-testid="saved-queries" />,
-}));
-
-vi.mock("@/components/chat-area/ConversationTemplates", () => ({
-  ConversationTemplates: (props: any) => (
-    <div data-testid="conversation-templates" data-dataset-count={props.datasetCount} />
-  ),
-}));
 
 // ── Mock hooks and API ───────────────────────────────────────────────────────
 const mockApiPost = vi.fn();
@@ -219,15 +204,6 @@ describe("CA-RENDER-2: Renders SuggestedPrompts when datasets exist but no messa
     expect(screen.getByTestId("suggested-prompts")).toBeInTheDocument();
   });
 
-  it("shows ConversationTemplates alongside SuggestedPrompts", () => {
-    useChatStore.setState({ activeConversationId: "conv-1" });
-    setDatasetsLoaded([makeDataset()]);
-
-    renderWithProviders(<ChatArea />);
-
-    expect(screen.getByTestId("conversation-templates")).toBeInTheDocument();
-  });
-
   it("does not show OnboardingGuide or MessageList when SuggestedPrompts is visible", () => {
     useChatStore.setState({ activeConversationId: "conv-1" });
     setDatasetsLoaded([makeDataset()]);
@@ -236,20 +212,6 @@ describe("CA-RENDER-2: Renders SuggestedPrompts when datasets exist but no messa
 
     expect(screen.queryByTestId("onboarding-guide")).not.toBeInTheDocument();
     expect(screen.queryByTestId("message-list")).not.toBeInTheDocument();
-  });
-
-  it("passes correct dataset count to ConversationTemplates", () => {
-    useChatStore.setState({ activeConversationId: "conv-1" });
-    setDatasetsLoaded([
-      makeDataset({ id: "ds-1", status: "ready" }),
-      makeDataset({ id: "ds-2", status: "loading" }),
-    ]);
-
-    renderWithProviders(<ChatArea />);
-
-    // Only "ready" datasets should be counted
-    const templates = screen.getByTestId("conversation-templates");
-    expect(templates).toHaveAttribute("data-dataset-count", "1");
   });
 
   it("filters datasets by active conversation", () => {
@@ -350,96 +312,6 @@ describe("CA-RENDER-4: Always renders ChatInput", () => {
   });
 });
 
-// ── CA-RENDER-5: Share/Download buttons ──────────────────────────────────────
-
-describe("CA-RENDER-5: Shows share/download buttons only when messages exist and conversation is active", () => {
-  it("shows download button when messages exist and conversation is active", () => {
-    setChatIdle("conv-1", [makeMessage()]);
-
-    renderWithProviders(<ChatArea />);
-
-    expect(screen.getByTestId("download-conversation-btn")).toBeInTheDocument();
-  });
-
-  it("shows share button when messages exist and conversation is active", () => {
-    setChatIdle("conv-1", [makeMessage()]);
-
-    renderWithProviders(<ChatArea />);
-
-    expect(screen.getByTestId("share-btn")).toBeInTheDocument();
-  });
-
-  it("does not show share/download buttons when no messages", () => {
-    useChatStore.setState({ activeConversationId: "conv-1", messages: [] });
-
-    renderWithProviders(<ChatArea />);
-
-    expect(screen.queryByTestId("download-conversation-btn")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("share-btn")).not.toBeInTheDocument();
-  });
-
-  it("does not show share/download buttons when no active conversation", () => {
-    useChatStore.setState({
-      activeConversationId: null,
-      messages: [makeMessage()],
-    });
-
-    renderWithProviders(<ChatArea />);
-
-    expect(screen.queryByTestId("download-conversation-btn")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("share-btn")).not.toBeInTheDocument();
-  });
-
-  it("download button opens export URL in new tab", () => {
-    setChatIdle("conv-1", [makeMessage()]);
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-
-    renderWithProviders(<ChatArea />);
-
-    const downloadBtn = screen.getByTestId("download-conversation-btn");
-    downloadBtn.click();
-
-    expect(openSpy).toHaveBeenCalledWith("/conversations/conv-1/export", "_blank");
-    openSpy.mockRestore();
-  });
-
-  it("share button toggles ShareDialog on click", async () => {
-    setChatIdle("conv-1", [makeMessage()]);
-
-    renderWithProviders(<ChatArea />);
-
-    // ShareDialog should not be visible initially
-    expect(screen.queryByTestId("share-dialog")).not.toBeInTheDocument();
-
-    // Click share button
-    const shareBtn = screen.getByTestId("share-btn");
-    await act(async () => {
-      shareBtn.click();
-    });
-
-    // ShareDialog should now be visible
-    expect(screen.getByTestId("share-dialog")).toBeInTheDocument();
-    expect(screen.getByTestId("share-dialog")).toHaveAttribute(
-      "data-conversation-id",
-      "conv-1"
-    );
-  });
-
-  it("share button has correct aria-expanded attribute", async () => {
-    setChatIdle("conv-1", [makeMessage()]);
-
-    renderWithProviders(<ChatArea />);
-
-    const shareBtn = screen.getByTestId("share-btn");
-    expect(shareBtn).toHaveAttribute("aria-expanded", "false");
-
-    await act(async () => {
-      shareBtn.click();
-    });
-
-    expect(shareBtn).toHaveAttribute("aria-expanded", "true");
-  });
-});
 
 // ── CA-RENDER-6: SkeletonMessages ────────────────────────────────────────────
 
@@ -890,10 +762,6 @@ describe("ChatArea always renders modal overlays", () => {
     expect(screen.getByTestId("followup-suggestions")).toBeInTheDocument();
   });
 
-  it("renders SavedQueries", () => {
-    renderWithProviders(<ChatArea />);
-    expect(screen.getByTestId("saved-queries")).toBeInTheDocument();
-  });
 });
 
 // ── Data-testid and accessibility ────────────────────────────────────────────

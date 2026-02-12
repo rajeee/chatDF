@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RunSqlPanel } from "@/components/right-panel/RunSqlPanel";
 import { useUiStore } from "@/stores/uiStore";
+import { useDevModeStore } from "@/stores/devModeStore";
 import { apiPost } from "@/api/client";
 
 // Mock API client
@@ -117,6 +118,7 @@ describe("RunSqlPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useUiStore.setState({ pendingSql: null });
+    useDevModeStore.setState({ devMode: true });
   });
 
   // ─── 1. Rendering ───
@@ -145,26 +147,6 @@ describe("RunSqlPanel", () => {
       expect(screen.getByTestId("run-sql-editor")).toBeInTheDocument();
       expect(screen.getByTestId("run-sql-execute")).toBeInTheDocument();
       expect(screen.getByText("Run")).toBeInTheDocument();
-    });
-
-    it("shows Explain and Format buttons when expanded", () => {
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-
-      expect(screen.getByTestId("run-sql-explain")).toBeInTheDocument();
-      expect(screen.getByTestId("run-sql-format")).toBeInTheDocument();
-      expect(screen.getByText("Explain")).toBeInTheDocument();
-      expect(screen.getByText("Format")).toBeInTheDocument();
-    });
-
-    it("shows natural language to SQL input when expanded", () => {
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-
-      expect(screen.getByTestId("nl-to-sql-input")).toBeInTheDocument();
-      expect(screen.getByTestId("nl-to-sql-generate")).toBeInTheDocument();
     });
 
     it("collapses when toggle is clicked again", () => {
@@ -637,49 +619,6 @@ describe("RunSqlPanel", () => {
       expect(screen.queryByTestId("export-xlsx")).not.toBeInTheDocument();
     });
 
-    it("shows Save Query and Pin Result buttons when results are present", async () => {
-      const mockApiPost = vi.mocked(apiPost);
-      mockApiPost.mockResolvedValueOnce(sampleResult);
-
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-      setSqlViaPending("SELECT 1");
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-execute")).not.toBeDisabled();
-      });
-
-      fireEvent.click(screen.getByTestId("run-sql-execute"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-save")).toBeInTheDocument();
-        expect(screen.getByTestId("run-sql-save")).toHaveTextContent("Save Query");
-        expect(screen.getByTestId("run-sql-pin")).toBeInTheDocument();
-        expect(screen.getByTestId("run-sql-pin")).toHaveTextContent("Pin Result");
-      });
-    });
-
-    it("shows Compare button when results are present", async () => {
-      const mockApiPost = vi.mocked(apiPost);
-      mockApiPost.mockResolvedValueOnce(sampleResult);
-
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-      setSqlViaPending("SELECT 1");
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-execute")).not.toBeDisabled();
-      });
-
-      fireEvent.click(screen.getByTestId("run-sql-execute"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-compare")).toBeInTheDocument();
-        expect(screen.getByTestId("run-sql-compare")).toHaveTextContent("Compare");
-      });
-    });
   });
 
   // ─── 6. Clear / Reset Behavior ───
@@ -726,26 +665,6 @@ describe("RunSqlPanel", () => {
       });
     });
 
-    it("Explain and Format buttons are disabled when SQL is empty", () => {
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-
-      expect(screen.getByTestId("run-sql-explain")).toBeDisabled();
-      expect(screen.getByTestId("run-sql-format")).toBeDisabled();
-    });
-
-    it("Explain and Format buttons are enabled when SQL is present", async () => {
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-      setSqlViaPending("SELECT 1");
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-explain")).not.toBeDisabled();
-        expect(screen.getByTestId("run-sql-format")).not.toBeDisabled();
-      });
-    });
   });
 
   // ─── 7. Pagination ───

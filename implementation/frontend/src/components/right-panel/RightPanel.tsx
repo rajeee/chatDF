@@ -1,6 +1,6 @@
 // Implements: spec/frontend/plan.md#layout-implementation (RightPanel container)
 //
-// Container for DatasetInput + DatasetCard list, with Discover and Pinned tabs.
+// Container for DatasetInput + DatasetCard list, with Discover tab.
 // Resizable via drag handle on left edge.
 // Below 1024px (lg): renders as fixed overlay from right side, toggled via Header button.
 // On desktop (>=1024px): always visible inline panel with resize handle.
@@ -22,7 +22,7 @@ import { ComparisonModal } from "./ComparisonModal";
 import { PresetSourcesModal } from "./PresetSourcesModal";
 import { RunSqlPanel } from "./RunSqlPanel";
 import { DatasetDiscoveryPanel } from "./DatasetDiscoveryPanel";
-import { PinnedResultsPanel } from "./PinnedResultsPanel";
+
 
 export function RightPanel() {
   const conversationId = useChatStore((s) => s.activeConversationId);
@@ -204,15 +204,6 @@ export function RightPanel() {
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
               </svg>
             )},
-            { key: "pinned" as RightPanelTab, label: "Pinned", icon: (
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2l0 5" />
-                <path d="M5 12l14 0" />
-                <path d="M12 22l0-5" />
-                <path d="M9 7l1.5 5H12h1.5L15 7a3 3 0 0 0-6 0z" />
-                <line x1="12" y1="17" x2="12" y2="22" />
-              </svg>
-            )},
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -327,9 +318,7 @@ export function RightPanel() {
             </>
           )}
 
-          {rightPanelTab === "pinned" && (
-            <PinnedResultsPanel />
-          )}
+
         </div>
       </div>
       <SchemaModal />

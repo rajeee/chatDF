@@ -230,7 +230,15 @@ function buildPlotlyConfigFromSpec(
       title: spec.y_label ? { text: spec.y_label } : undefined,
     },
     showlegend: (spec.y_columns?.length ?? 0) > 1,
-    legend: { bgcolor: "rgba(0,0,0,0)", font: { color: textColor } },
+    legend: {
+      bgcolor: "rgba(0,0,0,0)",
+      font: { color: textColor },
+      orientation: "h",
+      yanchor: "bottom",
+      y: 1.02,
+      xanchor: "center",
+      x: 0.5,
+    },
   };
 
   const xValues = extractByName(spec.x_column);
@@ -449,6 +457,11 @@ function buildPlotlyConfig(
     legend: {
       bgcolor: "rgba(0,0,0,0)",
       font: { color: textColor },
+      orientation: "h",
+      yanchor: "bottom",
+      y: 1.02,
+      xanchor: "center",
+      x: 0.5,
     },
     autosize: true,
   };

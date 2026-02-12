@@ -40,7 +40,6 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from app.exceptions import (  # noqa: E402
     ConflictError,
-    ForbiddenError,
     NotFoundError,
     RateLimitError,
 )
@@ -564,26 +563,6 @@ class TestStatusCodeMapping:
             assert response.json()["error"] == "Resource not found"
         finally:
             app.routes[:] = [r for r in app.routes if getattr(r, "path", None) != "/_test_404"]
-
-    @pytest.mark.asyncio
-    async def test_forbidden_error_returns_403(self, client):
-        """ForbiddenError from service layer produces 403."""
-        from fastapi import APIRouter
-
-        test_router = APIRouter()
-
-        @test_router.get("/_test_403")
-        async def raise_forbidden():
-            raise ForbiddenError("Access denied")
-
-        app.include_router(test_router)
-
-        try:
-            response = await client.get("/_test_403")
-            assert response.status_code == 403
-            assert response.json()["error"] == "Access denied"
-        finally:
-            app.routes[:] = [r for r in app.routes if getattr(r, "path", None) != "/_test_403"]
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_returns_429(self, client):

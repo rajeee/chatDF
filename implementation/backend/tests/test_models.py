@@ -33,22 +33,6 @@ class TestNotFoundError:
         assert issubclass(NotFoundError, Exception)
 
 
-class TestForbiddenError:
-    """Tests for ForbiddenError domain exception."""
-
-    def test_stores_message(self):
-        from app.exceptions import ForbiddenError
-
-        err = ForbiddenError("Not authorized")
-        assert str(err) == "Not authorized"
-        assert err.message == "Not authorized"
-
-    def test_is_exception_subclass(self):
-        from app.exceptions import ForbiddenError
-
-        assert issubclass(ForbiddenError, Exception)
-
-
 class TestRateLimitError:
     """Tests for RateLimitError domain exception."""
 
@@ -527,25 +511,3 @@ class TestSuccessResponse:
         assert resp.success is True
 
 
-class TestErrorResponse:
-    """Tests for ErrorResponse model."""
-
-    def test_error_with_details(self):
-        from app.models import ErrorResponse
-
-        resp = ErrorResponse(error="Not found", details="Conversation c1 not found")
-        assert resp.error == "Not found"
-        assert resp.details == "Conversation c1 not found"
-
-    def test_details_optional(self):
-        from app.models import ErrorResponse
-
-        resp = ErrorResponse(error="Internal server error")
-        assert resp.details is None
-
-    def test_serialization(self):
-        from app.models import ErrorResponse
-
-        resp = ErrorResponse(error="Bad request")
-        data = resp.model_dump()
-        assert data == {"error": "Bad request", "details": None}

@@ -34,7 +34,6 @@ from starlette.middleware.sessions import SessionMiddleware  # noqa: E402
 
 from app.exceptions import (  # noqa: E402
     ConflictError,
-    ForbiddenError,
     NotFoundError,
     RateLimitError,
 )
@@ -214,10 +213,6 @@ class TestExceptionHandlerRegistration:
         """NotFoundError has a registered exception handler."""
         assert NotFoundError in app.exception_handlers
 
-    def test_forbidden_error_handler_registered(self):
-        """ForbiddenError has a registered exception handler."""
-        assert ForbiddenError in app.exception_handlers
-
     def test_rate_limit_error_handler_registered(self):
         """RateLimitError has a registered exception handler."""
         assert RateLimitError in app.exception_handlers
@@ -232,9 +227,9 @@ class TestExceptionHandlerRegistration:
 
         assert HTTPException in app.exception_handlers
 
-    def test_handler_count_is_at_least_five(self):
-        """At least 5 custom exception handlers are registered."""
-        assert len(app.exception_handlers) >= 5
+    def test_handler_count_is_at_least_four(self):
+        """At least 4 custom exception handlers are registered."""
+        assert len(app.exception_handlers) >= 4
 
     @pytest.mark.asyncio
     async def test_not_found_handler_returns_404_json(self, client):
@@ -301,28 +296,6 @@ class TestExceptionHandlerRegistration:
         finally:
             app.routes[:] = [
                 r for r in app.routes if getattr(r, "path", None) != "/_ext_test_rate_limit"
-            ]
-
-    @pytest.mark.asyncio
-    async def test_forbidden_handler_returns_403_json(self, client):
-        """ForbiddenError handler returns 403 with JSON error body."""
-        from fastapi import APIRouter
-
-        router = APIRouter()
-
-        @router.get("/_ext_test_forbidden")
-        async def raise_fb():
-            raise ForbiddenError("no access")
-
-        app.include_router(router)
-        try:
-            response = await client.get("/_ext_test_forbidden")
-            assert response.status_code == 403
-            body = response.json()
-            assert body["error"] == "no access"
-        finally:
-            app.routes[:] = [
-                r for r in app.routes if getattr(r, "path", None) != "/_ext_test_forbidden"
             ]
 
     @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 """Comprehensive tests for app.exceptions — domain exception classes.
 
-Tests: NotFoundError, ForbiddenError, RateLimitError, ConflictError
+Tests: NotFoundError, RateLimitError, ConflictError
 Verifies: spec/backend/rest_api/plan.md#error-response-standardization
 """
 
@@ -66,57 +66,6 @@ class TestNotFoundError:
         msg = "x" * 500
         err = NotFoundError(msg)
         assert err.message == msg
-
-
-# ---------------------------------------------------------------------------
-# ForbiddenError
-# ---------------------------------------------------------------------------
-
-
-class TestForbiddenError:
-    """Tests for ForbiddenError domain exception."""
-
-    def test_instantiation_with_message(self):
-        from app.exceptions import ForbiddenError
-
-        err = ForbiddenError("Not authorized")
-        assert err.message == "Not authorized"
-
-    def test_str_representation(self):
-        from app.exceptions import ForbiddenError
-
-        err = ForbiddenError("Access denied")
-        assert str(err) == "Access denied"
-
-    def test_inherits_from_exception(self):
-        from app.exceptions import ForbiddenError
-
-        assert issubclass(ForbiddenError, Exception)
-
-    def test_is_instance_of_exception(self):
-        from app.exceptions import ForbiddenError
-
-        err = ForbiddenError("forbidden")
-        assert isinstance(err, Exception)
-
-    def test_can_be_raised_and_caught(self):
-        from app.exceptions import ForbiddenError
-
-        with pytest.raises(ForbiddenError) as exc_info:
-            raise ForbiddenError("You do not own this conversation")
-        assert exc_info.value.message == "You do not own this conversation"
-
-    def test_can_be_caught_as_exception(self):
-        from app.exceptions import ForbiddenError
-
-        with pytest.raises(Exception):
-            raise ForbiddenError("generic catch")
-
-    def test_empty_message(self):
-        from app.exceptions import ForbiddenError
-
-        err = ForbiddenError("")
-        assert err.message == ""
 
 
 # ---------------------------------------------------------------------------
@@ -258,31 +207,16 @@ class TestConflictError:
 class TestExceptionDistinctness:
     """Verify each exception type is distinct and does not accidentally catch others."""
 
-    def test_not_found_is_not_forbidden(self):
-        from app.exceptions import ForbiddenError, NotFoundError
-
-        assert not issubclass(NotFoundError, ForbiddenError)
-        assert not issubclass(ForbiddenError, NotFoundError)
-
     def test_rate_limit_is_not_conflict(self):
         from app.exceptions import ConflictError, RateLimitError
 
         assert not issubclass(RateLimitError, ConflictError)
         assert not issubclass(ConflictError, RateLimitError)
 
-    def test_not_found_does_not_catch_forbidden(self):
-        from app.exceptions import ForbiddenError, NotFoundError
+    def test_all_three_are_distinct(self):
+        from app.exceptions import ConflictError, NotFoundError, RateLimitError
 
-        with pytest.raises(ForbiddenError):
-            try:
-                raise ForbiddenError("forbidden")
-            except NotFoundError:
-                pytest.fail("NotFoundError should not catch ForbiddenError")
-
-    def test_all_four_are_distinct(self):
-        from app.exceptions import ConflictError, ForbiddenError, NotFoundError, RateLimitError
-
-        types = [NotFoundError, ForbiddenError, RateLimitError, ConflictError]
+        types = [NotFoundError, RateLimitError, ConflictError]
         for i, t1 in enumerate(types):
             for j, t2 in enumerate(types):
                 if i != j:

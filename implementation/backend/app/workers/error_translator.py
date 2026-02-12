@@ -411,6 +411,35 @@ def _match_error_pattern(
             "or adjust your SELECT statements to return matching columns."
         )
 
+    # 45. INTERSECT/EXCEPT not supported
+    if "intersect" in msg_lower or "except" in msg_lower:
+        return (
+            "INTERSECT and EXCEPT set operations are not supported in Polars SQL. "
+            "Use LEFT JOIN with IS NULL or NOT EXISTS patterns instead."
+        )
+
+    # 46. CROSS JOIN warning
+    if "cross join" in msg_lower:
+        return (
+            "CROSS JOIN syntax may not be supported. "
+            "Try using a regular JOIN with a constant condition (e.g., ON 1=1) "
+            "or restructure your query."
+        )
+
+    # 47. ALTER/CREATE/DROP TABLE (DDL statements)
+    if "alter table" in msg_lower or "create table" in msg_lower or "drop table" in msg_lower:
+        return (
+            "Data definition statements (CREATE, ALTER, DROP) are not supported. "
+            "ChatDF provides read-only access to datasets."
+        )
+
+    # 48. STRUCT/JSON field access
+    if "struct" in msg_lower and ("field" in msg_lower or "access" in msg_lower):
+        return (
+            "Accessing struct/JSON fields directly in SQL is not supported. "
+            "Try selecting the column and parsing it in your application."
+        )
+
     # Generic fallback for unrecognized errors
     return (
         "The query encountered an error. "

@@ -21,7 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.database import DatabasePool
-from app.exceptions import ConflictError, ForbiddenError, NotFoundError, RateLimitError
+from app.exceptions import ConflictError, NotFoundError, RateLimitError
 from app.routers import auth, conversations, dataset_search, datasets, export, health, query_history, saved_queries, shared, usage
 from app.routers import settings as settings_router
 from app.routers.conversations import public_router as shared_router
@@ -203,11 +203,6 @@ app.add_middleware(ErrorHandlingMiddleware)
 @app.exception_handler(NotFoundError)
 async def not_found_handler(request: Request, exc: NotFoundError):
     return JSONResponse(status_code=404, content={"error": exc.message})
-
-
-@app.exception_handler(ForbiddenError)
-async def forbidden_handler(request: Request, exc: ForbiddenError):
-    return JSONResponse(status_code=403, content={"error": exc.message})
 
 
 @app.exception_handler(RateLimitError)

@@ -17,14 +17,6 @@ class NotFoundError(Exception):
         self.message = message
 
 
-class ForbiddenError(Exception):
-    """Raised when the authenticated user is not authorized for the resource."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-        self.message = message
-
-
 class RateLimitError(Exception):
     """Raised when the user has exceeded their token usage limit."""
 

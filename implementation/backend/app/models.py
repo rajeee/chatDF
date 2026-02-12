@@ -362,13 +362,6 @@ class ExportCsvRequest(BaseModel):
     filename: str = "query-results"  # optional filename without extension
 
 
-class ErrorResponse(BaseModel):
-    """Standardized error response format."""
-
-    error: str
-    details: str | None = None
-
-
 # ---------------------------------------------------------------------------
 # Settings models (Dev Mode)
 # ---------------------------------------------------------------------------

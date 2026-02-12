@@ -41,7 +41,6 @@ interface UiActions {
   closeSqlModal: () => void;
   openSqlResultModal: (index: number) => void;
   closeSqlResultModal: () => void;
-  openSqlChartModal: (executions: SqlExecution[], index: number) => void;
   openChartModal: (execution: SqlExecution) => void;
   closeChartModal: () => void;
   openSchemaModal: (datasetId: string) => void;
@@ -116,9 +115,6 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeSqlResultModal: () =>
         set({ sqlResultModalIndex: null }),
-
-      openSqlChartModal: (executions, index) =>
-        set({ sqlModalOpen: true, activeSqlExecutions: executions, sqlResultModalIndex: index, sqlResultViewMode: "chart" }),
 
       openChartModal: (execution) =>
         set({ chartModalExecution: execution }),

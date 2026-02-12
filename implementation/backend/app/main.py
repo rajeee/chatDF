@@ -28,6 +28,7 @@ from app.routers.conversations import public_router as shared_router
 from app.routers.websocket import router as ws_router
 from app.services import persistent_cache, worker_pool
 from app.services.connection_manager import ConnectionManager
+from app.workers.file_cache import startup_cleanup as file_cache_startup_cleanup
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,9 @@ async def lifespan(application: FastAPI):
     pool = worker_pool.start(settings.worker_pool_size)
     pool.set_db_pool(db_pool)  # enable persistent query result caching
     application.state.worker_pool = pool
+
+    # -- File cache startup cleanup (remove orphaned temp files) --
+    file_cache_startup_cleanup()
 
     # -- Periodic cache cleanup --
     _cleanup_task = asyncio.create_task(_periodic_cache_cleanup(db_pool))

@@ -27,6 +27,7 @@ from app.workers.file_cache import (
     cache_stats,
     clear_cache,
     get_cached,
+    startup_cleanup,
 )
 
 
@@ -563,3 +564,71 @@ class TestEvictLru:
         """Eviction when cache directory doesn't exist does not raise."""
         with patch.object(file_cache, "MAX_CACHE_BYTES", 0):
             _evict_lru()  # Should not raise
+
+
+# ---------------------------------------------------------------------------
+# 15. startup_cleanup: creates cache dir, cleans temps, runs eviction
+# ---------------------------------------------------------------------------
+
+
+class TestStartupCleanup:
+    """startup_cleanup creates cache dir, removes stale temps, and runs LRU eviction."""
+
+    def test_creates_cache_dir_if_missing(self):
+        """startup_cleanup creates CACHE_DIR when it doesn't exist."""
+        assert not os.path.isdir(file_cache.CACHE_DIR)
+        startup_cleanup()
+        assert os.path.isdir(file_cache.CACHE_DIR)
+
+    def test_removes_stale_temp_files(self, cache_dir):
+        """startup_cleanup removes stale .download_ temp files."""
+        stale = os.path.join(cache_dir, ".download_stale.parquet")
+        with open(stale, "wb") as f:
+            f.write(b"stale")
+        os.utime(stale, (time.time() - 7200, time.time() - 7200))
+
+        removed = startup_cleanup()
+        assert removed == 1
+        assert not os.path.exists(stale)
+
+    def test_keeps_recent_temp_files(self, cache_dir):
+        """startup_cleanup keeps recent .download_ temp files."""
+        recent = os.path.join(cache_dir, ".download_recent.parquet")
+        with open(recent, "wb") as f:
+            f.write(b"active")
+
+        removed = startup_cleanup()
+        assert removed == 0
+        assert os.path.exists(recent)
+
+    def test_runs_lru_eviction(self, cache_dir):
+        """startup_cleanup triggers LRU eviction for oversized cache."""
+        with patch.object(file_cache, "MAX_CACHE_BYTES", 200):
+            for i in range(4):
+                path = os.path.join(cache_dir, f"file_{i}.parquet")
+                with open(path, "wb") as f:
+                    f.write(b"x" * 100)
+                atime = time.time() - (400 - i * 100)
+                os.utime(path, (atime, atime))
+
+            startup_cleanup()
+
+            remaining = [f for f in os.listdir(cache_dir) if not f.startswith(".download_")]
+            assert len(remaining) == 2
+
+    def test_returns_zero_on_clean_cache(self, cache_dir):
+        """startup_cleanup returns 0 when no stale temps exist."""
+        # Add a normal cached file (not stale)
+        path = os.path.join(cache_dir, "normal.parquet")
+        with open(path, "wb") as f:
+            f.write(b"data")
+
+        removed = startup_cleanup()
+        assert removed == 0
+        assert os.path.exists(path)
+
+    def test_idempotent(self, cache_dir):
+        """Calling startup_cleanup twice is safe."""
+        startup_cleanup()
+        startup_cleanup()
+        assert os.path.isdir(file_cache.CACHE_DIR)

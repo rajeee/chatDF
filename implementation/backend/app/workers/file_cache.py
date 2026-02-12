@@ -273,6 +273,20 @@ def download_and_cache(url: str) -> str:
                 pass
 
 
+def startup_cleanup() -> int:
+    """Run on application startup to clean orphaned temp files and evict stale cache.
+
+    Should be called once during app initialization (e.g., in lifespan).
+    Returns the number of stale temp files removed.
+    """
+    _ensure_cache_dir()
+    removed = _cleanup_stale_temps()
+    if removed > 0:
+        logger.info("Startup cleanup: removed %d stale temp files", removed)
+    _evict_lru()
+    return removed
+
+
 def clear_cache() -> int:
     """Remove all files from the cache directory.
 

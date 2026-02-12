@@ -7,6 +7,4 @@
 - **Polars SQLContext supports cross-table JOINs natively**: No need for DuckDB — Polars registers multiple lazy frames and handles JOINs, UNIONs, and subqueries.
 - **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), reference the first table's column definition instead of repeating it.
 - **CodeMirror testing in jsdom**: Mock all `@codemirror/*` modules entirely — CodeMirror requires real DOM measurements. Use `vi.hoisted()` for shared mock state referenced by `vi.mock()` factories.
-- **Playwright globalSetup/globalTeardown must be declared in config**: Having the files exist isn't enough — they must be referenced via `globalSetup` and `globalTeardown` keys in `playwright.config.ts`.
 - **Column stats boost LLM SQL quality cheaply**: Computing min/max/cardinality in a single Polars aggregation pass during schema extraction adds negligible overhead but gives the LLM critical context (data ranges, cardinality) that prevents bad WHERE clauses and type mismatches.
-- **Always verify "missing" features before building**: Query cache cleanup and endpoint removal were already done — auditing first saved an entire implementation cycle.

@@ -50,20 +50,6 @@ def _scan_data_file(path_or_url: str, is_local: bool = False) -> "object":
     return pl.scan_parquet(resolved)
 
 
-def _read_data_file(path_or_url: str) -> "object":
-    """Read a data file (parquet or CSV) eagerly and return a DataFrame.
-
-    For CSV files, uses ``pl.read_csv`` with date parsing and schema inference.
-    For parquet files, uses ``pl.read_parquet``.
-    """
-    import polars as pl
-
-    if _is_csv_file(path_or_url):
-        sep = '\t' if _is_tsv_file(path_or_url) else ','
-        return pl.read_csv(path_or_url, separator=sep, try_parse_dates=True, infer_schema_length=10000)
-    return pl.read_parquet(path_or_url)
-
-
 def _has_limit(sql: str) -> bool:
     """Check if SQL already contains a LIMIT clause.
 

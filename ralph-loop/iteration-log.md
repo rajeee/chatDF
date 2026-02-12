@@ -142,3 +142,4 @@ Track each improvement cycle: what was done, what was learned.
 | 136 | 2026-02-10 | Harden LLM prompt (10 SQL hints, type casting example), 8 new error patterns, SSRF prevention | hardening | 2638 frontend pass, 1782/1782 backend (+58 new) | e1cb7dc |
 | 137 | 2026-02-11 | Fix OOM: reduce Polars test SQL sizes (9.5GB→safe), remove dead LoadingStates, 58 ChatArea tests, backend edge-case tests | hardening | 2684+ frontend, backend 48 edge pass | ac1473c, c732a93 |
 | 138 | 2026-02-11 | Harden error translator (8 fixes + 9 new patterns), deduplicate schema utils, fix flaky test, 72 new backend tests | hardening | 2716/2716 frontend, 2090/2090 backend | 447e493, b52695d |
+| 139 | 2026-02-12 | Uploaded file cleanup on dataset deletion, fix E2E Playwright config (globalSetup/globalTeardown) | hardening | 2693 frontend, 2094/2094 backend (+4 new) | 1227f2a |

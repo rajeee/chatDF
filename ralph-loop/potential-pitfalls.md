@@ -13,3 +13,4 @@
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()` for Zustand access, not hooks.
 - **Track ALL requestAnimationFrame IDs**: Any RAF callback that calls setState must have its ID stored in a ref so it can be cancelled on unmount. Orphaned RAFs cause errors in tests and memory leaks in production.
 - **SSRF via dataset URLs**: Users can submit arbitrary URLs. The `_validate_url_safety` function rejects private/loopback IPs and non-HTTP schemes. Ensure this check stays in `fetch_and_validate` and is not bypassed outside test environments.
+- **Uploaded file disk leak**: Deleting a dataset with a `file://` URL only removes the DB row. Must also `os.unlink()` the physical file. Fixed in iteration 139.

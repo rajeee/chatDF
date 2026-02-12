@@ -10,3 +10,5 @@
 - **Column stats boost LLM SQL quality cheaply**: Computing min/max/cardinality during schema extraction adds negligible overhead but gives the LLM critical context that prevents bad WHERE clauses and type mismatches.
 - **Defense in depth for file size limits**: Both `fetch_and_validate()` (HEAD Content-Length) and `file_cache.download_and_cache()` (per-chunk accumulation) enforce the 500MB limit. Early check prevents wasted bandwidth; per-chunk check catches servers that lie.
 - **Error translator must cover all exit paths**: Raw Polars errors can leak through profile_columns, extract_schema, and profile_column — not just execute_query. Apply translate_polars_error at every error boundary that surfaces to users.
+- **Verify before deleting "dead" code**: Always Grep for imports/references before removing functions. `searchDatasets()` appeared unused but was imported in `DatasetSearch.tsx`. Quick Grep saves accidental breakage.
+- **Dead exception classes accumulate**: Custom exception classes with registered handlers but no raise sites are noise. Periodically audit `exceptions.py` against actual usage.

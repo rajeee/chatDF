@@ -146,3 +146,4 @@ Track each improvement cycle: what was done, what was learned.
 | 140 | 2026-02-12 | Enrich LLM prompt with column statistics (min/max, cardinality, null count), 13 new tests | hardening | 2693 frontend, 2107/2107 backend (+13 new) | 99ce07e |
 | 141 | 2026-02-12 | Size limit in fetch_and_validate, 3 SQL few-shot examples, 4 new E2E tests | hardening | 2693 frontend, 2112/2112 backend (+5 new) | fb82acf |
 | 142 | 2026-02-12 | Fix socket leaks, translate raw errors, add task done callbacks | hardening | 2693 frontend, 2112/2112 backend (0 failures) | 6bd1089 |
+| 143 | 2026-02-12 | Remove dead code (ForbiddenError, ErrorResponse), 4 new error patterns, LLM SQL hints | hardening | 2693 frontend, 2131/2131 backend (+36 new, -17 removed) | f3527a0 |

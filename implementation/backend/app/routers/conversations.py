@@ -69,6 +69,17 @@ from app.services import dataset_service, llm_service
 router = APIRouter()
 public_router = APIRouter()
 
+_logger = logging.getLogger(__name__)
+
+
+def _log_task_exception(task: asyncio.Task) -> None:
+    """Callback for fire-and-forget tasks to log uncaught exceptions."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        _logger.error("Uncaught exception in background task %s: %s", task.get_name(), exc, exc_info=exc)
+
 
 # ---------------------------------------------------------------------------
 # POST /conversations
@@ -1044,9 +1055,6 @@ async def clear_all_conversations(
 # ---------------------------------------------------------------------------
 
 
-_logger = logging.getLogger(__name__)
-
-
 @router.post("/{conversation_id}/messages", response_model=MessageAckResponse)
 async def send_message(
     request: Request,
@@ -1110,7 +1118,8 @@ async def send_message(
             except Exception:
                 _logger.warning("Failed to send chat_error WS event for conversation %s", conv_id)
 
-    asyncio.create_task(_background_process())
+    task = asyncio.create_task(_background_process())
+    task.add_done_callback(_log_task_exception)
 
     return MessageAckResponse(message_id=msg_id, status="processing")
 
@@ -1839,7 +1848,8 @@ async def redo_message(
             except Exception:
                 _logger.warning("Failed to send chat_error WS event for redo in conversation %s", conv_id)
 
-    asyncio.create_task(_background_redo())
+    task = asyncio.create_task(_background_redo())
+    task.add_done_callback(_log_task_exception)
 
     return MessageAckResponse(message_id=message_id, status="processing")
 

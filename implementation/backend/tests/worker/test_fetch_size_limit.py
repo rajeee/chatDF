@@ -14,6 +14,8 @@ class TestFetchSizeLimit(unittest.TestCase):
         """Files larger than 500 MB should be rejected early."""
         mock_resp = MagicMock()
         mock_resp.headers.get.return_value = str(600 * 1024 * 1024)  # 600 MB
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_resp
 
         result = fetch_and_validate("https://example.com/large.parquet")
@@ -30,6 +32,8 @@ class TestFetchSizeLimit(unittest.TestCase):
         # HEAD response
         mock_head_resp = MagicMock()
         mock_head_resp.headers.get.return_value = str(100 * 1024 * 1024)  # 100 MB
+        mock_head_resp.__enter__ = lambda s: s
+        mock_head_resp.__exit__ = MagicMock(return_value=False)
 
         # GET response for magic bytes
         mock_get_resp = MagicMock()
@@ -50,6 +54,8 @@ class TestFetchSizeLimit(unittest.TestCase):
         # HEAD response with no Content-Length
         mock_head_resp = MagicMock()
         mock_head_resp.headers.get.return_value = None
+        mock_head_resp.__enter__ = lambda s: s
+        mock_head_resp.__exit__ = MagicMock(return_value=False)
 
         # GET response for magic bytes
         mock_get_resp = MagicMock()
@@ -69,6 +75,8 @@ class TestFetchSizeLimit(unittest.TestCase):
         """Files exactly at the 500 MB boundary should still pass (only > 500 MB rejected)."""
         mock_head_resp = MagicMock()
         mock_head_resp.headers.get.return_value = str(500 * 1024 * 1024)  # Exactly 500 MB
+        mock_head_resp.__enter__ = lambda s: s
+        mock_head_resp.__exit__ = MagicMock(return_value=False)
 
         # GET response for magic bytes
         mock_get_resp = MagicMock()

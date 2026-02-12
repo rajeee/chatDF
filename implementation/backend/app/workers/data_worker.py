@@ -15,6 +15,7 @@ import time
 import urllib.error
 import urllib.request
 
+from app.workers.error_translator import translate_polars_error
 from app.workers.file_cache import download_and_cache as _download_and_cache
 
 MAX_RESULT_ROWS = 1000
@@ -226,9 +227,9 @@ def fetch_and_validate(url: str) -> dict:
     try:
         # Step 1: HEAD request to check accessibility
         req = urllib.request.Request(url, method="HEAD")
-        resp = urllib.request.urlopen(req, timeout=HEAD_REQUEST_TIMEOUT)
-        content_length = resp.headers.get("Content-Length")
-        file_size_bytes = int(content_length) if content_length else None
+        with urllib.request.urlopen(req, timeout=HEAD_REQUEST_TIMEOUT) as resp:
+            content_length = resp.headers.get("Content-Length")
+            file_size_bytes = int(content_length) if content_length else None
 
         # Reject oversized remote files early (before download)
         if file_size_bytes is not None and file_size_bytes > 500 * 1024 * 1024:
@@ -476,9 +477,10 @@ def extract_schema(url: str) -> dict:
         if "network" in error_msg.lower() or "404" in error_msg or "connect" in error_msg.lower():
             error_type = "network"
 
+        friendly = translate_polars_error(error_msg)
         return {
             "error_type": error_type,
-            "message": f"Failed to extract schema: {error_msg}",
+            "message": f"Failed to extract schema: {friendly}",
             "details": error_msg,
         }
 
@@ -573,7 +575,7 @@ def profile_columns(url: str) -> dict:
         return {"profiles": profiles}
 
     except Exception as exc:
-        return {"error": str(exc)}
+        return {"error": translate_polars_error(str(exc))}
 
 
 def profile_column(url: str, table_name: str, column_name: str, column_type: str) -> dict:
@@ -700,7 +702,7 @@ def profile_column(url: str, table_name: str, column_name: str, column_type: str
         return {"stats": stats}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": translate_polars_error(str(e))}
 
 
 def execute_query(sql: str, datasets: list[dict]) -> dict:

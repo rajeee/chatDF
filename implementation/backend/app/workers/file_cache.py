@@ -194,8 +194,8 @@ def download_and_cache(url: str) -> str:
         # Pre-check Content-Length with HEAD request to reject oversized files early
         try:
             head_req = urllib.request.Request(url, method="HEAD")
-            head_resp = urllib.request.urlopen(head_req, timeout=30)
-            content_length = head_resp.headers.get("Content-Length")
+            with urllib.request.urlopen(head_req, timeout=30) as head_resp:
+                content_length = head_resp.headers.get("Content-Length")
             if content_length and int(content_length) > MAX_FILE_BYTES:
                 raise ValueError(
                     f"Remote file is {int(content_length) / (1024 ** 2):.0f} MB, "

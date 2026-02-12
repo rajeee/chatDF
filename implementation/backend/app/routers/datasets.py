@@ -42,6 +42,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _log_task_exception(task: asyncio.Task) -> None:
+    """Callback for fire-and-forget tasks to log uncaught exceptions."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("Uncaught exception in background task %s: %s", task.get_name(), exc, exc_info=exc)
+
+
 # ---------------------------------------------------------------------------
 # Helper: get worker_pool from app.state
 # ---------------------------------------------------------------------------
@@ -157,11 +166,12 @@ async def add_dataset(
         )
 
     # Fire-and-forget: auto-profile columns in the background
-    asyncio.create_task(
+    profile_task = asyncio.create_task(
         _auto_profile_dataset(
             worker_pool, connection_manager, user["id"], result["id"], result["url"]
         )
     )
+    profile_task.add_done_callback(_log_task_exception)
 
     return DatasetAckResponse(dataset_id=result["id"], status="loading")
 

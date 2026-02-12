@@ -22,19 +22,18 @@ const assistantMessage = {
 describe("MessageBubble fork button", () => {
   const noop = () => {};
 
-  it("shows fork button on user messages", () => {
+  it("does not show fork button on user messages", () => {
     render(
       <MessageBubble
         message={baseMessage}
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
         onFork={noop}
       />
     );
-    expect(screen.getByTestId(`fork-btn-${baseMessage.id}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`fork-btn-${baseMessage.id}`)).not.toBeInTheDocument();
   });
 
   it("shows fork button on assistant messages", () => {
@@ -44,7 +43,6 @@ describe("MessageBubble fork button", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
         onFork={noop}
       />
@@ -56,45 +54,42 @@ describe("MessageBubble fork button", () => {
     const onFork = vi.fn();
     render(
       <MessageBubble
-        message={baseMessage}
+        message={assistantMessage}
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
         onFork={onFork}
       />
     );
-    fireEvent.click(screen.getByTestId(`fork-btn-${baseMessage.id}`));
-    expect(onFork).toHaveBeenCalledWith(baseMessage.id);
+    fireEvent.click(screen.getByTestId(`fork-btn-${assistantMessage.id}`));
+    expect(onFork).toHaveBeenCalledWith(assistantMessage.id);
   });
 
   it("does not show fork button when onFork is not provided", () => {
     render(
       <MessageBubble
-        message={baseMessage}
+        message={assistantMessage}
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );
-    expect(screen.queryByTestId(`fork-btn-${baseMessage.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`fork-btn-${assistantMessage.id}`)).not.toBeInTheDocument();
   });
 
   it("does not show fork button while streaming", () => {
     render(
       <MessageBubble
-        message={baseMessage}
+        message={assistantMessage}
         isCurrentlyStreaming={true}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
         onFork={noop}
       />
     );
-    expect(screen.queryByTestId(`fork-btn-${baseMessage.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`fork-btn-${assistantMessage.id}`)).not.toBeInTheDocument();
   });
 });

@@ -51,7 +51,6 @@ describe("MessageBubble SQL Preview", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -70,7 +69,6 @@ describe("MessageBubble SQL Preview", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -86,7 +84,6 @@ describe("MessageBubble SQL Preview", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -100,7 +97,6 @@ describe("MessageBubble SQL Preview", () => {
         isCurrentlyStreaming={true}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -121,7 +117,6 @@ describe("MessageBubble SQL Preview", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );

@@ -31,7 +31,6 @@ describe("Timestamp custom tooltip shows exact date/time", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );
@@ -62,7 +61,6 @@ describe("Timestamp custom tooltip shows exact date/time", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );
@@ -78,7 +76,6 @@ describe("Timestamp custom tooltip shows exact date/time", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );
@@ -108,7 +105,6 @@ describe("Timestamp custom tooltip shows exact date/time", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );
@@ -133,7 +129,6 @@ describe("Timestamp custom tooltip shows exact date/time", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noop}
         onShowReasoning={noop}
-        onCopy={noop}
         onVisualize={noop}
       />
     );

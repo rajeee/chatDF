@@ -286,53 +286,6 @@ describe("ML-SQL-1: Show SQL button opens SQL panel", () => {
 
 });
 
-describe("ML-COPY-1: Copy button copies message content", () => {
-  it("renders a copy button for each message", () => {
-    setChatIdle("conv-1", [
-      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    expect(screen.getByTestId("copy-btn-msg-1")).toBeInTheDocument();
-  });
-
-  it("clicking copy button calls clipboard.writeText with message content", () => {
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-1",
-        role: "user",
-        content: "Copy this text",
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const copyBtn = screen.getByTestId("copy-btn-msg-1");
-    fireEvent.click(copyBtn);
-
-    expect(writeTextMock).toHaveBeenCalledWith("Copy this text");
-  });
-
-  it("copies raw markdown source for assistant messages", () => {
-    const markdownContent = "**Bold** and `code`";
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-2",
-        role: "assistant",
-        content: markdownContent,
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const copyBtn = screen.getByTestId("copy-btn-msg-2");
-    fireEvent.click(copyBtn);
-
-    expect(writeTextMock).toHaveBeenCalledWith(markdownContent);
-  });
-});
-
 describe("ML-STREAM-1: Streaming indicator shown", () => {
   it("shows pulsing cursor when isStreaming is true", () => {
     const msg = makeMessage({
@@ -467,19 +420,7 @@ describe("Accessibility: ARIA attributes", () => {
   });
 });
 
-describe("Touch-friendly: action buttons visible on touch devices", () => {
-  it("copy button is always visible at subtle opacity", () => {
-    setChatIdle("conv-1", [
-      makeMessage({ id: "msg-1", role: "user", content: "Hello" }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const copyBtn = screen.getByTestId("copy-btn-msg-1");
-    expect(copyBtn.className).toContain("opacity-40");
-    expect(copyBtn.className).toContain("hover:opacity-100");
-  });
-
+describe("Touch-friendly: UI elements visible on touch devices", () => {
   it("timestamp is always visible with subtle opacity", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello" }),

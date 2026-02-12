@@ -8,7 +8,6 @@ describe("MessageBubble word wrapping", () => {
     isCurrentlyStreaming: false,
     onShowSQL: vi.fn(),
     onShowReasoning: vi.fn(),
-    onCopy: vi.fn(),
     onVisualize: vi.fn(),
   };
 

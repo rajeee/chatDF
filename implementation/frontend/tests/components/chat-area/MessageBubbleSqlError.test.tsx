@@ -44,7 +44,6 @@ describe("MessageBubble SQL error display", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -77,7 +76,6 @@ describe("MessageBubble SQL error display", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -109,7 +107,6 @@ describe("MessageBubble SQL error display", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -141,7 +138,6 @@ describe("MessageBubble SQL error display", () => {
         isCurrentlyStreaming={true}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -189,7 +185,6 @@ describe("MessageBubble SQL error display", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );

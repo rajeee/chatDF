@@ -37,7 +37,6 @@ describe("MessageBubble retry on send failure", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
         onRetry={onRetry}
       />
@@ -65,7 +64,6 @@ describe("MessageBubble retry on send failure", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
         onRetry={onRetry}
       />
@@ -90,7 +88,6 @@ describe("MessageBubble retry on send failure", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
         onRetry={noopFn}
       />
@@ -115,7 +112,6 @@ describe("MessageBubble retry on send failure", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
         onRetry={noopFn}
       />

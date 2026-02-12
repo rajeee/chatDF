@@ -34,7 +34,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );
@@ -56,7 +55,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );
@@ -78,7 +76,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );
@@ -107,7 +104,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );
@@ -126,7 +122,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );
@@ -152,7 +147,6 @@ describe("MessageBubble SQL Preview Animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={() => {}}
         onShowReasoning={() => {}}
-        onCopy={() => {}}
         onVisualize={() => {}}
       />
     );

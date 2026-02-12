@@ -4,12 +4,11 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo, useMemo, useState, useCallback, useRef } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { useChatStore, type Message, type SqlExecution } from "@/stores/chatStore";
+import { type Message, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useDevModeStore } from "@/stores/devModeStore";
-import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
@@ -37,12 +36,9 @@ interface MessageBubbleProps {
   staggerIndex?: number;
   onShowSQL: (executions: SqlExecution[]) => void;
   onShowReasoning: (reasoning: string) => void;
-  onCopy: (content: string) => void;
   onVisualize: (executions: SqlExecution[], index: number) => void;
   onRetry?: (messageId: string, content: string) => void;
   onFork?: (messageId: string) => void;
-  onBranch?: (messageId: string) => void;
-  onDelete?: (messageId: string) => void;
   onRedo?: (messageId: string) => void;
   searchQuery?: string;
 }
@@ -71,12 +67,9 @@ function MessageBubbleComponent({
   staggerIndex,
   onShowSQL,
   onShowReasoning,
-  onCopy,
   onVisualize,
   onRetry,
   onFork,
-  onBranch,
-  onDelete,
   onRedo,
   searchQuery,
 }: MessageBubbleProps) {
@@ -85,12 +78,6 @@ function MessageBubbleComponent({
   const devMode = useDevModeStore((s) => s.devMode);
   const reasoningContent = message.reasoning;
 
-  // Bookmark state
-  const isMessageBookmarked = useBookmarkStore((s) => s.isBookmarked(message.id));
-  const addBookmark = useBookmarkStore((s) => s.addBookmark);
-  const removeBookmarkAction = useBookmarkStore((s) => s.removeBookmark);
-  const getBookmarkByMessageId = useBookmarkStore((s) => s.getBookmarkByMessageId);
-  const activeConversationId = useChatStore((s) => s.activeConversationId);
 
   // Find the first sql_execution that has chartable data
   const visualizableIndex = useMemo(() => {
@@ -105,17 +92,7 @@ function MessageBubbleComponent({
 
   const [sqlExpanded, setSqlExpanded] = useState(false);
   const [traceExpanded, setTraceExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [forked, setForked] = useState(false);
-  const [branched, setBranched] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleCopyClick = useCallback(() => {
-    onCopy(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }, [onCopy, message.content]);
 
   const handleForkClick = useCallback(() => {
     if (onFork) {
@@ -124,48 +101,6 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
-
-  const handleBranchClick = useCallback(() => {
-    if (onBranch) {
-      onBranch(message.id);
-      setBranched(true);
-      setTimeout(() => setBranched(false), 1500);
-    }
-  }, [onBranch, message.id]);
-
-  const handleBookmarkClick = useCallback(() => {
-    if (isMessageBookmarked) {
-      const existing = getBookmarkByMessageId(message.id);
-      if (existing) removeBookmarkAction(existing.id);
-    } else {
-      const sql = message.sql_executions.map((e) => e.query).join(";\n");
-      const title = message.content.slice(0, 50).trim() || "Untitled query";
-      addBookmark({
-        messageId: message.id,
-        conversationId: activeConversationId ?? "",
-        sql,
-        title,
-        tags: [],
-      });
-    }
-  }, [isMessageBookmarked, message.id, message.content, message.sql_executions, activeConversationId, addBookmark, removeBookmarkAction, getBookmarkByMessageId]);
-
-  const handleDeleteClick = useCallback(() => {
-    if (!onDelete) return;
-    if (deleteConfirm) {
-      // Second click within 2s — actually delete
-      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
-      setDeleteConfirm(false);
-      onDelete(message.id);
-    } else {
-      // First click — show confirmation
-      setDeleteConfirm(true);
-      deleteTimerRef.current = setTimeout(() => {
-        setDeleteConfirm(false);
-        deleteTimerRef.current = null;
-      }, 2000);
-    }
-  }, [onDelete, message.id, deleteConfirm]);
 
   return (
     <div
@@ -179,6 +114,38 @@ function MessageBubbleComponent({
         ...(staggerIndex !== undefined ? { "--stagger-index": staggerIndex } as React.CSSProperties : {}),
       }}
     >
+      {/* Fork button - above bubble, only on assistant messages, visible on hover */}
+      {!isUser && onFork && !isCurrentlyStreaming && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-0.5">
+          <button
+            data-testid={`fork-btn-${message.id}`}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all"
+            style={{ color: "var(--color-text)", opacity: 0.5 }}
+            onClick={handleForkClick}
+            aria-label={forked ? "Forked" : "Fork conversation from here"}
+            title="Fork conversation from here"
+          >
+            {forked ? (
+              <>
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span style={{ color: "var(--color-success)" }}>Forked!</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="6" y1="3" x2="6" y2="15" />
+                  <circle cx="18" cy="6" r="3" />
+                  <circle cx="6" cy="18" r="3" />
+                  <path d="M18 9a9 9 0 0 1-9 9" />
+                </svg>
+                <span>Fork</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
       <div
         data-testid={`message-bubble-${message.id}`}
         className={`relative max-w-[80%] rounded-lg break-words ${
@@ -629,173 +596,6 @@ function MessageBubbleComponent({
           </div>
         )}
 
-        {/* Action buttons row - top right */}
-        <div className="absolute top-1 right-1 flex items-center gap-1">
-          {/* Bookmark button - only on assistant messages with SQL */}
-          {!isUser && !isCurrentlyStreaming && message.sql_executions.length > 0 && (
-            <button
-              data-testid={`bookmark-btn-${message.id}`}
-              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
-                isMessageBookmarked
-                  ? "opacity-100"
-                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
-              } active:scale-90`}
-              style={{
-                color: isMessageBookmarked ? "var(--color-accent)" : "var(--color-text)",
-              }}
-              onClick={handleBookmarkClick}
-              aria-label={isMessageBookmarked ? "Remove bookmark" : "Bookmark query"}
-              title={isMessageBookmarked ? "Remove bookmark" : "Bookmark query"}
-            >
-              {isMessageBookmarked ? (
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-              ) : (
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          {/* Delete button */}
-          {onDelete && !isCurrentlyStreaming && (
-            <button
-              data-testid={`delete-btn-${message.id}`}
-              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
-                deleteConfirm
-                  ? "opacity-100"
-                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
-              } active:scale-90`}
-              style={{
-                color: deleteConfirm ? "var(--color-error)" : isUser ? "var(--color-white)" : "var(--color-text)",
-              }}
-              onClick={handleDeleteClick}
-              aria-label={deleteConfirm ? "Confirm delete" : "Delete message"}
-              title={deleteConfirm ? "Click again to confirm" : "Delete message"}
-            >
-              {deleteConfirm ? (
-                <span className="flex items-center gap-0.5 copy-check-enter">
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6" />
-                    <path d="M14 11v6" />
-                  </svg>
-                  <span className="text-[10px] font-medium">Delete?</span>
-                </span>
-              ) : (
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                  <path d="M10 11v6" />
-                  <path d="M14 11v6" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          {/* Fork button */}
-          {onFork && !isCurrentlyStreaming && (
-            <button
-              data-testid={`fork-btn-${message.id}`}
-              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
-                forked
-                  ? "opacity-100"
-                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
-              } active:scale-90`}
-              style={{
-                color: forked ? "var(--color-success)" : isUser ? "var(--color-white)" : "var(--color-text)",
-              }}
-              onClick={handleForkClick}
-              aria-label={forked ? "Forked" : "Fork conversation"}
-              title="Fork conversation from here"
-            >
-              {forked ? (
-                <span className="flex items-center gap-0.5 copy-check-enter">
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
-              ) : (
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="6" y1="3" x2="6" y2="15" />
-                  <circle cx="18" cy="6" r="3" />
-                  <circle cx="6" cy="18" r="3" />
-                  <path d="M18 9a9 9 0 0 1-9 9" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          {/* Branch button */}
-          {onBranch && !isCurrentlyStreaming && (
-            <button
-              data-testid={`branch-btn-${message.id}`}
-              className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
-                branched
-                  ? "opacity-100"
-                  : "opacity-40 hover:opacity-100 hover:bg-white/10"
-              } active:scale-90`}
-              style={{
-                color: branched ? "var(--color-success)" : isUser ? "var(--color-white)" : "var(--color-text)",
-              }}
-              onClick={handleBranchClick}
-              aria-label={branched ? "Branched" : "Branch from here"}
-              title="Branch conversation from here"
-            >
-              {branched ? (
-                <span className="flex items-center gap-0.5 copy-check-enter">
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
-              ) : (
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="18" r="3" />
-                  <circle cx="6" cy="6" r="3" />
-                  <circle cx="18" cy="6" r="3" />
-                  <path d="M12 15V9" />
-                  <path d="M6 9v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V9" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          {/* Copy button - shows checkmark + "Copied!" for 1.5s after click */}
-          <button
-            data-testid={`copy-btn-${message.id}`}
-            className={`touch-action-btn p-1 rounded text-xs transition-all duration-150 ${
-              copied
-                ? "opacity-100"
-                : "opacity-40 hover:opacity-100 hover:bg-white/10"
-            } active:scale-90`}
-            style={{
-              color: copied
-                ? "var(--color-success)"
-                : isUser
-                  ? "var(--color-white)"
-                  : "var(--color-text)",
-            }}
-            onClick={handleCopyClick}
-            aria-label={copied ? "Copied" : "Copy message"}
-          >
-            {copied ? (
-              <span className="flex items-center gap-0.5 copy-check-enter">
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span className="text-[10px] font-medium">Copied!</span>
-              </span>
-            ) : (
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" />
-                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-              </svg>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Timestamp with custom tooltip */}

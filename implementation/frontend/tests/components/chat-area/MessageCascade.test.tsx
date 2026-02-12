@@ -37,7 +37,6 @@ describe("Message cascade animation", () => {
         staggerIndex={2}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -53,7 +52,6 @@ describe("Message cascade animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -70,7 +68,6 @@ describe("Message cascade animation", () => {
         staggerIndex={3}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -85,7 +82,6 @@ describe("Message cascade animation", () => {
         isCurrentlyStreaming={false}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );
@@ -101,7 +97,6 @@ describe("Message cascade animation", () => {
         staggerIndex={0}
         onShowSQL={noopFn}
         onShowReasoning={noopFn}
-        onCopy={noopFn}
         onVisualize={noopFn}
       />
     );

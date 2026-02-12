@@ -305,10 +305,34 @@ def build_system_prompt(datasets: list[dict]) -> str:
                 line = f"  - {col_name}: {col_type}"
                 if col_desc:
                     line += f" -- {col_desc}"
+
+                # Build parenthetical with samples and stats
+                paren_parts: list[str] = []
+
                 if sample_values:
                     # Format sample values with quotes for strings
                     formatted = ", ".join(f'"{v}"' for v in sample_values[:5])
-                    line += f" (samples: {formatted})"
+                    paren_parts.append(f"samples: {formatted}")
+
+                # Add column stats if available
+                col_stats = col.get("column_stats", {})
+                if col_stats:
+                    if "min" in col_stats and "max" in col_stats:
+                        paren_parts.append(
+                            f"range: {col_stats['min']}\u2013{col_stats['max']}"
+                        )
+                    if "unique_count" in col_stats:
+                        paren_parts.append(
+                            f"{col_stats['unique_count']} unique values"
+                        )
+                    if "null_count" in col_stats:
+                        paren_parts.append(
+                            f"{col_stats['null_count']} nulls"
+                        )
+
+                if paren_parts:
+                    line += f" ({'; '.join(paren_parts)})"
+
                 parts.append(line)
             parts.append("")
 

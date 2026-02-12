@@ -5,6 +5,7 @@ Tests: spec/backend/llm/test.md#CONTEXT-1 through CONTEXT-3
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -143,3 +144,135 @@ class TestEmptyContext:
         messages = [{"role": "user", "content": "hello"}]
         pruned = prune_context(messages)
         assert len(pruned) == 1
+
+
+class TestColumnStatsInPrompt:
+    """Column stats appear correctly in the system prompt."""
+
+    def test_numeric_range_in_prompt(self):
+        """Numeric columns with min/max show range in the prompt."""
+        datasets = [
+            {
+                "name": "sales",
+                "schema_json": json.dumps([
+                    {
+                        "name": "price",
+                        "type": "Float64",
+                        "sample_values": ["9.99", "19.50"],
+                        "column_stats": {"min": 0.01, "max": 9999.99},
+                    }
+                ]),
+                "row_count": 1000,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        assert "range: 0.01" in prompt
+        assert "9999.99" in prompt
+        assert "samples:" in prompt
+
+    def test_string_unique_count_in_prompt(self):
+        """String columns with unique_count show cardinality in the prompt."""
+        datasets = [
+            {
+                "name": "geo",
+                "schema_json": json.dumps([
+                    {
+                        "name": "city",
+                        "type": "Utf8",
+                        "sample_values": ["NYC", "LA"],
+                        "column_stats": {"unique_count": 150},
+                    }
+                ]),
+                "row_count": 5000,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        assert "150 unique values" in prompt
+
+    def test_null_count_in_prompt(self):
+        """Columns with nulls show null count in the prompt."""
+        datasets = [
+            {
+                "name": "data",
+                "schema_json": json.dumps([
+                    {
+                        "name": "score",
+                        "type": "Float64",
+                        "sample_values": ["10.0", "50.0"],
+                        "column_stats": {"min": 10.0, "max": 50.0, "null_count": 5},
+                    }
+                ]),
+                "row_count": 100,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        assert "5 nulls" in prompt
+
+    def test_no_stats_backward_compatible(self):
+        """Old datasets without column_stats still render correctly."""
+        datasets = [
+            {
+                "name": "legacy",
+                "schema_json": json.dumps([
+                    {
+                        "name": "id",
+                        "type": "Int64",
+                        "sample_values": ["1", "2", "3"],
+                    }
+                ]),
+                "row_count": 50,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        assert "id: Int64" in prompt
+        assert "samples:" in prompt
+        # Should not crash or show "column_stats"
+        assert "column_stats" not in prompt
+
+    def test_empty_stats_no_extra_parens(self):
+        """Columns with empty column_stats dict don't get spurious stats text."""
+        datasets = [
+            {
+                "name": "t",
+                "schema_json": json.dumps([
+                    {
+                        "name": "x",
+                        "type": "Boolean",
+                        "sample_values": [],
+                        "column_stats": {},
+                    }
+                ]),
+                "row_count": 10,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        # With no samples and no stats, the column line should have
+        # no parenthetical annotation
+        assert "x: Boolean" in prompt
+        # The column line itself should not end with empty parens
+        for line in prompt.splitlines():
+            if "x: Boolean" in line:
+                assert line.strip() == "- x: Boolean"
+                break
+
+    def test_combined_samples_and_stats(self):
+        """Samples and stats are combined in a single parenthetical."""
+        datasets = [
+            {
+                "name": "orders",
+                "schema_json": json.dumps([
+                    {
+                        "name": "amount",
+                        "type": "Float64",
+                        "sample_values": ["10.5", "20.0"],
+                        "column_stats": {"min": 1.0, "max": 500.0, "null_count": 3},
+                    }
+                ]),
+                "row_count": 200,
+            }
+        ]
+        prompt = build_system_prompt(datasets)
+        # All parts in one parenthetical, separated by semicolons
+        assert 'samples: "10.5", "20.0"' in prompt
+        assert "range: 1.0" in prompt
+        assert "3 nulls" in prompt

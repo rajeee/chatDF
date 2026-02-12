@@ -69,3 +69,88 @@ class TestSchemaExtraction:
         assert "error_type" in result
         assert result["error_type"] in ("network", "validation")
         assert "message" in result
+
+
+class TestColumnStatsInSchema:
+    """Column statistics are computed during schema extraction."""
+
+    def test_simple_parquet_has_column_stats(self, simple_parquet_url):
+        """Every column in simple.parquet should have a column_stats dict."""
+        result = extract_schema(simple_parquet_url)
+        assert "error_type" not in result
+
+        for col in result["columns"]:
+            assert "column_stats" in col, f"Missing column_stats for {col['name']}"
+            assert isinstance(col["column_stats"], dict)
+
+    def test_numeric_column_has_min_max(self, simple_parquet_url):
+        """Numeric columns (id, value) should have min and max in stats."""
+        result = extract_schema(simple_parquet_url)
+        columns = {c["name"]: c for c in result["columns"]}
+
+        # 'id' is Int64, values 0..9
+        id_stats = columns["id"]["column_stats"]
+        assert "min" in id_stats
+        assert "max" in id_stats
+        assert id_stats["min"] == 0
+        assert id_stats["max"] == 9
+
+        # 'value' is Float64, values 0.0, 1.5, ..., 13.5
+        val_stats = columns["value"]["column_stats"]
+        assert "min" in val_stats
+        assert "max" in val_stats
+        assert val_stats["min"] == 0.0
+        assert val_stats["max"] == 13.5
+
+    def test_string_column_has_unique_count(self, simple_parquet_url):
+        """String column 'name' should have unique_count in stats."""
+        result = extract_schema(simple_parquet_url)
+        columns = {c["name"]: c for c in result["columns"]}
+
+        name_stats = columns["name"]["column_stats"]
+        assert "unique_count" in name_stats
+        assert name_stats["unique_count"] == 10  # 10 unique item_0..item_9
+
+    def test_null_count_present_when_nulls_exist(self, nulls_parquet_url):
+        """Columns with nulls should report null_count in stats."""
+        result = extract_schema(nulls_parquet_url)
+        columns = {c["name"]: c for c in result["columns"]}
+
+        # 'score' has 2 nulls
+        score_stats = columns["score"]["column_stats"]
+        assert "null_count" in score_stats
+        assert score_stats["null_count"] == 2
+
+        # 'label' has 2 nulls
+        label_stats = columns["label"]["column_stats"]
+        assert "null_count" in label_stats
+        assert label_stats["null_count"] == 2
+
+    def test_no_null_count_when_no_nulls(self, simple_parquet_url):
+        """Columns without nulls should NOT have null_count in stats."""
+        result = extract_schema(simple_parquet_url)
+        columns = {c["name"]: c for c in result["columns"]}
+
+        # 'id' has no nulls
+        id_stats = columns["id"]["column_stats"]
+        assert "null_count" not in id_stats
+
+    def test_empty_parquet_has_column_stats(self, empty_parquet_url):
+        """Empty parquet columns should still have column_stats (may be empty)."""
+        result = extract_schema(empty_parquet_url)
+        assert "error_type" not in result
+
+        for col in result["columns"]:
+            assert "column_stats" in col
+
+    def test_column_stats_serializable(self, nulls_parquet_url):
+        """Column stats should be JSON-serializable (stored in schema_json)."""
+        import json
+
+        result = extract_schema(nulls_parquet_url)
+        # The full columns list must round-trip through JSON
+        serialized = json.dumps(result["columns"])
+        deserialized = json.loads(serialized)
+        assert len(deserialized) == len(result["columns"])
+        for col in deserialized:
+            assert "column_stats" in col

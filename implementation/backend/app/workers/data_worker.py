@@ -317,6 +317,80 @@ def _collect_sample_values(lazy_frame, columns: list[dict], max_samples: int = 5
     return columns
 
 
+def _collect_column_stats(lazy_frame, columns: list[dict]) -> list[dict]:
+    """Collect lightweight column statistics for the system prompt.
+
+    For numeric columns (Int*, UInt*, Float*): min, max.
+    For string columns (Utf8, String): unique count (cardinality).
+    For all columns: null count (only if > 0).
+
+    Uses aggregation on the full LazyFrame (Polars pushes predicates down,
+    so this is efficient even for large parquet files).
+
+    Args:
+        lazy_frame: A Polars LazyFrame.
+        columns: List of column info dicts (already has ``name``, ``type``).
+
+    Returns:
+        The same *columns* list, each dict augmented with a ``column_stats``
+        dict containing the computed statistics.
+    """
+    import polars as pl
+
+    try:
+        # Build aggregation expressions for all columns in a single pass
+        agg_exprs = []
+        for col_info in columns:
+            col_name = col_info["name"]
+            dtype_str = col_info.get("type", "")
+            col_ref = pl.col(col_name)
+
+            # Null count for every column
+            agg_exprs.append(col_ref.null_count().alias(f"__null__{col_name}"))
+
+            if dtype_str.startswith(("Int", "UInt", "Float")):
+                agg_exprs.append(col_ref.min().alias(f"__min__{col_name}"))
+                agg_exprs.append(col_ref.max().alias(f"__max__{col_name}"))
+            elif dtype_str in ("Utf8", "String"):
+                agg_exprs.append(col_ref.n_unique().alias(f"__nunique__{col_name}"))
+
+        if not agg_exprs:
+            return columns
+
+        stats_row = lazy_frame.select(agg_exprs).collect().to_dicts()[0]
+
+        for col_info in columns:
+            col_name = col_info["name"]
+            dtype_str = col_info.get("type", "")
+            stats: dict = {}
+
+            null_count = stats_row.get(f"__null__{col_name}", 0)
+            if null_count and null_count > 0:
+                stats["null_count"] = null_count
+
+            if dtype_str.startswith(("Int", "UInt", "Float")):
+                min_val = stats_row.get(f"__min__{col_name}")
+                max_val = stats_row.get(f"__max__{col_name}")
+                if min_val is not None:
+                    stats["min"] = min_val
+                if max_val is not None:
+                    stats["max"] = max_val
+            elif dtype_str in ("Utf8", "String"):
+                n_unique = stats_row.get(f"__nunique__{col_name}")
+                if n_unique is not None:
+                    stats["unique_count"] = n_unique
+
+            col_info["column_stats"] = stats
+
+    except Exception:
+        # If stats collection fails, add empty stats so the system still works
+        for col_info in columns:
+            if "column_stats" not in col_info:
+                col_info["column_stats"] = {}
+
+    return columns
+
+
 def extract_schema(url: str) -> dict:
     """Read data file schema without loading full data.
 
@@ -349,6 +423,7 @@ def extract_schema(url: str) -> dict:
             ]
             row_count = lazy_frame.select(pl.len()).collect().item()
             columns = _collect_sample_values(lazy_frame, columns)
+            columns = _collect_column_stats(lazy_frame, columns)
             return {"columns": columns, "row_count": row_count}
 
         # Try direct URL access first (uses HTTP range requests for parquet — fast)
@@ -361,6 +436,7 @@ def extract_schema(url: str) -> dict:
             ]
             row_count = lazy_frame.select(pl.len()).collect().item()
             columns = _collect_sample_values(lazy_frame, columns)
+            columns = _collect_column_stats(lazy_frame, columns)
             return {"columns": columns, "row_count": row_count}
         except Exception:
             pass
@@ -375,6 +451,7 @@ def extract_schema(url: str) -> dict:
         ]
         row_count = lazy_frame.select(pl.len()).collect().item()
         columns = _collect_sample_values(lazy_frame, columns)
+        columns = _collect_column_stats(lazy_frame, columns)
         return {"columns": columns, "row_count": row_count}
 
     except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:

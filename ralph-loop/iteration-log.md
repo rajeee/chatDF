@@ -144,3 +144,4 @@ Track each improvement cycle: what was done, what was learned.
 | 138 | 2026-02-11 | Harden error translator (8 fixes + 9 new patterns), deduplicate schema utils, fix flaky test, 72 new backend tests | hardening | 2716/2716 frontend, 2090/2090 backend | 447e493, b52695d |
 | 139 | 2026-02-12 | Uploaded file cleanup on dataset deletion, fix E2E Playwright config (globalSetup/globalTeardown) | hardening | 2693 frontend, 2094/2094 backend (+4 new) | 1227f2a |
 | 140 | 2026-02-12 | Enrich LLM prompt with column statistics (min/max, cardinality, null count), 13 new tests | hardening | 2693 frontend, 2107/2107 backend (+13 new) | 99ce07e |
+| 141 | 2026-02-12 | Size limit in fetch_and_validate, 3 SQL few-shot examples, 4 new E2E tests | hardening | 2693 frontend, 2112/2112 backend (+5 new) | fb82acf |

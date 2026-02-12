@@ -8,8 +8,10 @@ Verifies: spec/backend/dataset_handling/plan.md
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import aiosqlite
@@ -490,6 +492,97 @@ class TestRemoveDataset:
         await remove_dataset(fresh_db, ds1["id"])
         assert await _get_dataset(fresh_db, ds1["id"]) is None
         assert await _get_dataset(fresh_db, ds2["id"]) is not None
+
+    async def test_deletes_uploaded_file_on_removal(self, fresh_db, test_user):
+        """Deleting an uploaded dataset (file:// URL) should remove the physical file."""
+        from app.services.dataset_service import remove_dataset
+
+        conv = make_conversation(user_id=test_user["id"])
+        await _insert_conversation(fresh_db, conv)
+
+        # Create a real temp file to simulate an upload
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".parquet") as f:
+            f.write(b"PAR1fakecontent")
+            temp_path = f.name
+
+        try:
+            ds = make_dataset(
+                conversation_id=conv["id"],
+                url=f"file://{temp_path}",
+            )
+            await _insert_dataset(fresh_db, ds)
+            assert os.path.exists(temp_path)
+
+            await remove_dataset(fresh_db, ds["id"])
+
+            assert not os.path.exists(temp_path), "Physical file should be deleted"
+            assert await _get_dataset(fresh_db, ds["id"]) is None
+        finally:
+            # Safety cleanup in case the test fails before removal
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    async def test_does_not_delete_file_for_http_url(self, fresh_db, test_user):
+        """Deleting a URL-based dataset should NOT attempt file cleanup."""
+        from app.services.dataset_service import remove_dataset
+
+        conv = make_conversation(user_id=test_user["id"])
+        await _insert_conversation(fresh_db, conv)
+
+        ds = make_dataset(
+            conversation_id=conv["id"],
+            url="https://example.com/data.parquet",
+        )
+        await _insert_dataset(fresh_db, ds)
+
+        with patch("app.services.dataset_service.os.unlink") as mock_unlink:
+            await remove_dataset(fresh_db, ds["id"])
+            mock_unlink.assert_not_called()
+
+        assert await _get_dataset(fresh_db, ds["id"]) is None
+
+    async def test_graceful_when_file_already_missing(self, fresh_db, test_user):
+        """Deleting an uploaded dataset whose file is already gone should not raise."""
+        from app.services.dataset_service import remove_dataset
+
+        conv = make_conversation(user_id=test_user["id"])
+        await _insert_conversation(fresh_db, conv)
+
+        # Use a path that does not exist
+        nonexistent_path = "/tmp/chatdf_test_nonexistent_file_12345.parquet"
+        assert not os.path.exists(nonexistent_path)
+
+        ds = make_dataset(
+            conversation_id=conv["id"],
+            url=f"file://{nonexistent_path}",
+        )
+        await _insert_dataset(fresh_db, ds)
+
+        # Should not raise even though file doesn't exist
+        await remove_dataset(fresh_db, ds["id"])
+        assert await _get_dataset(fresh_db, ds["id"]) is None
+
+    async def test_graceful_on_os_permission_error(self, fresh_db, test_user):
+        """If os.unlink raises a non-FileNotFoundError OSError, deletion still succeeds."""
+        from app.services.dataset_service import remove_dataset
+
+        conv = make_conversation(user_id=test_user["id"])
+        await _insert_conversation(fresh_db, conv)
+
+        ds = make_dataset(
+            conversation_id=conv["id"],
+            url="file:///some/protected/file.parquet",
+        )
+        await _insert_dataset(fresh_db, ds)
+
+        with patch(
+            "app.services.dataset_service.os.unlink",
+            side_effect=PermissionError("Permission denied"),
+        ):
+            # Should not raise -- the DB row should still be deleted
+            await remove_dataset(fresh_db, ds["id"])
+
+        assert await _get_dataset(fresh_db, ds["id"]) is None
 
 
 # ---------------------------------------------------------------------------

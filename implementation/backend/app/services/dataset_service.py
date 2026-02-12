@@ -14,11 +14,15 @@ Provides:
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
 from datetime import datetime, timezone
 from uuid import uuid4
 
 import aiosqlite
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -167,9 +171,40 @@ async def add_dataset(
 
 
 async def remove_dataset(db: aiosqlite.Connection, dataset_id: str) -> None:
-    """Delete a dataset row from the datasets table. No-op if not found."""
+    """Delete a dataset row from the datasets table. No-op if not found.
+
+    If the dataset was an uploaded file (URL starts with ``file://``), the
+    physical file on disk is also removed.  File-not-found is handled
+    gracefully so deletion never fails due to a missing file.
+    """
+    # Look up the URL before deleting the row so we can clean up the file.
+    cursor = await db.execute(
+        "SELECT url FROM datasets WHERE id = ?", (dataset_id,)
+    )
+    row = await cursor.fetchone()
+
     await db.execute("DELETE FROM datasets WHERE id = ?", (dataset_id,))
     await db.commit()
+
+    # Clean up the physical file for uploaded datasets.
+    if row is not None:
+        url = row["url"]
+        if url and url.startswith("file://"):
+            file_path = url[len("file://"):]
+            try:
+                os.unlink(file_path)
+                logger.info("Deleted uploaded file: %s", file_path)
+            except FileNotFoundError:
+                logger.warning(
+                    "Uploaded file already missing during cleanup: %s",
+                    file_path,
+                )
+            except OSError:
+                logger.warning(
+                    "Failed to delete uploaded file: %s",
+                    file_path,
+                    exc_info=True,
+                )
 
 
 # ---------------------------------------------------------------------------

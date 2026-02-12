@@ -13,3 +13,4 @@
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()`, not hooks.
 - **Track ALL requestAnimationFrame IDs**: Any RAF callback that calls setState must have its ID stored in a ref so it can be cancelled on unmount.
+- **Piped bash commands with `tail` buffer forever**: `cmd | tail -N` in background buffers until `cmd` completes. Write to a file instead and read separately.

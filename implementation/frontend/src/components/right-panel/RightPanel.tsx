@@ -136,7 +136,7 @@ export function RightPanel() {
     ? "fixed top-12 right-0 bottom-0 z-40 animate-slide-in-right"
     : "hidden";
   // lg: overrides mobile positioning to be inline
-  const desktopClasses = "lg:flex lg:relative lg:sticky lg:top-12 lg:self-start lg:z-auto lg:animate-none";
+  const desktopClasses = "lg:flex lg:relative lg:z-auto lg:animate-none";
 
   return (
     <aside
@@ -146,7 +146,7 @@ export function RightPanel() {
       style={{
         width: rightPanelWidth,
         minWidth: rightPanelWidth,
-        height: "calc(100vh - 3rem)",
+        height: "100%",
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-border)",
         boxShadow: "-1px 0 3px var(--color-shadow)",

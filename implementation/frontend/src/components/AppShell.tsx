@@ -94,7 +94,8 @@ export function AppShell() {
 
       <main
         data-testid="main-grid"
-        className="flex flex-1"
+        className="flex flex-1 overflow-hidden"
+        style={{ height: "calc(100vh - 3rem)" }}
       >
         <LeftPanel />
         <ChatArea />

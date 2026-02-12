@@ -199,7 +199,7 @@ export function ChatArea() {
       id="main-content"
       tabIndex={-1}
       data-testid="chat-area"
-      className="relative flex flex-col flex-1 min-w-0 items-center outline-none"
+      className="relative flex flex-col flex-1 min-w-0 items-center outline-none overflow-y-auto"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* ARIA live region for screen reader announcements */}

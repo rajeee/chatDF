@@ -80,11 +80,11 @@ export function LeftPanel() {
     return (
       <aside
         data-testid="left-panel"
-        className="hidden lg:flex flex-col items-center pt-3 sticky top-12 self-start border-r transition-all duration-300 ease-in-out"
+        className="hidden lg:flex flex-col items-center pt-3 border-r transition-all duration-300 ease-in-out"
         style={{
           width: 48,
           minWidth: 48,
-          height: "calc(100vh - 3rem)",
+          height: "100%",
           backgroundColor: "var(--color-surface)",
           borderColor: "var(--color-border)",
         }}
@@ -106,7 +106,7 @@ export function LeftPanel() {
   // On mobile: fixed overlay from left side with slide animation
   // On desktop (lg+): inline sticky panel
   const mobileClasses = "fixed top-12 left-0 bottom-0 z-40 animate-slide-in-left";
-  const desktopClasses = "lg:relative lg:sticky lg:top-12 lg:self-start lg:z-auto lg:animate-none";
+  const desktopClasses = "lg:relative lg:z-auto lg:animate-none";
 
   return (
     <aside
@@ -116,7 +116,7 @@ export function LeftPanel() {
       style={{
         width: leftPanelWidth,
         minWidth: leftPanelWidth,
-        height: "calc(100vh - 3rem)",
+        height: "100%",
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-border)",
       }}

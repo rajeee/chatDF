@@ -425,7 +425,7 @@ function MessageBubbleComponent({
         )}
 
         {/* Tool Call Trace Viewer (dev mode) */}
-        {!isUser && devMode && !isCurrentlyStreaming && message.tool_call_trace && message.tool_call_trace.length > 0 && (
+        {!isUser && devMode && !isCurrentlyStreaming && Array.isArray(message.tool_call_trace) && message.tool_call_trace.length > 0 && (
           <div
             data-testid={`trace-viewer-${message.id}`}
             className="mt-2 rounded overflow-hidden text-xs"

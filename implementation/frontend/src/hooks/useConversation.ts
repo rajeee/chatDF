@@ -54,6 +54,11 @@ export function useConversation() {
         ...msg,
         sql_executions: msg.sql_executions ?? parseSqlExecutions(msg.sql_query),
         reasoning: msg.reasoning ?? null,
+        tool_call_trace: Array.isArray(msg.tool_call_trace)
+          ? msg.tool_call_trace
+          : typeof msg.tool_call_trace === "string"
+            ? (() => { try { return JSON.parse(msg.tool_call_trace); } catch { return null; } })()
+            : msg.tool_call_trace ?? null,
       }));
       useChatStore.getState().loadMessages(prepared);
     } else {

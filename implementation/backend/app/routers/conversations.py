@@ -449,7 +449,7 @@ async def get_conversation_detail(
             reasoning=row["reasoning"],
             input_tokens=row["input_tokens"] or 0,
             output_tokens=row["output_tokens"] or 0,
-            tool_call_trace=row["tool_call_trace"],
+            tool_call_trace=json.loads(row["tool_call_trace"]) if row["tool_call_trace"] else None,
             created_at=datetime.fromisoformat(row["created_at"]),
         )
         for row in message_rows
@@ -1883,7 +1883,7 @@ async def get_public_conversation(
             reasoning=r["reasoning"],
             input_tokens=r["input_tokens"] or 0,
             output_tokens=r["output_tokens"] or 0,
-            tool_call_trace=r["tool_call_trace"],
+            tool_call_trace=json.loads(r["tool_call_trace"]) if r["tool_call_trace"] else None,
             created_at=datetime.fromisoformat(r["created_at"]),
         )
         for r in message_rows

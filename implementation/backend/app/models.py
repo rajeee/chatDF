@@ -145,7 +145,7 @@ class MessageResponse(BaseModel):
     reasoning: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
-    tool_call_trace: str | None = None
+    tool_call_trace: list[dict] | None = None
     created_at: datetime
 
 

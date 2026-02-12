@@ -208,22 +208,43 @@ def download_and_cache(url: str) -> str:
             # HEAD request failed — proceed with download (size checked per-chunk)
             pass
 
-        total_written = 0
-        with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
-            with os.fdopen(fd, "wb") as f:
-                fd = -1  # Prevent double-close
-                while True:
-                    chunk = response.read(65536)
-                    if not chunk:
-                        break
-                    total_written += len(chunk)
-                    if total_written > MAX_FILE_BYTES:
-                        raise ValueError(
-                            f"Remote file exceeds size limit "
-                            f"({MAX_FILE_BYTES / (1024 ** 2):.0f} MB). "
-                            f"Download aborted."
-                        )
-                    f.write(chunk)
+        # Download with retry for transient network errors
+        max_retries = 3
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                total_written = 0
+                with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response:
+                    with os.fdopen(fd, "wb") as f:
+                        fd = -1  # Prevent double-close
+                        while True:
+                            chunk = response.read(65536)
+                            if not chunk:
+                                break
+                            total_written += len(chunk)
+                            if total_written > MAX_FILE_BYTES:
+                                raise ValueError(
+                                    f"Remote file exceeds size limit "
+                                    f"({MAX_FILE_BYTES / (1024 ** 2):.0f} MB). "
+                                    f"Download aborted."
+                                )
+                            f.write(chunk)
+                break  # Success — exit retry loop
+            except ValueError:
+                raise  # Size limit — don't retry
+            except (urllib.error.URLError, OSError) as exc:
+                last_exc = exc
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        "Download attempt %d/%d failed for %s: %s — retrying",
+                        attempt + 1, max_retries, url[:80], exc,
+                    )
+                    time.sleep(2 ** attempt)  # 1s, 2s
+                    # Re-open temp file for retry (truncate)
+                    if fd < 0:
+                        fd = os.open(tmp_path, os.O_WRONLY | os.O_TRUNC)
+                else:
+                    raise
 
         # Atomic rename into place.  Another process may have written the
         # same file concurrently -- that's fine, last-writer wins and the

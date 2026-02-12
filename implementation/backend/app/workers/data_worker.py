@@ -20,7 +20,7 @@ from app.workers.file_cache import download_and_cache as _download_and_cache
 
 MAX_RESULT_ROWS = 1000
 MAX_QUERY_ROWS = 10000  # Auto-LIMIT cap for SELECT queries without LIMIT
-HEAD_REQUEST_TIMEOUT = 10  # seconds
+HEAD_REQUEST_TIMEOUT = 30  # seconds
 DOWNLOAD_TIMEOUT = 300  # seconds for full file downloads
 
 

@@ -147,3 +147,5 @@ Track each improvement cycle: what was done, what was learned.
 | 141 | 2026-02-12 | Size limit in fetch_and_validate, 3 SQL few-shot examples, 4 new E2E tests | hardening | 2693 frontend, 2112/2112 backend (+5 new) | fb82acf |
 | 142 | 2026-02-12 | Fix socket leaks, translate raw errors, add task done callbacks | hardening | 2693 frontend, 2112/2112 backend (0 failures) | 6bd1089 |
 | 143 | 2026-02-12 | Remove dead code (ForbiddenError, ErrorResponse), 4 new error patterns, LLM SQL hints | hardening | 2693 frontend, 2131/2131 backend (+36 new, -17 removed) | f3527a0 |
+| 144 | 2026-02-12 | Remove dead _read_data_file(), 77 new edge-case tests (data_worker helpers, dataset endpoints, query/generate-sql) | hardening | 2693 frontend, 2208/2208 backend (+77 new) | 0e3fb68 |
+| 145 | 2026-02-12 | Download retry with backoff, standardize HEAD timeout (30s), LLM prompt hardening (data types, error recovery), 12 new tests | hardening | 2693 frontend, 2220/2220 backend (+12 new) | TBD |

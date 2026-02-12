@@ -275,3 +275,39 @@ class TestNewFewShotPatterns:
         assert "BETWEEN" in prompt
         assert "Conditional aggregation" in prompt
         assert "String search with multiple patterns" in prompt
+
+
+class TestDataTypeNotesAndQueryFailureHints:
+    """Verify Data Type Notes and When Queries Fail sections in the system prompt."""
+
+    def test_data_type_notes_section_present(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Data Type Notes" in prompt
+
+    def test_when_queries_fail_section_present(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "When Queries Fail" in prompt
+
+    def test_iso_8601_mentioned(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "ISO 8601" in prompt
+
+    def test_column_not_found_hint(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Column not found" in prompt
+
+    def test_date_format_hint(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "YYYY-MM-DD" in prompt
+
+    def test_null_handling_hint(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "NULL handling" in prompt
+
+    def test_type_mismatch_hint(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Type mismatch" in prompt
+
+    def test_syntax_error_hint(self, sample_datasets):
+        prompt = build_system_prompt(sample_datasets)
+        assert "Syntax error" in prompt

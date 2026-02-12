@@ -8,3 +8,4 @@
 - **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), reference the first table's column definition instead of repeating it.
 - **CodeMirror testing in jsdom**: Mock all `@codemirror/*` modules entirely — CodeMirror requires real DOM measurements. Use `vi.hoisted()` for shared mock state referenced by `vi.mock()` factories.
 - **Column stats boost LLM SQL quality cheaply**: Computing min/max/cardinality during schema extraction adds negligible overhead but gives the LLM critical context that prevents bad WHERE clauses and type mismatches.
+- **Startup cleanup prevents orphaned temp files**: File cache temp files (`.download_*`) can accumulate if processes crash mid-download. Running cleanup on app startup catches what periodic eviction misses.

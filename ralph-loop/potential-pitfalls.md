@@ -5,7 +5,6 @@
 - **Worker pool process isolation**: Data workers run in separate processes — can't share in-memory state with FastAPI.
 - **Background task failures are silent**: `asyncio.create_task()` swallows exceptions. Always add `task.add_done_callback()` and send a WS error event so the frontend doesn't wait forever.
 - **Polars OOM in tests**: Large SQL expressions (2000+ OR conditions, 2500+ columns) cause 9+ GB allocation → OOM kill on the 11 GB VPS. Cap test SQL at ~100 conditions/columns.
-- **SSRF via dataset URLs**: `_validate_url_safety` rejects private/loopback IPs and non-HTTP schemes. Ensure this check stays in `fetch_and_validate`.
 - **Error translator must cover all exit paths**: Raw Polars errors can leak through profile_columns, extract_schema, and profile_column — not just execute_query. Apply translate_polars_error at every error boundary that surfaces to users.
 
 ## Frontend

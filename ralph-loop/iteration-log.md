@@ -150,3 +150,4 @@ Track each improvement cycle: what was done, what was learned.
 | 144 | 2026-02-12 | Remove dead _read_data_file(), 77 new edge-case tests (data_worker helpers, dataset endpoints, query/generate-sql) | hardening | 2693 frontend, 2208/2208 backend (+77 new) | 0e3fb68 |
 | 145 | 2026-02-12 | Download retry with backoff, standardize HEAD timeout (30s), LLM prompt hardening (data types, error recovery), 12 new tests | hardening | 2693 frontend, 2220/2220 backend (+12 new) | a180907 |
 | 146 | 2026-02-12 | Remove dead openSqlChartModal, startup cache cleanup, 6 new tests | hardening | 2693 frontend, 2226/2226 backend (+6 new) | 700c9b0 |
+| 147 | 2026-02-12 | 139 new backend tests: LLM helpers, dataset search helpers, persistent cache edge cases | hardening | 2693 frontend, 2485/2485 backend (+139 new) | 3a3a29d |

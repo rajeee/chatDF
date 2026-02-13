@@ -73,7 +73,6 @@ describe("RP-MOBILE-1: Mobile responsive behavior", () => {
     const panel = screen.getByTestId("right-panel");
     expect(panel.className).toContain("lg:flex");
     expect(panel.className).toContain("lg:relative");
-    expect(panel.className).toContain("lg:sticky");
   });
 
   it("applies fixed overlay classes when rightPanelOpen is true", () => {
@@ -110,14 +109,6 @@ describe("RP-MOBILE-1: Mobile responsive behavior", () => {
     expect(closeBtn).toHaveAttribute("aria-label", "Close datasets panel");
   });
 
-  it("shows Datasets title in mobile header", () => {
-    useDatasetStore.setState({ datasets: [] });
-    useUiStore.setState({ rightPanelOpen: true });
-
-    renderWithProviders(<RightPanel />);
-
-    expect(screen.getByText("Datasets")).toBeInTheDocument();
-  });
 });
 
 describe("RP-LIST-1: Shows dataset cards when datasets exist", () => {

@@ -406,7 +406,7 @@ class TestRouterRegistration:
         assert len(health_paths) > 0, f"No /health routes found. All paths: {sorted(paths)}"
 
     def test_api_routes_registered(self):
-        """API routes (shared-results, dataset-search) exist under /api prefix."""
+        """API routes (shared-results) exist under /api prefix."""
         paths = self._get_route_paths()
         api_paths = [p for p in paths if p.startswith("/api")]
         assert len(api_paths) > 0, f"No /api routes found. All paths: {sorted(paths)}"

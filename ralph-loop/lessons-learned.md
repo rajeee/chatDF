@@ -7,4 +7,4 @@
 - **Polars SQLContext supports cross-table JOINs natively**: No need for DuckDB — Polars registers multiple lazy frames and handles JOINs, UNIONs, and subqueries.
 - **Schema deduplication saves LLM context**: When multiple datasets share columns (same name+type), reference the first table's column definition instead of repeating it.
 - **Column stats boost LLM SQL quality cheaply**: Computing min/max/cardinality during schema extraction adds negligible overhead but gives the LLM critical context that prevents bad WHERE clauses and type mismatches.
-- **Removing a tab from RightPanel also orphans its sibling components**: DatasetDiscoveryPanel, DatasetSearch, and DatasetCatalog all lived exclusively in the "discover" tab — removing the feature meant removing 3 components + store + backend router + the entire tab bar (14 files, -5478 lines). The handleLoadFromSearch callback and searchLoading state were also tab-only.
+- **Removing a tab orphans its sibling components**: Deleting one tab can cascade to 3+ components, stores, backend routers, and callbacks that lived exclusively in that tab. Grep thoroughly after removal.

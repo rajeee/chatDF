@@ -152,3 +152,5 @@ Track each improvement cycle: what was done, what was learned.
 | 146 | 2026-02-12 | Remove dead openSqlChartModal, startup cache cleanup, 6 new tests | hardening | 2693 frontend, 2226/2226 backend (+6 new) | 700c9b0 |
 | 147 | 2026-02-12 | 139 new backend tests: LLM helpers, dataset search helpers, persistent cache edge cases | hardening | 2693 frontend, 2485/2485 backend (+139 new) | 3a3a29d |
 | 148 | 2026-02-12 | Remove BookmarkPanel + bookmarkStore (6 files, -1967 lines) | simplification | 2532/2535 frontend (3 pre-existing), 2485/2485 backend | d31084d |
+| 149 | 2026-02-12 | Remove PinnedResultsPanel (3 files deleted, 2 edited, -1171 lines) | simplification | 2491/2492 frontend (1 pre-existing), 2485/2485 backend | a179b9d |
+| 150 | 2026-02-13 | Remove QueryResultComparisonModal (3 files deleted, 1 edited, -1481 lines) | simplification | 2448/2449 frontend (1 pre-existing), 2485/2485 backend | 18f2462 |

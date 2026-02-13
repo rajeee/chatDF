@@ -25,7 +25,6 @@ interface UiState {
   activeReasoning: string;
   shortcutsModalOpen: boolean;
   pendingSql: string | null;
-  schemaDiffDatasetIds: [string, string] | null;
 }
 
 interface UiActions {
@@ -54,8 +53,6 @@ interface UiActions {
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
   setPendingSql: (sql: string | null) => void;
-  openSchemaDiffModal: (datasetIds: [string, string]) => void;
-  closeSchemaDiffModal: () => void;
 }
 
 export const useUiStore = create<UiState & UiActions>()(
@@ -80,7 +77,6 @@ export const useUiStore = create<UiState & UiActions>()(
       activeReasoning: "",
       shortcutsModalOpen: false,
       pendingSql: null,
-      schemaDiffDatasetIds: null,
 
       toggleLeftPanel: () =>
         set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
@@ -153,12 +149,6 @@ export const useUiStore = create<UiState & UiActions>()(
         set({ shortcutsModalOpen: false }),
 
       setPendingSql: (sql) => set({ pendingSql: sql }),
-
-      openSchemaDiffModal: (datasetIds) =>
-        set({ schemaDiffDatasetIds: datasetIds }),
-
-      closeSchemaDiffModal: () =>
-        set({ schemaDiffDatasetIds: null }),
     }),
     {
       name: "chatdf-ui-preferences",

@@ -21,8 +21,6 @@ from app.workers.data_worker import (
     execute_query as _execute_query,
     extract_schema as _extract_schema,
     fetch_and_validate as _fetch_and_validate,
-    profile_column as _profile_column_fn,
-    profile_columns as _profile_columns_fn,
 )
 
 logger = logging.getLogger(__name__)
@@ -114,16 +112,6 @@ class WorkerPool:
     def db_pool(self):
         """Expose the database pool for persistent cache endpoints."""
         return self._db_pool
-
-    async def profile_columns(self, url: str) -> dict:
-        return await _profile_columns(self._pool, url)
-
-    async def profile_column(
-        self, url: str, table_name: str, column_name: str, column_type: str
-    ) -> dict:
-        return await _profile_column(
-            self._pool, url, table_name, column_name, column_type
-        )
 
     def shutdown(self) -> None:
         self._pool.terminate()
@@ -260,72 +248,5 @@ async def _run_query(
         }
 
 
-async def _profile_columns(pool: multiprocessing.pool.Pool, url: str) -> dict:
-    """Run profile_columns in a worker process.
-
-    Args:
-        pool: The multiprocessing pool.
-        url: Parquet file URL.
-
-    Returns:
-        Result dict from profile_columns, or error dict on failure.
-    """
-    try:
-        loop = asyncio.get_event_loop()
-        async_result = pool.apply_async(_profile_columns_fn, (url,))
-        result = await loop.run_in_executor(None, async_result.get, QUERY_TIMEOUT)
-        return result
-    except multiprocessing.TimeoutError:
-        return {
-            "error_type": "timeout",
-            "message": "Column profiling timed out",
-            "details": f"Timeout after {QUERY_TIMEOUT}s for URL: {url}",
-        }
-    except Exception as exc:
-        return {
-            "error_type": "internal",
-            "message": f"Unexpected error during column profiling: {exc}",
-            "details": str(exc),
-        }
-
-
-async def _profile_column(
-    pool: multiprocessing.pool.Pool,
-    url: str,
-    table_name: str,
-    column_name: str,
-    column_type: str,
-) -> dict:
-    """Run profile_column in a worker process.
-
-    Args:
-        pool: The multiprocessing pool.
-        url: Parquet file URL.
-        table_name: Table name (for consistency).
-        column_name: Column to profile.
-        column_type: Polars dtype string.
-
-    Returns:
-        Result dict from profile_column, or error dict on failure.
-    """
-    try:
-        loop = asyncio.get_event_loop()
-        async_result = pool.apply_async(
-            _profile_column_fn, (url, table_name, column_name, column_type)
-        )
-        result = await loop.run_in_executor(None, async_result.get, QUERY_TIMEOUT)
-        return result
-    except multiprocessing.TimeoutError:
-        return {
-            "error_type": "timeout",
-            "message": "Column profiling timed out",
-            "details": f"Timeout after {QUERY_TIMEOUT}s for column: {column_name}",
-        }
-    except Exception as exc:
-        return {
-            "error_type": "internal",
-            "message": f"Unexpected error during column profiling: {exc}",
-            "details": str(exc),
-        }
 
 

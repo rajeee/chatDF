@@ -12,7 +12,6 @@ Endpoints (all under /conversations/{conversation_id}/datasets):
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import math
@@ -31,7 +30,6 @@ from app.models import (
     DatasetAckResponse,
     DatasetDetailResponse,
     DatasetPreviewResponse,
-    ProfileColumnRequest,
     RenameDatasetRequest,
     SuccessResponse,
 )
@@ -42,15 +40,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _log_task_exception(task: asyncio.Task) -> None:
-    """Callback for fire-and-forget tasks to log uncaught exceptions."""
-    if task.cancelled():
-        return
-    exc = task.exception()
-    if exc is not None:
-        logger.error("Uncaught exception in background task %s: %s", task.get_name(), exc, exc_info=exc)
-
-
 # ---------------------------------------------------------------------------
 # Helper: get worker_pool from app.state
 # ---------------------------------------------------------------------------
@@ -58,25 +47,6 @@ def _log_task_exception(task: asyncio.Task) -> None:
 
 def _get_worker_pool(request: Request) -> object:
     return request.app.state.worker_pool
-
-
-async def _auto_profile_dataset(
-    worker_pool, connection_manager, user_id: str, dataset_id: str, url: str
-) -> None:
-    """Background task: profile columns after dataset load, send results via WS."""
-    try:
-        profile_result = await worker_pool.profile_columns(url)
-        if connection_manager is not None and profile_result.get("profiles"):
-            await connection_manager.send_to_user(
-                user_id,
-                {
-                    "type": "dataset_profiled",
-                    "dataset_id": dataset_id,
-                    "profiles": profile_result["profiles"],
-                },
-            )
-    except Exception:
-        logger.warning("Auto-profile failed for dataset %s", dataset_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +134,6 @@ async def add_dataset(
                 },
             },
         )
-
-    # Fire-and-forget: auto-profile columns in the background
-    profile_task = asyncio.create_task(
-        _auto_profile_dataset(
-            worker_pool, connection_manager, user["id"], result["id"], result["url"]
-        )
-    )
-    profile_task.add_done_callback(_log_task_exception)
 
     return DatasetAckResponse(dataset_id=result["id"], status="loading")
 
@@ -366,61 +328,6 @@ async def refresh_dataset_schema(
 
 
 # ---------------------------------------------------------------------------
-# POST /conversations/{conversation_id}/datasets/{dataset_id}/profile
-# Column profiling endpoint
-# ---------------------------------------------------------------------------
-
-
-@router.post("/{dataset_id}/profile")
-async def profile_dataset(
-    request: Request,
-    dataset_id: str,
-    conversation: dict = Depends(get_conversation),
-    db: aiosqlite.Connection = Depends(get_db),
-):
-    """Compute per-column profiling statistics for a dataset."""
-    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
-
-    worker_pool = _get_worker_pool(request)
-    result = await worker_pool.profile_columns(ds["url"])
-
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-    if "error_type" in result:
-        raise HTTPException(status_code=500, detail=result.get("message", "Profiling failed"))
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# POST /conversations/{conversation_id}/datasets/{dataset_id}/profile-column
-# Single-column detailed profiling endpoint
-# ---------------------------------------------------------------------------
-
-
-@router.post("/{dataset_id}/profile-column")
-async def profile_single_column(
-    request: Request,
-    dataset_id: str,
-    body: ProfileColumnRequest,
-    conversation: dict = Depends(get_conversation),
-    db: aiosqlite.Connection = Depends(get_db),
-):
-    """Profile a single column with detailed statistics."""
-    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
-
-    worker_pool = _get_worker_pool(request)
-    result = await worker_pool.profile_column(
-        ds["url"], ds["name"], body.column_name, body.column_type
-    )
-
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-
-    return result
-
-
-# ---------------------------------------------------------------------------
 # POST /conversations/{conversation_id}/datasets/{dataset_id}/preview
 # Quick-preview: return up to 10 sample rows from the dataset
 # ---------------------------------------------------------------------------
@@ -567,62 +474,3 @@ async def remove_dataset(
     return SuccessResponse(success=True)
 
 
-# ---------------------------------------------------------------------------
-# GET /conversations/{conversation_id}/datasets/{dataset_id}/column-descriptions
-# ---------------------------------------------------------------------------
-
-
-@router.get("/{dataset_id}/column-descriptions")
-async def get_column_descriptions(
-    dataset_id: str,
-    conversation: dict = Depends(get_conversation),
-    db: aiosqlite.Connection = Depends(get_db),
-) -> dict:
-    """Get column descriptions for a dataset."""
-    ds = await _get_dataset_or_404(db, dataset_id, conversation["id"])
-
-    raw = ds.get("column_descriptions", "{}")
-    try:
-        descriptions = json.loads(raw) if raw else {}
-    except (json.JSONDecodeError, TypeError):
-        descriptions = {}
-
-    return {"descriptions": descriptions}
-
-
-# ---------------------------------------------------------------------------
-# PATCH /conversations/{conversation_id}/datasets/{dataset_id}/column-descriptions
-# ---------------------------------------------------------------------------
-
-
-@router.patch("/{dataset_id}/column-descriptions")
-async def update_column_descriptions(
-    dataset_id: str,
-    body: dict,
-    conversation: dict = Depends(get_conversation),
-    db: aiosqlite.Connection = Depends(get_db),
-) -> dict:
-    """Update column descriptions for a dataset.
-
-    Body: {"descriptions": {"column_name": "description text", ...}}
-    """
-    await _get_dataset_or_404(db, dataset_id, conversation["id"])
-
-    descriptions = body.get("descriptions", {})
-    if not isinstance(descriptions, dict):
-        raise HTTPException(status_code=400, detail="descriptions must be a dict")
-
-    # Validate all keys are strings and values are strings
-    for k, v in descriptions.items():
-        if not isinstance(k, str) or not isinstance(v, str):
-            raise HTTPException(status_code=400, detail="All keys and values must be strings")
-        if len(v) > 500:
-            raise HTTPException(status_code=400, detail=f"Description for '{k}' exceeds 500 chars")
-
-    await db.execute(
-        "UPDATE datasets SET column_descriptions = ? WHERE id = ?",
-        (json.dumps(descriptions), dataset_id),
-    )
-    await db.commit()
-
-    return {"success": True, "descriptions": descriptions}

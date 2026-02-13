@@ -5,7 +5,6 @@ Covers:
 - Task cancellation / timeout behavior
 - Error handling during pool operations (pool not initialized, shutdown)
 - Edge cases in run_query (empty results, large results, error results)
-- Edge cases in profile_column and profile_columns
 - Property accessors and set_db_pool
 """
 
@@ -27,8 +26,6 @@ from app.services.worker_pool import (
     _run_query,
     _validate_url,
     _get_schema,
-    _profile_column,
-    _profile_columns,
 )
 
 
@@ -240,25 +237,6 @@ class TestTimeoutBehavior:
         assert "Query execution timed out" in result["message"]
         assert str(QUERY_TIMEOUT) in result["details"]
 
-    async def test_profile_columns_timeout_returns_error_dict(self):
-        """profile_columns returns a timeout error dict on TimeoutError."""
-        pool = _make_mock_pool()
-        ar = _make_async_result(side_effect=multiprocessing.TimeoutError())
-        pool.apply_async.return_value = ar
-
-        result = await _profile_columns(pool, "http://example.com/data.parquet")
-        assert result["error_type"] == "timeout"
-        assert "Column profiling timed out" in result["message"]
-
-    async def test_profile_column_timeout_returns_error_dict(self):
-        """profile_column returns a timeout error dict on TimeoutError."""
-        pool = _make_mock_pool()
-        ar = _make_async_result(side_effect=multiprocessing.TimeoutError())
-        pool.apply_async.return_value = ar
-
-        result = await _profile_column(pool, "http://x.com/d.parquet", "t", "col1", "Int64")
-        assert result["error_type"] == "timeout"
-        assert "col1" in result["details"]
 
 
 # ---------------------------------------------------------------------------
@@ -298,26 +276,6 @@ class TestPoolErrorHandling:
         result = await _run_query(pool, "SELECT 1", [])
         assert result["error_type"] == "internal"
         assert "worker crashed" in result["details"]
-
-    async def test_profile_columns_unexpected_exception(self):
-        """profile_columns wraps unexpected exceptions into an internal error dict."""
-        pool = _make_mock_pool()
-        ar = _make_async_result(side_effect=MemoryError("out of memory"))
-        pool.apply_async.return_value = ar
-
-        result = await _profile_columns(pool, "http://example.com/data.parquet")
-        assert result["error_type"] == "internal"
-        assert "out of memory" in result["details"]
-
-    async def test_profile_column_unexpected_exception(self):
-        """profile_column wraps unexpected exceptions into an internal error dict."""
-        pool = _make_mock_pool()
-        ar = _make_async_result(side_effect=KeyError("missing_col"))
-        pool.apply_async.return_value = ar
-
-        result = await _profile_column(pool, "http://x.com/d.parquet", "t", "c", "Utf8")
-        assert result["error_type"] == "internal"
-        assert "missing_col" in result["details"]
 
     async def test_pool_apply_async_raises_immediately(self):
         """If apply_async itself raises (e.g., pool terminated), error is caught."""
@@ -443,78 +401,7 @@ class TestRunQueryEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# 5. Edge cases in profile_column and profile_columns
-# ---------------------------------------------------------------------------
-
-
-class TestProfileEdgeCases:
-    """Edge cases for profile_column and profile_columns wrappers."""
-
-    async def test_profile_columns_success(self):
-        """profile_columns delegates to the pool and returns the result."""
-        wp = _make_worker_pool()
-        expected = {
-            "columns": [
-                {"name": "id", "type": "Int64", "null_count": 0},
-                {"name": "val", "type": "Utf8", "null_count": 2},
-            ]
-        }
-        ar = _make_async_result(return_value=expected)
-        wp._pool.apply_async.return_value = ar
-
-        result = await wp.profile_columns("http://example.com/d.parquet")
-        assert result == expected
-
-    async def test_profile_column_success(self):
-        """profile_column delegates to the pool with correct arguments."""
-        wp = _make_worker_pool()
-        expected = {
-            "column": "score",
-            "type": "Float64",
-            "min": 0.0,
-            "max": 100.0,
-            "mean": 50.0,
-        }
-        ar = _make_async_result(return_value=expected)
-        wp._pool.apply_async.return_value = ar
-
-        result = await wp.profile_column(
-            "http://example.com/d.parquet", "table1", "score", "Float64"
-        )
-        assert result == expected
-        # Verify the pool was called with all four arguments
-        call_args = wp._pool.apply_async.call_args
-        assert call_args[0][1] == (
-            "http://example.com/d.parquet",
-            "table1",
-            "score",
-            "Float64",
-        )
-
-    async def test_profile_column_empty_column_name(self):
-        """profile_column with empty string column name still delegates to pool."""
-        wp = _make_worker_pool()
-        expected = {"error_type": "validation", "message": "Column not found"}
-        ar = _make_async_result(return_value=expected)
-        wp._pool.apply_async.return_value = ar
-
-        result = await wp.profile_column("http://example.com/d.parquet", "t", "", "Utf8")
-        assert result["error_type"] == "validation"
-
-    async def test_profile_columns_with_special_url_characters(self):
-        """profile_columns handles URLs with special characters."""
-        wp = _make_worker_pool()
-        expected = {"columns": []}
-        ar = _make_async_result(return_value=expected)
-        wp._pool.apply_async.return_value = ar
-
-        url = "http://example.com/path%20with%20spaces/data.parquet?token=abc&v=2"
-        result = await wp.profile_columns(url)
-        assert result == expected
-
-
-# ---------------------------------------------------------------------------
-# 6. WorkerPool properties, set_db_pool, and shutdown
+# 5. WorkerPool properties, set_db_pool, and shutdown
 # ---------------------------------------------------------------------------
 
 

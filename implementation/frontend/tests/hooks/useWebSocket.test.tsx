@@ -596,32 +596,6 @@ describe("useWebSocket - dataset events", () => {
     expect(ds.error_message).toBe("Invalid CSV format");
   });
 
-  it("dataset_profiled sets column profiles", () => {
-    const { ws } = mountAuthenticated();
-
-    act(() => {
-      ws.simulateOpen();
-    });
-
-    const profiles = [
-      { name: "age", null_count: 0, null_percent: 0, unique_count: 50, min: 18, max: 65, mean: 35 },
-      { name: "name", null_count: 2, null_percent: 2.0, unique_count: 98, min_length: 3, max_length: 30 },
-    ];
-
-    act(() => {
-      ws.simulateMessage({
-        type: "dataset_profiled",
-        dataset_id: "ds-prof",
-        profiles,
-      });
-    });
-
-    const columnProfiles = useDatasetStore.getState().columnProfiles;
-    expect(columnProfiles["ds-prof"]).toHaveLength(2);
-    expect(columnProfiles["ds-prof"][0].name).toBe("age");
-    expect(columnProfiles["ds-prof"][1].null_count).toBe(2);
-  });
-
   it("dataset_loaded uses activeConversationId as fallback for conversation_id", () => {
     useChatStore.setState({ activeConversationId: "fallback-conv" });
 

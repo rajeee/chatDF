@@ -263,16 +263,6 @@ def build_system_prompt(datasets: list[dict]) -> str:
             else:
                 columns = schema_raw
 
-            # Parse column descriptions
-            column_descriptions_raw = ds.get("column_descriptions", "{}")
-            if isinstance(column_descriptions_raw, str):
-                try:
-                    column_descriptions = json.loads(column_descriptions_raw)
-                except (json.JSONDecodeError, TypeError):
-                    column_descriptions = {}
-            else:
-                column_descriptions = column_descriptions_raw or {}
-
             # Save first dataset as reference for schema deduplication
             if ds_index == 0:
                 reference_table = name
@@ -287,7 +277,6 @@ def build_system_prompt(datasets: list[dict]) -> str:
             for col in columns:
                 col_name = col.get("name", "unknown")
                 col_type = col.get("type", "unknown")
-                col_desc = column_descriptions.get(col_name, "")
                 sample_values = col.get("sample_values", [])
 
                 # For subsequent datasets, abbreviate columns that match the
@@ -303,8 +292,6 @@ def build_system_prompt(datasets: list[dict]) -> str:
                     continue
 
                 line = f"  - {col_name}: {col_type}"
-                if col_desc:
-                    line += f" -- {col_desc}"
 
                 # Build parenthetical with samples and stats
                 paren_parts: list[str] = []

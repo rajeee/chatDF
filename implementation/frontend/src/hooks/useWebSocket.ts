@@ -223,25 +223,6 @@ export function useWebSocket(isAuthenticated: boolean): void {
           }
           break;
         }
-        case "dataset_profiled": {
-          const datasetStore = useDatasetStore.getState();
-          const dsId = msg.dataset_id as string;
-          const profiles = msg.profiles as Array<{
-            name: string;
-            null_count: number;
-            null_percent: number;
-            unique_count: number;
-            min?: number | null;
-            max?: number | null;
-            mean?: number | null;
-            min_length?: number | null;
-            max_length?: number | null;
-          }>;
-          if (dsId && profiles) {
-            datasetStore.setColumnProfiles(dsId, profiles);
-          }
-          break;
-        }
         case "ctu": // conversation_title_updated (compressed)
         case "conversation_title_updated": {
           void queryClient.invalidateQueries({ queryKey: ["conversations"] });

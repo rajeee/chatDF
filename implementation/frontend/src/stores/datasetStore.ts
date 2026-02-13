@@ -1,6 +1,5 @@
 // Implements: spec/frontend/plan.md#state-management-architecture (datasetStore)
 import { create } from "zustand";
-import { apiPost } from "@/api/client";
 
 export interface Dataset {
   id: string;
@@ -15,24 +14,10 @@ export interface Dataset {
   file_size_bytes?: number | null;
 }
 
-export interface ColumnProfile {
-  name: string;
-  null_count: number;
-  null_percent: number;
-  unique_count: number;
-  min?: number | null;
-  max?: number | null;
-  mean?: number | null;
-  min_length?: number | null;
-  max_length?: number | null;
-}
-
 interface DatasetState {
   datasets: Dataset[];
   loadingDatasets: Set<string>;
   loadingStartTimes: Record<string, number>;
-  columnProfiles: Record<string, ColumnProfile[]>;
-  isProfiling: Record<string, boolean>;
 }
 
 interface DatasetActions {
@@ -43,8 +28,6 @@ interface DatasetActions {
   refreshSchema: (id: string) => void;
   setConversationDatasets: (conversationId: string, datasets: Dataset[]) => void;
   getLoadingStartTime: (id: string) => number | undefined;
-  profileDataset: (conversationId: string, datasetId: string) => Promise<void>;
-  setColumnProfiles: (datasetId: string, profiles: ColumnProfile[]) => void;
   reset: () => void;
 }
 
@@ -52,8 +35,6 @@ const initialState: DatasetState = {
   datasets: [],
   loadingDatasets: new Set<string>(),
   loadingStartTimes: {},
-  columnProfiles: {},
-  isProfiling: {},
 };
 
 export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => ({
@@ -118,42 +99,11 @@ export const useDatasetStore = create<DatasetState & DatasetActions>()((set) => 
 
   getLoadingStartTime: (id) => useDatasetStore.getState().loadingStartTimes[id],
 
-  profileDataset: async (conversationId, datasetId) => {
-    // Skip if already profiled (e.g., via auto-profile on load)
-    const existing = useDatasetStore.getState().columnProfiles[datasetId];
-    if (existing && existing.length > 0) return;
-
-    set((state) => ({
-      isProfiling: { ...state.isProfiling, [datasetId]: true },
-    }));
-    try {
-      const result = await apiPost<{ profiles: ColumnProfile[] }>(
-        `/conversations/${conversationId}/datasets/${datasetId}/profile`
-      );
-      set((state) => ({
-        columnProfiles: { ...state.columnProfiles, [datasetId]: result.profiles },
-        isProfiling: { ...state.isProfiling, [datasetId]: false },
-      }));
-    } catch {
-      set((state) => ({
-        isProfiling: { ...state.isProfiling, [datasetId]: false },
-      }));
-    }
-  },
-
-  setColumnProfiles: (datasetId, profiles) =>
-    set((state) => ({
-      columnProfiles: { ...state.columnProfiles, [datasetId]: profiles },
-      isProfiling: { ...state.isProfiling, [datasetId]: false },
-    })),
-
   reset: () =>
     set({
       datasets: [],
       loadingDatasets: new Set<string>(),
       loadingStartTimes: {},
-      columnProfiles: {},
-      isProfiling: {},
     }),
 }));
 

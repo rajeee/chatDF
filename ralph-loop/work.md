@@ -6,7 +6,7 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 ## SIMPLIFICATION PHASE — Do these in order, one per iteration
 
 ### Round 2: Remove premature/niche features
-- [ ] **Remove DatasetDiscoveryPanel + datasetDiscoveryStore entirely.** Delete: `DatasetDiscoveryPanel.tsx`, `DatasetSearch.tsx`, `stores/datasetDiscoveryStore.ts`, backend `dataset_search.py` router, all related tests. Users paste URLs — they don't need a dataset marketplace.
+- [x] **Remove DatasetDiscoveryPanel + datasetDiscoveryStore entirely.** Delete: `DatasetDiscoveryPanel.tsx`, `DatasetSearch.tsx`, `stores/datasetDiscoveryStore.ts`, backend `dataset_search.py` router, all related tests. Users paste URLs — they don't need a dataset marketplace.
 - [ ] **Remove SchemaDiffModal entirely.** Delete: `SchemaDiffModal.tsx` and tests. Remove from `RightPanel.tsx`. Nobody compares schemas interactively.
 - [ ] **Remove OnboardingGuide entirely.** Delete: `OnboardingGuide.tsx` and tests. Remove from `ChatArea.tsx`. The app should be simple enough to not need a guide.
 - [ ] **Remove ConversationTemplates entirely.** Delete: `ConversationTemplates.tsx`, `utils/conversationTemplates.ts`, and tests. Remove from `ChatArea.tsx`. Premature feature.

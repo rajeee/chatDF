@@ -154,3 +154,4 @@ Track each improvement cycle: what was done, what was learned.
 | 148 | 2026-02-12 | Remove BookmarkPanel + bookmarkStore (6 files, -1967 lines) | simplification | 2532/2535 frontend (3 pre-existing), 2485/2485 backend | d31084d |
 | 149 | 2026-02-12 | Remove PinnedResultsPanel (3 files deleted, 2 edited, -1171 lines) | simplification | 2491/2492 frontend (1 pre-existing), 2485/2485 backend | a179b9d |
 | 150 | 2026-02-13 | Remove QueryResultComparisonModal (3 files deleted, 1 edited, -1481 lines) | simplification | 2448/2449 frontend (1 pre-existing), 2485/2485 backend | 18f2462 |
+| 151 | 2026-02-13 | Remove DatasetDiscoveryPanel, DatasetSearch, DatasetCatalog + dataset_search backend (14 files deleted, 6 edited, -5478 lines) | simplification | 2334/2334 frontend (0 failures), 2326/2326 backend | 3ad8834 |

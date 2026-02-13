@@ -5,9 +5,6 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 
 ## SIMPLIFICATION PHASE — Do these in order, one per iteration
 
-### Round 1: Remove redundant query-saving features (3 overlapping mechanisms)
-- [x] **Remove QueryResultComparisonModal entirely.** Delete: `QueryResultComparisonModal.tsx` and tests. Remove from `RightPanel.tsx` / `RunSqlPanel.tsx`. Niche power-user feature nobody asked for.
-
 ### Round 2: Remove premature/niche features
 - [ ] **Remove DatasetDiscoveryPanel + datasetDiscoveryStore entirely.** Delete: `DatasetDiscoveryPanel.tsx`, `DatasetSearch.tsx`, `stores/datasetDiscoveryStore.ts`, backend `dataset_search.py` router, all related tests. Users paste URLs — they don't need a dataset marketplace.
 - [ ] **Remove SchemaDiffModal entirely.** Delete: `SchemaDiffModal.tsx` and tests. Remove from `RightPanel.tsx`. Nobody compares schemas interactively.

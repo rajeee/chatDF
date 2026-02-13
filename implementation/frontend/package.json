@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "vitest -c vitest.config.ts",
     "test:run": "vitest run -c vitest.config.ts",
+    "test:unit": "vitest run -c vitest.unit.config.ts",
+    "test:components": "vitest run -c vitest.components.config.ts",
     "test:coverage": "vitest run -c vitest.config.ts --coverage",
     "test:e2e": "playwright test -c playwright.config.ts",
     "test:e2e:ui": "playwright test -c playwright.config.ts --ui"

@@ -570,8 +570,8 @@ class TestQueryHistoryPagination:
     @pytest.mark.asyncio
     async def test_default_limit_is_50(self, authed_client, fresh_db, test_user):
         """Default limit should be 50 when not specified."""
-        # Insert 55 entries
-        for i in range(55):
+        # Insert 52 entries (just over the default limit of 50)
+        for i in range(52):
             await _insert_query_history(
                 fresh_db, test_user["id"], query=f"SELECT {i}"
             )
@@ -580,7 +580,7 @@ class TestQueryHistoryPagination:
         assert response.status_code == 200
         body = response.json()
         assert len(body["history"]) == 50
-        assert body["total"] == 55
+        assert body["total"] == 52
 
     @pytest.mark.asyncio
     async def test_max_limit_200(self, authed_client, fresh_db, test_user):

@@ -250,7 +250,7 @@ class TestRedoMessage:
         assert body["message_id"] == assistant_msg["id"]
 
         # Give the background task time to run
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.05)
 
         # Verify both old messages were deleted
         cursor = await fresh_db.execute(

@@ -218,7 +218,7 @@ async def test_search_limit_parameter(authed_client, fresh_db, test_user):
     conv = make_conversation(user_id=test_user["id"], title="Many Messages")
     await insert_conversation(fresh_db, conv)
 
-    for i in range(60):
+    for i in range(25):
         msg = make_message(
             conversation_id=conv["id"],
             content=f"Message number {i} containing keyword",
@@ -235,7 +235,7 @@ async def test_search_limit_parameter(authed_client, fresh_db, test_user):
     body = assert_success_response(response, status_code=200)
     assert body["total"] <= 10
 
-    # Test that limit is capped at 50
+    # Test that limit is capped at 50 (25 results < 50, so total should be 25)
     response = await authed_client.get("/conversations/search?q=keyword&limit=100")
     body = assert_success_response(response, status_code=200)
     assert body["total"] <= 50

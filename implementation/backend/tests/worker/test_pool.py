@@ -64,7 +64,7 @@ class TestPoolLifecycle:
         pool = start(pool_size=2)
 
         # Submit a task that takes a little time
-        async_result = pool._pool.apply_async(time.sleep, (0.5,))
+        async_result = pool._pool.apply_async(time.sleep, (0.2,))
 
         # Shutdown should wait for the task to complete (using terminate+join)
         shutdown(pool)

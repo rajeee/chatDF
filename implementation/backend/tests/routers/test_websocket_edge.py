@@ -138,7 +138,7 @@ class TestHeartbeatFailure:
             # _heartbeat should complete (not hang) when send_json fails
             task = asyncio.create_task(_heartbeat(mock_ws))
             # Give it time to try at least one send
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
             # The task should have finished because of the exception
             assert task.done()
             # No exception should propagate (it's caught internally)
@@ -152,7 +152,7 @@ class TestHeartbeatFailure:
 
         with patch("app.routers.websocket.HEARTBEAT_INTERVAL", 0.01):
             task = asyncio.create_task(_heartbeat(mock_ws))
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
             assert task.done()
             task.result()  # Should not raise
 
@@ -163,7 +163,7 @@ class TestHeartbeatFailure:
 
         with patch("app.routers.websocket.HEARTBEAT_INTERVAL", 0.01):
             task = asyncio.create_task(_heartbeat(mock_ws))
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
             assert task.done()
             task.result()  # Should not raise
 
@@ -182,7 +182,7 @@ class TestHeartbeatFailure:
 
         with patch("app.routers.websocket.HEARTBEAT_INTERVAL", 0.01):
             task = asyncio.create_task(_heartbeat(mock_ws))
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.05)
             assert task.done()
 
         # At least one successful send, then failure on the second
@@ -218,7 +218,7 @@ class TestHeartbeatFailure:
 
         with patch("app.routers.websocket.HEARTBEAT_INTERVAL", 0.01):
             task = asyncio.create_task(_heartbeat(mock_ws))
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.05)
             assert task.done()
 
         # All calls should have been with {"type": "ping"}

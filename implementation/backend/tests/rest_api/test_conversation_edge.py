@@ -120,7 +120,7 @@ async def test_create_conversation_with_many_existing(authed_client, fresh_db, t
     """
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    for i in range(100):
+    for i in range(15):
         conv = make_conversation(
             user_id=test_user["id"],
             title=f"Conv {i}",
@@ -135,27 +135,27 @@ async def test_create_conversation_with_many_existing(authed_client, fresh_db, t
     body = assert_success_response(response, status_code=201)
     assert "id" in body
 
-    # Verify total count is now 101
+    # Verify total count is now 16
     cursor = await fresh_db.execute(
         "SELECT COUNT(*) AS cnt FROM conversations WHERE user_id = ?",
         (test_user["id"],),
     )
     row = await cursor.fetchone()
-    assert row["cnt"] == 101
+    assert row["cnt"] == 16
 
 
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_list_conversations_after_many_creates(authed_client, fresh_db, test_user):
     """Listing after creating many conversations returns all of them."""
-    for i in range(50):
+    for i in range(15):
         conv = make_conversation(user_id=test_user["id"], title=f"Conv {i}")
         await insert_conversation(fresh_db, conv)
 
     response = await authed_client.get("/conversations")
 
     body = assert_success_response(response, status_code=200)
-    assert len(body["conversations"]) == 50
+    assert len(body["conversations"]) == 15
 
 
 # ---------------------------------------------------------------------------

@@ -314,7 +314,7 @@ class TestConcurrencyGuard:
                 )
             )
             # Give task1 time to enter the active set
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.02)
 
             # Second call should raise ConflictError
             with pytest.raises(ConflictError):
@@ -348,7 +348,7 @@ class TestStopGeneration:
         async def capture_cancel(*args, cancel_event=None, **kwargs):
             nonlocal cancel_was_set
             # Wait briefly for stop_generation to be called
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.02)
             if cancel_event is not None:
                 cancel_was_set = cancel_event.is_set()
             return _make_stream_result(assistant_message="partial")

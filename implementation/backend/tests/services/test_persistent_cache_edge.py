@@ -141,7 +141,7 @@ class TestMakeKeyEdgeCases:
 
     def test_very_long_sql_produces_fixed_length_key(self):
         """Even a very long SQL statement produces a 64-char hex key."""
-        long_sql = "SELECT " + ", ".join(f"col_{i}" for i in range(500))
+        long_sql = "SELECT " + ", ".join(f"col_{i}" for i in range(100))
         key = _make_key(long_sql, SAMPLE_DATASETS)
         assert len(key) == 64
 

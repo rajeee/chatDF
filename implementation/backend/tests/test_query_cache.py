@@ -80,7 +80,7 @@ class TestTTLExpiration:
         assert cache.get("SELECT 1", SAMPLE_DATASETS) is not None
 
         # Wait for expiry
-        time.sleep(0.15)
+        time.sleep(0.12)
         assert cache.get("SELECT 1", SAMPLE_DATASETS) is None
 
     def test_fresh_entry_not_expired(self):

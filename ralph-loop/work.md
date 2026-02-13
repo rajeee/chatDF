@@ -6,7 +6,7 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 ## SIMPLIFICATION PHASE — Do these in order, one per iteration
 
 ### Round 2: Remove premature/niche features
-- [ ] **Remove SchemaDiffModal entirely.** Delete: `SchemaDiffModal.tsx` and tests. Remove from `RightPanel.tsx`. Nobody compares schemas interactively.
+- [x] **Remove SchemaDiffModal entirely.** Delete: `SchemaDiffModal.tsx` and tests. Remove from `RightPanel.tsx`. Nobody compares schemas interactively.
 - [ ] **Remove OnboardingGuide entirely.** Delete: `OnboardingGuide.tsx` and tests. Remove from `ChatArea.tsx`. The app should be simple enough to not need a guide.
 - [ ] **Remove ConversationTemplates entirely.** Delete: `ConversationTemplates.tsx`, `utils/conversationTemplates.ts`, and tests. Remove from `ChatArea.tsx`. Premature feature.
 - [ ] **Remove PromptPreviewModal entirely.** Delete: `PromptPreviewModal.tsx` and tests. Remove from wherever it's imported. Dev-only feature.

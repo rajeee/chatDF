@@ -25,8 +25,6 @@ interface UiState {
   activeReasoning: string;
   shortcutsModalOpen: boolean;
   pendingSql: string | null;
-  queryResultComparisonOpen: boolean;
-  comparisonCurrentResult: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null;
   schemaDiffDatasetIds: [string, string] | null;
 }
 
@@ -56,8 +54,6 @@ interface UiActions {
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
   setPendingSql: (sql: string | null) => void;
-  openQueryResultComparison: (currentResult?: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null) => void;
-  closeQueryResultComparison: () => void;
   openSchemaDiffModal: (datasetIds: [string, string]) => void;
   closeSchemaDiffModal: () => void;
 }
@@ -84,8 +80,6 @@ export const useUiStore = create<UiState & UiActions>()(
       activeReasoning: "",
       shortcutsModalOpen: false,
       pendingSql: null,
-      queryResultComparisonOpen: false,
-      comparisonCurrentResult: null,
       schemaDiffDatasetIds: null,
 
       toggleLeftPanel: () =>
@@ -159,12 +153,6 @@ export const useUiStore = create<UiState & UiActions>()(
         set({ shortcutsModalOpen: false }),
 
       setPendingSql: (sql) => set({ pendingSql: sql }),
-
-      openQueryResultComparison: (currentResult) =>
-        set({ queryResultComparisonOpen: true, comparisonCurrentResult: currentResult ?? null }),
-
-      closeQueryResultComparison: () =>
-        set({ queryResultComparisonOpen: false, comparisonCurrentResult: null }),
 
       openSchemaDiffModal: (datasetIds) =>
         set({ schemaDiffDatasetIds: datasetIds }),

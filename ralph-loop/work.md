@@ -6,7 +6,6 @@ Add tasks as checkbox items. The loop will do the top unchecked one and mark it 
 ## SIMPLIFICATION PHASE — Do these in order, one per iteration
 
 ### Round 1: Remove redundant query-saving features (3 overlapping mechanisms)
-- [ ] **Remove PinnedResultsPanel entirely.** Delete: `PinnedResultsPanel.tsx` and all its tests. Remove from `RightPanel.tsx`. This overlaps with SavedQueries.
 - [ ] **Remove QueryResultComparisonModal entirely.** Delete: `QueryResultComparisonModal.tsx` and tests. Remove from `RightPanel.tsx` / `RunSqlPanel.tsx`. Niche power-user feature nobody asked for.
 
 ### Round 2: Remove premature/niche features

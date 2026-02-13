@@ -12,3 +12,4 @@
 - **Streaming token race**: `chat_token` events arrive before `chat_complete`. Must create placeholder message on first token.
 - **Zustand outside React**: WS event handlers run outside React render cycle — use `useStore.getState()`, not hooks.
 - **Track ALL requestAnimationFrame IDs**: Any RAF callback that calls setState must have its ID stored in a ref so it can be cancelled on unmount.
+- **Removing a RightPanel tab requires 3 edits**: delete the tab entry from the array, delete the content render block, and remove the value from the `RightPanelTab` union type in uiStore.

@@ -19,16 +19,17 @@ import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetS
 import { useChatStore } from "@/stores/chatStore";
 import { formatSql } from "@/utils/sqlFormatter";
 import { detectChartTypes } from "@/utils/chartDetection";
-import { generateQueryTemplates, type QueryTemplate } from "@/utils/queryTemplates";
+import { generateQueryTemplates } from "@/utils/queryTemplates";
 
 const ChartVisualization = lazy(() =>
   import("@/components/chat-area/ChartVisualization").then((m) => ({
     default: m.ChartVisualization,
   }))
 );
+
+import { DataGrid } from "@/components/chat-area/DataGrid";
 import { useEditableCodeMirror } from "@/hooks/useEditableCodeMirror";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 interface RunQueryResponse {
   columns: string[];
@@ -59,21 +60,14 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const [saveFolder, setSaveFolder] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
   const savePopoverRef = useRef<HTMLDivElement>(null);
-  const [resultCopied, setResultCopied] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [pinnedQueryId, setPinnedQueryId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [explanationExpanded, setExplanationExpanded] = useState(true);
-  const [exportingCsv, setExportingCsv] = useState(false);
-  const [exportingXlsx, setExportingXlsx] = useState(false);
   const [showChart, setShowChart] = useState(false);
-  const [sortColumn, setSortColumn] = useState<number | null>(null);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showTemplates, setShowTemplates] = useState(false);
-  const [resultFilter, setResultFilter] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState("");
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const templatesRef = useRef<HTMLDivElement>(null);
@@ -117,14 +111,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showTemplates]);
 
-  // Debounce the result filter input (300ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilter(resultFilter);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [resultFilter]);
-
   // Theme detection (same approach as SQLPanel.tsx)
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -133,45 +119,17 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
   const executeQueryRef = useRef<() => void>(() => {});
   const handleFormatRef = useRef<() => void>(() => {});
 
-  const sortedRows = useMemo(() => {
-    if (sortColumn == null || !result) return result?.rows ?? [];
-    const col = sortColumn;
-    const dir = sortDirection === "asc" ? 1 : -1;
-    return [...result.rows].sort((a, b) => {
-      const va = a[col];
-      const vb = b[col];
-      if (va == null && vb == null) return 0;
-      if (va == null) return 1;
-      if (vb == null) return -1;
-      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
-      return String(va).localeCompare(String(vb)) * dir;
+  // Convert array-based rows to record-based format for DataGrid
+  const dataGridRows = useMemo(() => {
+    if (!result) return [];
+    return result.rows.map((row) => {
+      const record: Record<string, unknown> = {};
+      result.columns.forEach((col, i) => {
+        record[col] = row[i];
+      });
+      return record;
     });
-  }, [result, sortColumn, sortDirection]);
-
-  const filteredRows = useMemo(() => {
-    if (!debouncedFilter) return sortedRows;
-    const lowerFilter = debouncedFilter.toLowerCase();
-    return sortedRows.filter((row) =>
-      row.some((cell) =>
-        String(cell ?? "").toLowerCase().includes(lowerFilter)
-      )
-    );
-  }, [sortedRows, debouncedFilter]);
-
-  const handleSortClick = useCallback((colIndex: number) => {
-    if (sortColumn === colIndex) {
-      if (sortDirection === "asc") {
-        setSortDirection("desc");
-      } else {
-        // Third click: clear sort
-        setSortColumn(null);
-        setSortDirection("asc");
-      }
-    } else {
-      setSortColumn(colIndex);
-      setSortDirection("asc");
-    }
-  }, [sortColumn, sortDirection]);
+  }, [result]);
 
   const executeQuery = useCallback(async () => {
     const trimmed = sql.trim();
@@ -181,11 +139,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     setError(null);
     setResult(null);
     setCurrentPage(1);
-    setSortColumn(null);
-    setSortDirection("asc");
     setShowChart(false);
-    setResultFilter("");
-    setDebouncedFilter("");
     setPinned(false);
     setPinnedQueryId(null);
 
@@ -214,8 +168,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
 
       setIsExecuting(true);
       setError(null);
-      setSortColumn(null);
-      setSortDirection("asc");
 
       try {
         const response = await apiPost<RunQueryResponse>(
@@ -484,110 +436,12 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
     }
   }, [nlQuestion, isGenerating, conversationId, editor]);
 
-  // Export results as CSV or XLSX via the backend export endpoints
-  const handleExport = useCallback(
-    async (format: "csv" | "xlsx") => {
-      if (!result) return;
-
-      const setExporting =
-        format === "csv" ? setExportingCsv : setExportingXlsx;
-      setExporting(true);
-
-      try {
-        const response = await fetch(`${API_BASE}/export/${format}`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            columns: result.columns,
-            rows: result.rows,
-            filename: "query-results",
-          }),
-        });
-
-        if (!response.ok) {
-          let errorMessage = `Export failed (HTTP ${response.status})`;
-          try {
-            const body = await response.json();
-            if (body && typeof body.error === "string") {
-              errorMessage = body.error;
-            }
-          } catch {
-            // Response was not JSON
-          }
-          throw new Error(errorMessage);
-        }
-
-        // Extract filename from Content-Disposition header if available
-        const disposition = response.headers.get("Content-Disposition");
-        let filename = `query-results.${format}`;
-        if (disposition) {
-          const match = disposition.match(/filename="?([^";\n]+)"?/);
-          if (match?.[1]) {
-            filename = match[1];
-          }
-        }
-
-        // Create blob and trigger download
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Export failed";
-        useToastStore.getState().error(message);
-      } finally {
-        setExporting(false);
-      }
-    },
-    [result]
-  );
-
-  // Copy results to clipboard as TSV (tab-separated values)
-  const handleCopyResults = useCallback(async () => {
-    if (!result) return;
-    const header = result.columns.join("\t");
-    const body = result.rows
-      .map((row) =>
-        row.map((cell) => (cell == null ? "" : String(cell))).join("\t")
-      )
-      .join("\n");
-    const tsv = header + "\n" + body;
-    try {
-      await navigator.clipboard.writeText(tsv);
-      setResultCopied(true);
-      setTimeout(() => setResultCopied(false), 2000);
-    } catch {
-      // clipboard write failed silently
-    }
-  }, [result]);
-
   // Format execution time for display
   const formatTime = (ms: number): string => {
     if (ms < 1) return `${ms.toFixed(2)}ms`;
     if (ms < 1000) return `${ms.toFixed(0)}ms`;
     return `${(ms / 1000).toFixed(2)}s`;
   };
-
-  // Spinner SVG used for export button loading states
-  const spinnerSvg = (
-    <svg
-      className="w-3 h-3 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="12" cy="12" r="10" opacity="0.25" />
-      <path d="M12 2a10 10 0 0 1 10 10" />
-    </svg>
-  );
 
   return (
     <div
@@ -1079,7 +933,7 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
               className="rounded border overflow-hidden"
               style={{ borderColor: "var(--color-border)" }}
             >
-              {/* Results header */}
+              {/* Results action bar */}
               <div
                 className="flex items-center justify-between px-2 py-1 border-b"
                 style={{
@@ -1099,97 +953,6 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                   )}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  {/* Copy to clipboard button */}
-                  <button
-                    data-testid="copy-results-tsv"
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text)",
-                      backgroundColor: "transparent",
-                    }}
-                    disabled={!result}
-                    onClick={handleCopyResults}
-                    title="Copy results as TSV"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    {resultCopied ? "Copied!" : "Copy"}
-                  </button>
-                  {/* CSV export button */}
-                  <button
-                    data-testid="export-csv"
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text)",
-                      backgroundColor: "transparent",
-                    }}
-                    disabled={exportingCsv}
-                    onClick={() => handleExport("csv")}
-                    title="Export as CSV"
-                  >
-                    {exportingCsv ? (
-                      spinnerSvg
-                    ) : (
-                      <svg
-                        className="w-3 h-3"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                    )}
-                    CSV
-                  </button>
-                  {/* XLSX export button */}
-                  <button
-                    data-testid="export-xlsx"
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border hover:opacity-70 transition-opacity disabled:opacity-30"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text)",
-                      backgroundColor: "transparent",
-                    }}
-                    disabled={exportingXlsx}
-                    onClick={() => handleExport("xlsx")}
-                    title="Export as Excel"
-                  >
-                    {exportingXlsx ? (
-                      spinnerSvg
-                    ) : (
-                      <svg
-                        className="w-3 h-3"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                    )}
-                    XLSX
-                  </button>
                   {/* Save query button + popover */}
                   <div className="relative">
                     <button
@@ -1465,116 +1228,12 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </div>
               )}
 
-              {/* Search / filter input */}
-              <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--color-border)" }}>
-                <div className="relative">
-                  <input
-                    data-testid="result-filter-input"
-                    type="text"
-                    className="w-full px-3 py-1.5 text-sm rounded border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    style={{
-                      borderColor: "var(--color-border)",
-                      backgroundColor: "var(--color-bg)",
-                      color: "var(--color-text)",
-                    }}
-                    placeholder="Search results..."
-                    value={resultFilter}
-                    onChange={(e) => setResultFilter(e.target.value)}
-                  />
-                  {resultFilter && (
-                    <button
-                      data-testid="result-filter-clear"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0.5 rounded hover:opacity-70 transition-opacity"
-                      style={{ color: "var(--color-text-muted)" }}
-                      onClick={() => {
-                        setResultFilter("");
-                        setDebouncedFilter("");
-                      }}
-                      aria-label="Clear search"
-                    >
-                      &times;
-                    </button>
-                  )}
-                </div>
-                {debouncedFilter && (
-                  <div
-                    data-testid="result-filter-count"
-                    className="mt-1 text-[10px]"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Showing {filteredRows.length} of {sortedRows.length} rows
-                  </div>
-                )}
-              </div>
-
-              {/* Results table */}
-              <div className="overflow-auto" style={{ maxHeight: "12rem" }}>
-                <table
-                  className="w-full text-[10px]"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  <thead>
-                    <tr
-                      className="sticky top-0"
-                      style={{ backgroundColor: "var(--color-bg)" }}
-                    >
-                      {result.columns.map((col, i) => (
-                        <th
-                          key={i}
-                          data-testid={`sort-header-${i}`}
-                          className="px-1.5 py-1 text-left font-medium whitespace-nowrap border-b cursor-pointer select-none hover:opacity-70 transition-opacity"
-                          style={{ borderColor: "var(--color-border)" }}
-                          onClick={() => handleSortClick(i)}
-                        >
-                          <span className="inline-flex items-center gap-0.5">
-                            {col}
-                            {sortColumn === i && (
-                              <svg
-                                className="w-2.5 h-2.5 shrink-0"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                data-testid={`sort-indicator-${sortDirection}`}
-                              >
-                                {sortDirection === "asc" ? (
-                                  <polyline points="18 15 12 9 6 15" />
-                                ) : (
-                                  <polyline points="6 9 12 15 18 9" />
-                                )}
-                              </svg>
-                            )}
-                          </span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRows.map((row, ri) => (
-                      <tr
-                        key={ri}
-                        className="hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                      >
-                        {row.map((cell, ci) => (
-                          <td
-                            key={ci}
-                            className="px-1.5 py-0.5 whitespace-nowrap border-b"
-                            style={{ borderColor: "var(--color-border)" }}
-                          >
-                            {cell == null ? (
-                              <span className="opacity-30 italic">null</span>
-                            ) : (
-                              String(cell)
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* DataGrid with sorting, column resizing, column visibility, copy, and export */}
+              <DataGrid
+                columns={result.columns}
+                rows={dataGridRows}
+                totalRows={result.rows.length}
+              />
 
               {/* Pagination controls */}
               {result.total_pages > 1 && (

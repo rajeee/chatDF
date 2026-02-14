@@ -393,7 +393,7 @@ describe("RunSqlPanel", () => {
       });
     });
 
-    it("shows search/filter input when results are present", async () => {
+    it("renders DataGrid component when results are present", async () => {
       const mockApiPost = vi.mocked(apiPost);
       mockApiPost.mockResolvedValueOnce(sampleResult);
 
@@ -409,7 +409,7 @@ describe("RunSqlPanel", () => {
       fireEvent.click(screen.getByTestId("run-sql-execute"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("result-filter-input")).toBeInTheDocument();
+        expect(screen.getByTestId("data-grid")).toBeInTheDocument();
       });
     });
 
@@ -565,7 +565,7 @@ describe("RunSqlPanel", () => {
   // ─── 5. Export Buttons ───
 
   describe("Export", () => {
-    it("shows CSV and XLSX export buttons when results are present", async () => {
+    it("DataGrid has Download CSV and Download Excel buttons when results are present", async () => {
       const mockApiPost = vi.mocked(apiPost);
       mockApiPost.mockResolvedValueOnce(sampleResult);
 
@@ -581,12 +581,12 @@ describe("RunSqlPanel", () => {
       fireEvent.click(screen.getByTestId("run-sql-execute"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("export-csv")).toBeInTheDocument();
-        expect(screen.getByTestId("export-xlsx")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /download csv/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /download excel/i })).toBeInTheDocument();
       });
     });
 
-    it("CSV export button has correct label", async () => {
+    it("DataGrid has Copy table button when results are present", async () => {
       const mockApiPost = vi.mocked(apiPost);
       mockApiPost.mockResolvedValueOnce(sampleResult);
 
@@ -602,29 +602,7 @@ describe("RunSqlPanel", () => {
       fireEvent.click(screen.getByTestId("run-sql-execute"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("export-csv")).toHaveTextContent("CSV");
-        expect(screen.getByTestId("export-xlsx")).toHaveTextContent("XLSX");
-      });
-    });
-
-    it("shows Copy button when results are present", async () => {
-      const mockApiPost = vi.mocked(apiPost);
-      mockApiPost.mockResolvedValueOnce(sampleResult);
-
-      render(<RunSqlPanel conversationId="conv-1" />);
-
-      expandPanel();
-      setSqlViaPending("SELECT 1");
-
-      await waitFor(() => {
-        expect(screen.getByTestId("run-sql-execute")).not.toBeDisabled();
-      });
-
-      fireEvent.click(screen.getByTestId("run-sql-execute"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("copy-results-tsv")).toBeInTheDocument();
-        expect(screen.getByTestId("copy-results-tsv")).toHaveTextContent("Copy");
+        expect(screen.getByRole("button", { name: /copy table/i })).toBeInTheDocument();
       });
     });
 
@@ -834,7 +812,7 @@ describe("RunSqlPanel", () => {
   // ─── 8. Column Sorting ───
 
   describe("Column Sorting", () => {
-    it("clicking a column header sorts by that column", async () => {
+    it("DataGrid renders column headers that support sorting", async () => {
       const mockApiPost = vi.mocked(apiPost);
       mockApiPost.mockResolvedValueOnce({
         ...sampleResult,
@@ -857,15 +835,10 @@ describe("RunSqlPanel", () => {
       fireEvent.click(screen.getByTestId("run-sql-execute"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("sort-header-0")).toBeInTheDocument();
-      });
-
-      // Click the first column header to sort by "id" ascending
-      fireEvent.click(screen.getByTestId("sort-header-0"));
-
-      // After sort, the sort indicator should appear
-      await waitFor(() => {
-        expect(screen.getByTestId("sort-indicator-asc")).toBeInTheDocument();
+        // DataGrid renders column headers with sort icon wrappers
+        const headers = screen.getAllByRole("columnheader");
+        expect(headers.length).toBeGreaterThanOrEqual(3);
+        expect(screen.getAllByTestId("sort-icon-wrapper")).toHaveLength(3);
       });
     });
   });

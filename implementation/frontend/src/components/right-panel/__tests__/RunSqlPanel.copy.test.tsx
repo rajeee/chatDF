@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { RunSqlPanel } from "../RunSqlPanel";
 
-// Capture the onChange callback from useEditableCodeMirror for test access
+// Copy-to-clipboard is now handled by the DataGrid component (which has its own tests).
+// These tests verify that DataGrid's copy/export toolbar is rendered within RunSqlPanel.
+
 let mockOnChange: ((value: string, cursor: number) => void) | undefined;
 
 vi.mock("@/hooks/useEditableCodeMirror", () => ({
@@ -70,14 +72,7 @@ vi.mock("@/utils/sqlFormatter", () => ({
   formatSql: vi.fn((s: string) => s),
 }));
 
-// Mock navigator.clipboard
-Object.defineProperty(navigator, "clipboard", {
-  value: { writeText: vi.fn().mockResolvedValue(undefined) },
-  writable: true,
-  configurable: true,
-});
-
-describe("RunSqlPanel copy to clipboard", () => {
+describe("RunSqlPanel DataGrid copy/export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockOnChange = undefined;
@@ -100,11 +95,7 @@ describe("RunSqlPanel copy to clipboard", () => {
     });
 
     render(<RunSqlPanel conversationId="test-conv" />);
-
-    // Expand the panel
     fireEvent.click(screen.getByTestId("run-sql-toggle"));
-
-    // Simulate typing in the CodeMirror editor via mock
     act(() => { mockOnChange?.("SELECT * FROM t", 15); });
     fireEvent.click(screen.getByTestId("run-sql-execute"));
 
@@ -113,43 +104,25 @@ describe("RunSqlPanel copy to clipboard", () => {
     });
   }
 
-  it("shows Copy button in results header after executing a query", async () => {
+  it("renders DataGrid with copy table button after executing a query", async () => {
     await executeQueryAndGetResults();
 
-    const copyBtn = screen.getByTestId("copy-results-tsv");
+    // DataGrid provides its own "Copy table" button
+    const copyBtn = screen.getByRole("button", { name: /copy table/i });
     expect(copyBtn).toBeInTheDocument();
-    expect(copyBtn).toHaveTextContent("Copy");
   });
 
-  it("copies TSV data to clipboard when Copy is clicked", async () => {
+  it("renders DataGrid with Download CSV button", async () => {
     await executeQueryAndGetResults();
 
-    const copyBtn = screen.getByTestId("copy-results-tsv");
-    fireEvent.click(copyBtn);
-
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
-    });
-
-    const expectedTsv =
-      "id\tname\tvalue\n" +
-      "1\tAlice\t100\n" +
-      "2\t\t200\n" +
-      "3\tCharlie\t";
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expectedTsv);
+    const csvBtn = screen.getByRole("button", { name: /download csv/i });
+    expect(csvBtn).toBeInTheDocument();
   });
 
-  it("shows 'Copied!' feedback after clicking Copy", async () => {
+  it("renders DataGrid with Download Excel button", async () => {
     await executeQueryAndGetResults();
 
-    const copyBtn = screen.getByTestId("copy-results-tsv");
-    expect(copyBtn).toHaveTextContent("Copy");
-
-    fireEvent.click(copyBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("copy-results-tsv")).toHaveTextContent("Copied!");
-    });
+    const xlsxBtn = screen.getByRole("button", { name: /download excel/i });
+    expect(xlsxBtn).toBeInTheDocument();
   });
 });

@@ -156,3 +156,5 @@ Track each improvement cycle: what was done, what was learned.
 | 149 | 2026-02-14 | (auto-logged) | — | — | 6d53a57 | $4.9360237499999995 |
 | 151 | 2026-02-14 | Fix Settings modal invisible behind LeftPanel stacking context | work.md task | 156/156 frontend (LeftPanel suite), 2342/2342 backend | f7678e0 |
 | 151 | 2026-02-14 | (auto-logged) | — | — | 810d0b3 | $2.211173499999999 |
+| 153 | 2026-02-14 | (auto-logged) | — | — | 82c7ee5 | $5.0223580000000005 |
+| 154 | 2026-02-14 | Dataset count badge in sidebar, SQL error indicator on toggle, RunSqlPanel DataGrid refactor | UX improvements | 39/39 tests (5 new), frontend builds | 2beee95, c7845b5 |

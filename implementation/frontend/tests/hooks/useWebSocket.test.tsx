@@ -164,6 +164,98 @@ describe("useWebSocket - connection lifecycle", () => {
     // MockWebSocket.close() sets readyState to CLOSED
     expect(ws.readyState).toBe(MockWebSocket.CLOSED);
   });
+
+  it("clears streaming state on unexpected WS close mid-stream", () => {
+    const { ws } = mountAuthenticated();
+
+    act(() => {
+      ws.simulateOpen();
+    });
+
+    // Start streaming some tokens
+    act(() => {
+      ws.simulateMessage({ type: "ct", t: "partial " });
+    });
+    act(() => {
+      ws.simulateMessage({ type: "ct", t: "response" });
+    });
+
+    expect(useChatStore.getState().isStreaming).toBe(true);
+    expect(useChatStore.getState().streamingTokens).toBe("partial response");
+
+    // Unexpected WS close
+    act(() => {
+      ws.simulateClose();
+    });
+
+    const chatState = useChatStore.getState();
+    expect(chatState.isStreaming).toBe(false);
+    expect(chatState.loadingPhase).toBe("idle");
+    // Partial content should be preserved in the finalized message
+    expect(chatState.messages[0].content).toBe("partial response");
+  });
+
+  it("shows error toast on unexpected WS close mid-stream", () => {
+    const { ws } = mountAuthenticated();
+
+    act(() => {
+      ws.simulateOpen();
+    });
+
+    act(() => {
+      ws.simulateMessage({ type: "ct", t: "hello" });
+    });
+
+    act(() => {
+      ws.simulateClose();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].type).toBe("error");
+    expect(toasts[0].message).toContain("Connection lost");
+  });
+
+  it("clears loadingPhase on unexpected WS close during thinking phase", () => {
+    const { ws } = mountAuthenticated();
+
+    act(() => {
+      ws.simulateOpen();
+    });
+
+    // Simulate thinking phase (set by ChatArea.handleSend before tokens arrive)
+    useChatStore.setState({ loadingPhase: "thinking" });
+
+    act(() => {
+      ws.simulateClose();
+    });
+
+    expect(useChatStore.getState().loadingPhase).toBe("idle");
+    expect(useChatStore.getState().isStreaming).toBe(false);
+  });
+
+  it("does not show error toast on intentional disconnect during streaming", () => {
+    const { ws, unmount } = mountAuthenticated();
+
+    act(() => {
+      ws.simulateOpen();
+    });
+
+    act(() => {
+      ws.simulateMessage({ type: "ct", t: "streaming" });
+    });
+
+    expect(useChatStore.getState().isStreaming).toBe(true);
+
+    // Intentional disconnect via unmount
+    act(() => {
+      unmount();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    // No error toast for intentional disconnect
+    expect(toasts).toHaveLength(0);
+  });
 });
 
 // ===========================================================================

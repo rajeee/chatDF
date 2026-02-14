@@ -256,6 +256,22 @@ export function useWebSocket(isAuthenticated: boolean): void {
       // After intentional disconnect, stay "disconnected".
       // After unexpected close, ChatDFSocket auto-reconnects with backoff.
       setStatus(intentionalDisconnect ? "disconnected" : "reconnecting");
+
+      // If WS drops mid-stream, clear streaming state so the UI doesn't
+      // get stuck in a permanent loading/thinking state.
+      const chatStore = useChatStore.getState();
+      if (chatStore.isStreaming) {
+        // Preserve any partial content that was already streamed
+        chatStore.finalizeStreamingMessage();
+        chatStore.setStreaming(false);
+        chatStore.setLoadingPhase("idle");
+        if (!intentionalDisconnect) {
+          useToastStore.getState().error("Connection lost during response. Reconnecting...");
+        }
+      } else if (chatStore.loadingPhase !== "idle") {
+        // Was in "thinking" phase (before any tokens arrived) — clear it
+        chatStore.setLoadingPhase("idle");
+      }
     });
 
     socket.connect();

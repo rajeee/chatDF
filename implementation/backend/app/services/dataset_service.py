@@ -188,23 +188,63 @@ async def remove_dataset(db: aiosqlite.Connection, dataset_id: str) -> None:
 
     # Clean up the physical file for uploaded datasets.
     if row is not None:
-        url = row["url"]
-        if url and url.startswith("file://"):
-            file_path = url[len("file://"):]
-            try:
-                os.unlink(file_path)
-                logger.info("Deleted uploaded file: %s", file_path)
-            except FileNotFoundError:
-                logger.warning(
-                    "Uploaded file already missing during cleanup: %s",
-                    file_path,
-                )
-            except OSError:
-                logger.warning(
-                    "Failed to delete uploaded file: %s",
-                    file_path,
-                    exc_info=True,
-                )
+        _cleanup_uploaded_file(row["url"])
+
+
+def _cleanup_uploaded_file(url: str | None) -> None:
+    """Delete the physical file for a ``file://`` URL, with path-traversal guard.
+
+    Only files whose real path falls inside the configured ``upload_dir`` are
+    deleted.  Everything else is logged and skipped.
+    """
+    if not url or not url.startswith("file://"):
+        return
+
+    from app.config import get_settings
+
+    file_path = url[len("file://"):]
+    settings = get_settings()
+    upload_dir = os.path.abspath(settings.upload_dir)
+    resolved = os.path.realpath(file_path)
+
+    if not resolved.startswith(upload_dir + os.sep) and resolved != upload_dir:
+        logger.error(
+            "Path traversal blocked: %s resolves to %s (outside %s)",
+            file_path,
+            resolved,
+            upload_dir,
+        )
+        return
+
+    try:
+        os.unlink(resolved)
+        logger.info("Deleted uploaded file: %s", resolved)
+    except FileNotFoundError:
+        logger.warning(
+            "Uploaded file already missing during cleanup: %s", resolved
+        )
+    except OSError:
+        logger.warning(
+            "Failed to delete uploaded file: %s", resolved, exc_info=True
+        )
+
+
+async def cleanup_uploaded_files_for_conversation(
+    db: aiosqlite.Connection,
+    conversation_id: str,
+) -> None:
+    """Delete physical files for all uploaded datasets in a conversation.
+
+    Call this *before* cascade-deleting the conversation row so that the
+    dataset rows (and their ``file://`` URLs) are still available.
+    """
+    cursor = await db.execute(
+        "SELECT url FROM datasets WHERE conversation_id = ? AND url LIKE 'file://%'",
+        (conversation_id,),
+    )
+    rows = await cursor.fetchall()
+    for row in rows:
+        _cleanup_uploaded_file(row["url"])
 
 
 # ---------------------------------------------------------------------------

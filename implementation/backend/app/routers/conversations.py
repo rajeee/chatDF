@@ -390,6 +390,7 @@ async def bulk_delete_conversations(
             (cid, user["id"]),
         )
         if await row.fetchone():
+            await dataset_service.cleanup_uploaded_files_for_conversation(db, cid)
             await db.execute("DELETE FROM conversations WHERE id = ?", (cid,))
             deleted += 1
     await db.commit()
@@ -1010,6 +1011,10 @@ async def delete_conversation(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> SuccessResponse:
     """Delete a conversation and all associated data (cascade)."""
+    # Clean up uploaded files before cascade-delete removes dataset rows.
+    await dataset_service.cleanup_uploaded_files_for_conversation(
+        db, conversation["id"]
+    )
     await db.execute(
         "DELETE FROM conversations WHERE id = ?",
         (conversation["id"],),
@@ -1038,6 +1043,16 @@ async def clear_all_conversations(
     )
     row = await cursor.fetchone()
     count = row["cnt"]
+
+    # Clean up uploaded files before cascade-delete removes dataset rows.
+    conv_cursor = await db.execute(
+        "SELECT id FROM conversations WHERE user_id = ?", (user["id"],)
+    )
+    conv_rows = await conv_cursor.fetchall()
+    for conv_row in conv_rows:
+        await dataset_service.cleanup_uploaded_files_for_conversation(
+            db, conv_row["id"]
+        )
 
     # Delete all
     await db.execute(

@@ -150,7 +150,7 @@ function MessageBubbleComponent({
     >
       {/* Fork button - above bubble, only on assistant messages, visible on hover */}
       {!isUser && onFork && !isCurrentlyStreaming && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-0.5">
+        <div className="touch-action-btn opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-0.5">
           <button
             data-testid={`fork-btn-${message.id}`}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all"

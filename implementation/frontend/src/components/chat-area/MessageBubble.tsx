@@ -6,9 +6,10 @@
 
 import { memo, useMemo, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { type Message, type SqlExecution } from "@/stores/chatStore";
+import { type Message, type SqlExecution, useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useDevModeStore } from "@/stores/devModeStore";
+import { useDatasetStore } from "@/stores/datasetStore";
 import { CodeBlock } from "./CodeBlock";
 import { StreamingMessage } from "./StreamingMessage";
 import { ChartVisualization } from "./ChartVisualization";
@@ -16,6 +17,7 @@ import { detectChartTypes } from "@/utils/chartDetection";
 import { highlightText } from "@/utils/highlightText";
 import { downloadCsv } from "@/utils/csvExport";
 import { downloadExcel } from "@/utils/excelExport";
+import { explainSql } from "@/api/client";
 
 /** Recursively highlight text nodes within React children */
 function highlightChildren(children: React.ReactNode, query: string): React.ReactNode {
@@ -93,6 +95,8 @@ function MessageBubbleComponent({
   const [sqlExpanded, setSqlExpanded] = useState(false);
   const [traceExpanded, setTraceExpanded] = useState(false);
   const [forked, setForked] = useState(false);
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
 
   const handleForkClick = useCallback(() => {
     if (onFork) {
@@ -101,6 +105,36 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
+
+  const handleExplainInline = useCallback(async () => {
+    if (explaining || message.sql_executions.length === 0) return;
+    const conversationId = useChatStore.getState().activeConversationId;
+    if (!conversationId) return;
+    setExplaining(true);
+    try {
+      const allQueries = message.sql_executions.map(e => e.query).join(";\n\n");
+      const datasets = useDatasetStore.getState().datasets;
+      const schemaJson = JSON.stringify(
+        Object.fromEntries(
+          datasets.map((ds: { name: string; schema_json: string }) => {
+            try {
+              const parsed = JSON.parse(ds.schema_json);
+              const cols = Array.isArray(parsed) ? parsed : parsed?.columns ?? [];
+              return [ds.name, cols.map((c: { name: string; type: string }) => ({ name: c.name, type: c.type }))];
+            } catch {
+              return [ds.name, []];
+            }
+          })
+        )
+      );
+      const result = await explainSql(conversationId, allQueries, schemaJson);
+      setExplanation(result.explanation);
+    } catch {
+      setExplanation("Failed to generate explanation.");
+    } finally {
+      setExplaining(false);
+    }
+  }, [explaining, message.sql_executions]);
 
   return (
     <div
@@ -299,7 +333,7 @@ function MessageBubbleComponent({
             <div
               data-testid={`sql-preview-content-${message.id}`}
               style={{
-                maxHeight: sqlExpanded ? "200px" : "0px",
+                maxHeight: sqlExpanded ? "500px" : "0px",
                 opacity: sqlExpanded ? 1 : 0,
                 overflow: "hidden",
                 transition: "max-height 200ms ease, opacity 200ms ease",
@@ -316,47 +350,75 @@ function MessageBubbleComponent({
                   overflowY: "auto",
                 }}
               >
-                {message.sql_executions.map((exec, i) => exec.query).join(";\n\n")}
+                {message.sql_executions.map((exec) => exec.query).join(";\n\n")}
               </pre>
-              {/* Quick export buttons */}
-              {message.sql_executions.some(e => e.columns && e.rows && e.rows.length > 0) && (
-                <div
-                  data-testid={`sql-quick-export-${message.id}`}
-                  className="flex items-center gap-1 px-2 py-1 border-t"
-                  style={{ borderColor: "var(--color-border)" }}
+              {/* Quick export + explain buttons */}
+              <div
+                data-testid={`sql-quick-actions-${message.id}`}
+                className="flex items-center gap-1 px-2 py-1 border-t"
+                style={{ borderColor: "var(--color-border)" }}
+              >
+                {message.sql_executions.some(e => e.columns && e.rows && e.rows.length > 0) && (
+                  <>
+                    <span className="text-[10px] opacity-40 mr-1">Export:</span>
+                    {message.sql_executions.map((exec, i) => {
+                      if (!exec.columns || !exec.rows || exec.rows.length === 0) return null;
+                      const label = message.sql_executions.filter(e => e.columns && e.rows && e.rows.length > 0).length > 1
+                        ? `Q${i + 1} ` : "";
+                      return (
+                        <span key={i} className="flex items-center gap-1">
+                          <button
+                            data-testid={`export-csv-btn-${message.id}-${i}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
+                            style={{ color: "var(--color-accent)" }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadCsv(exec.columns!, exec.rows!, `query_${i + 1}.csv`);
+                            }}
+                          >
+                            {label}CSV
+                          </button>
+                          <button
+                            data-testid={`export-xlsx-btn-${message.id}-${i}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
+                            style={{ color: "var(--color-accent)" }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadExcel(exec.columns!, exec.rows!, `query_${i + 1}`);
+                            }}
+                          >
+                            {label}XLSX
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </>
+                )}
+                <button
+                  data-testid={`explain-inline-btn-${message.id}`}
+                  className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity ml-auto"
+                  style={{ color: "var(--color-accent)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleExplainInline();
+                  }}
+                  disabled={explaining}
                 >
-                  <span className="text-[10px] opacity-40 mr-1">Export:</span>
-                  {message.sql_executions.map((exec, i) => {
-                    if (!exec.columns || !exec.rows || exec.rows.length === 0) return null;
-                    const label = message.sql_executions.filter(e => e.columns && e.rows && e.rows.length > 0).length > 1
-                      ? `Q${i + 1} ` : "";
-                    return (
-                      <span key={i} className="flex items-center gap-1">
-                        <button
-                          data-testid={`export-csv-btn-${message.id}-${i}`}
-                          className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
-                          style={{ color: "var(--color-accent)" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadCsv(exec.columns!, exec.rows!, `query_${i + 1}.csv`);
-                          }}
-                        >
-                          {label}CSV
-                        </button>
-                        <button
-                          data-testid={`export-xlsx-btn-${message.id}-${i}`}
-                          className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
-                          style={{ color: "var(--color-accent)" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadExcel(exec.columns!, exec.rows!, `query_${i + 1}`);
-                          }}
-                        >
-                          {label}XLSX
-                        </button>
-                      </span>
-                    );
-                  })}
+                  {explaining ? "Explaining..." : explanation ? "Re-explain" : "Explain"}
+                </button>
+              </div>
+              {/* Inline SQL explanation */}
+              {explanation && (
+                <div
+                  data-testid={`sql-inline-explanation-${message.id}`}
+                  className="px-2 py-1.5 text-[11px] leading-relaxed border-t"
+                  style={{
+                    borderColor: "var(--color-border)",
+                    backgroundColor: "color-mix(in srgb, var(--color-accent) 5%, var(--color-bg))",
+                    color: "var(--color-text)",
+                  }}
+                >
+                  {explanation}
                 </div>
               )}
             </div>

@@ -91,7 +91,7 @@ describe("MessageBubble SQL Preview Animation", () => {
 
     // Should be expanded
     expect(contentContainer).toHaveStyle({
-      maxHeight: "200px",
+      maxHeight: "500px",
       opacity: "1",
       overflow: "hidden",
     });
@@ -156,7 +156,7 @@ describe("MessageBubble SQL Preview Animation", () => {
 
     // Expand
     await user.click(toggleButton);
-    expect(contentContainer).toHaveStyle({ maxHeight: "200px", opacity: "1" });
+    expect(contentContainer).toHaveStyle({ maxHeight: "500px", opacity: "1" });
 
     // Collapse
     await user.click(toggleButton);

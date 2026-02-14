@@ -3,11 +3,12 @@
 // Card component for a single dataset entry.
 // Three states: loading (progress bar), ready (name + dims), error (retry).
 
-import { memo, useState } from "react";
+import { memo, useState, useCallback } from "react";
 import type { Dataset } from "@/stores/datasetStore";
 import { useDatasetStore } from "@/stores/datasetStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
+import { previewDataset, type PreviewResponse } from "@/api/client";
 import { LoadingETA } from "./LoadingETA";
 
 interface DatasetCardProps {
@@ -78,6 +79,33 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const togglePreview = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    // Only fetch if we haven't already
+    if (previewData || !conversationId) return;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    previewDataset(conversationId, dataset.id, { sampleSize: 5, sampleMethod: "head" })
+      .then((result) => {
+        setPreviewData(result);
+      })
+      .catch((err) => {
+        setPreviewError(err instanceof Error ? err.message : "Failed to load preview");
+      })
+      .finally(() => {
+        setPreviewLoading(false);
+      });
+  }, [expanded, previewData, conversationId, dataset.id]);
 
   function handleRemove(e: React.MouseEvent) {
     e.stopPropagation();
@@ -187,9 +215,120 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
               </span>
             </span>
           </div>
-          <span className="text-xs opacity-40 truncate block" title={dataset.url}>
-            {getHostname(dataset.url)}
-          </span>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="text-xs opacity-40 truncate" title={dataset.url}>
+              {getHostname(dataset.url)}
+            </span>
+            <button
+              onClick={togglePreview}
+              aria-label={expanded ? "Collapse preview" : "Peek at data"}
+              title={expanded ? "Collapse preview" : "Peek at first 5 rows"}
+              data-testid="inline-preview-toggle"
+              className="ml-auto flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded opacity-50 hover:opacity-100 transition-all duration-150"
+              style={{ color: "var(--color-accent)" }}
+            >
+              <svg
+                className={`w-3 h-3 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              {expanded ? "Hide" : "Peek"}
+            </button>
+          </div>
+          {/* Inline data preview */}
+          {expanded && (
+            <div
+              data-testid="inline-preview"
+              className="mt-2 animate-fade-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {previewLoading && (
+                <div className="flex items-center justify-center py-3" data-testid="inline-preview-loading">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-40" />
+                  <span className="ml-1.5 text-xs opacity-40">Loading...</span>
+                </div>
+              )}
+              {previewError && (
+                <div className="text-xs text-red-500 py-2" data-testid="inline-preview-error">
+                  {previewError}
+                </div>
+              )}
+              {previewData && !previewLoading && !previewError && (
+                <div
+                  className="overflow-x-auto rounded border text-[11px]"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <table className="w-full">
+                    <thead>
+                      <tr
+                        className="border-b"
+                        style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg)" }}
+                      >
+                        {previewData.columns.map((col) => (
+                          <th
+                            key={col}
+                            className="px-1.5 py-1 text-left font-medium whitespace-nowrap"
+                            style={{ color: "var(--color-text)" }}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.rows.map((row, rowIdx) => (
+                        <tr
+                          key={rowIdx}
+                          className={`border-b last:border-b-0 transition-colors hover:brightness-95`}
+                          style={{
+                            borderColor: "var(--color-border)",
+                            backgroundColor: rowIdx % 2 === 0 ? "transparent" : "var(--color-bg)",
+                          }}
+                        >
+                          {row.map((cell, cellIdx) => (
+                            <td
+                              key={cellIdx}
+                              className="px-1.5 py-0.5 whitespace-nowrap max-w-[120px] truncate"
+                              style={{ color: "var(--color-text)" }}
+                              title={cell == null ? "null" : String(cell)}
+                            >
+                              {cell == null ? (
+                                <span className="opacity-30 italic">null</span>
+                              ) : (
+                                String(cell)
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div
+                    className="flex items-center justify-between px-1.5 py-1 border-t text-[10px] opacity-50"
+                    style={{ borderColor: "var(--color-border)" }}
+                  >
+                    <span>Showing {previewData.rows.length} of {formatNumber(previewData.total_rows)} rows</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPreviewModal(dataset.id);
+                      }}
+                      className="hover:opacity-100 underline transition-opacity"
+                      style={{ color: "var(--color-accent)" }}
+                    >
+                      Full preview
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

@@ -158,3 +158,5 @@ Track each improvement cycle: what was done, what was learned.
 | 151 | 2026-02-14 | (auto-logged) | — | — | 810d0b3 | $2.211173499999999 |
 | 153 | 2026-02-14 | (auto-logged) | — | — | 82c7ee5 | $5.0223580000000005 |
 | 154 | 2026-02-14 | Dataset count badge in sidebar, SQL error indicator on toggle, RunSqlPanel DataGrid refactor | UX improvements | 39/39 tests (5 new), frontend builds | 2beee95, c7845b5 |
+| 154 | 2026-02-14 | (auto-logged) | — | — | 46678b0 | $1.8669522499999998 |
+| 156 | 2026-02-14 | Inline expandable data preview on DatasetCard (Peek button) | UX feature | 99/99 right-panel tests (10 new), all existing pass | — |

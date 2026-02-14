@@ -1,0 +1,1 @@
+Remove any completed work from the work.md and completed ideas from potential-ideas.md

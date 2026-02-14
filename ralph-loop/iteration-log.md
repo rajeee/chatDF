@@ -166,3 +166,5 @@ Track each improvement cycle: what was done, what was learned.
 | 160 | 2026-02-14 | Copy button + Visualize button on assistant messages | UX | 46/46 MessageBubble tests (10 new), frontend builds | 7a156a5 |
 | 160 | 2026-02-14 | (auto-logged) | — | — | a4d4802 | $2.49639005 |
 | 162 | 2026-02-14 | Inline message editing (Edit + Save & Resend) | UX feature | 40/40 MessageBubble tests (14 new), frontend builds | c6652e6 |
+| 162 | 2026-02-14 | (auto-logged) | — | — | f6e9644 | $4.056819249999999 |
+| 164 | 2026-02-14 | Dark mode search highlight, edit mode visual, multi-dataset suggestions, proactive charts | UX + LLM | 748/748 unit, 1775/1809 component (pre-existing failures), 15/15 backend chat | 68a9c94 |

@@ -10,6 +10,7 @@ import { useChatStore, type SqlExecution } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
 import { MessageBubble } from "./MessageBubble";
+import { ThinkingBubble } from "./ThinkingBubble";
 import { SearchBar } from "./SearchBar";
 import { exportAsMarkdown, downloadMarkdown } from "@/utils/exportMarkdown";
 import { exportAsJson, downloadJson } from "@/utils/exportJson";
@@ -33,6 +34,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
   // This prevents MessageList from re-rendering on every token during streaming
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingMessageId = useChatStore((s) => s.streamingMessageId);
+  const loadingPhase = useChatStore((s) => s.loadingPhase);
   const searchQuery = useChatStore((s) => s.searchQuery);
   const searchOpen = useChatStore((s) => s.searchOpen);
   const messageDensity = useUiStore((s) => s.messageDensity);
@@ -138,7 +140,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
         scrollRafRef.current = null;
       }
     };
-  }, [messages, userHasScrolledUp]);
+  }, [messages, userHasScrolledUp, loadingPhase]);
 
   const scrollToBottom = useCallback(() => {
     setUserHasScrolledUp(false);
@@ -472,6 +474,9 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
             />
           );
         })}
+
+        {/* Thinking bubble — shown after user sends message, before first WS token */}
+        {loadingPhase === "thinking" && !isStreaming && <ThinkingBubble />}
 
         {/* Scroll sentinel */}
         <div data-testid="scroll-sentinel" ref={sentinelRef} />

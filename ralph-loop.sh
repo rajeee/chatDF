@@ -274,6 +274,14 @@ while true; do
   echo ""
   if [[ $exit_code -eq 0 ]]; then
     ok "Iteration #$iter_num completed"
+    # Extract cost from log (last result event)
+    iter_cost=$(grep -o '"total_cost_usd":[0-9.]*' "$log_file" | tail -1 | cut -d':' -f2)
+    iter_cost=${iter_cost:-"?"}
+    # Extract commit hash if Claude pushed one
+    iter_commit=$(grep -o '"Commit.*[0-9a-f]\{7\}' "$log_file" | tail -1 | grep -o '[0-9a-f]\{7\}$' || true)
+    iter_commit=${iter_commit:-"—"}
+    # Append to iteration log so the counter increments
+    echo "| $iter_num | $(date +%Y-%m-%d) | (auto-logged) | — | — | $iter_commit | \$$iter_cost |" >> "$LOOP_DIR/iteration-log.md"
   elif [[ $exit_code -eq 143 ]] || [[ $exit_code -eq 137 ]]; then
     err "Iteration #$iter_num killed (API stall)"
     warn "Reverting uncommitted changes..."
@@ -293,8 +301,11 @@ while true; do
   prune_prompt=$(build_prune_prompt)
   prune_log="$LOG_DIR/prune-${iter_num}-$(date +%Y%m%d-%H%M%S).log"
 
+  touch "$prune_log"
+  start_watchdog "$prune_log"
   run_claude "$prune_log" "0.50" "$PRUNE_MODEL" "$prune_prompt"
   prune_exit=$?
+  stop_watchdog
 
   echo ""
   if [[ $prune_exit -eq 0 ]]; then

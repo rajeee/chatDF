@@ -59,6 +59,20 @@ export class ChatDFSocket {
   }
 
   /**
+   * Force a reconnect: close any existing connection and start fresh.
+   */
+  reconnect(): void {
+    this.clearReconnectTimer();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.intentionalClose = false;
+    this.backoffMs = INITIAL_BACKOFF_MS;
+    this.createConnection();
+  }
+
+  /**
    * Register a callback for parsed incoming messages.
    * The callback receives the parsed JSON data.
    */

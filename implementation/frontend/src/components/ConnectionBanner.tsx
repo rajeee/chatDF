@@ -5,6 +5,7 @@ import { useConnectionStore } from "@/stores/connectionStore";
 
 export function ConnectionBanner() {
   const status = useConnectionStore((s) => s.status);
+  const reconnect = useConnectionStore((s) => s.reconnect);
 
   if (status === "connected") return null;
 
@@ -60,7 +61,7 @@ export function ConnectionBanner() {
           <button
             data-testid="reconnect-btn"
             className="px-3 py-0.5 rounded text-xs font-semibold bg-white/20 hover:bg-white/30 active:scale-95 transition-all"
-            onClick={() => window.location.reload()}
+            onClick={() => reconnect ? reconnect() : window.location.reload()}
           >
             Reconnect
           </button>

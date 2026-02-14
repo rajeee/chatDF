@@ -88,6 +88,8 @@ export function useTheme(): ThemeController {
       document.documentElement.classList.remove("theme-transitioning");
       transitionTimeoutId = null;
     }, 250);
+    // Notify other useTheme instances (e.g. Header ↔ keyboard shortcut sync)
+    window.dispatchEvent(new CustomEvent("theme-change", { detail: m }));
   }
 
   function toggleTheme() {

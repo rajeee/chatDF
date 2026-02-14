@@ -276,11 +276,19 @@ export function useWebSocket(isAuthenticated: boolean): void {
 
     socket.connect();
 
+    // Expose reconnect callback so ConnectionBanner can trigger it
+    const { setReconnect } = useConnectionStore.getState();
+    setReconnect(() => {
+      setStatus("reconnecting");
+      socket.reconnect();
+    });
+
     return () => {
       intentionalDisconnect = true;
       socket.disconnect();
       socketRef.current = null;
       setStatus("disconnected");
+      setReconnect(null);
     };
   }, [isAuthenticated, queryClient]);
 }

@@ -57,17 +57,20 @@ class CatalogSearchResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_FTS5_KEYWORDS = {"AND", "OR", "NOT", "NEAR"}
+
+
 def _sanitize_fts_query(raw: str) -> str:
     """Sanitize user input for FTS5 MATCH.
 
-    Strips FTS5 special characters, splits into tokens, and joins with
-    spaces (implicit AND in FTS5).
+    Strips FTS5 special characters and reserved keywords (AND, OR, NOT, NEAR),
+    splits into tokens, and joins with spaces (implicit AND in FTS5).
     """
     # Remove FTS5 operators and special chars
     cleaned = re.sub(r'[^\w\s]', ' ', raw)
     tokens = cleaned.split()
-    # Filter out empty and very short tokens
-    tokens = [t for t in tokens if len(t) > 1]
+    # Filter out empty, very short tokens, and FTS5 keywords
+    tokens = [t for t in tokens if len(t) > 1 and t.upper() not in _FTS5_KEYWORDS]
     if not tokens:
         return raw.strip()
     return " ".join(tokens)

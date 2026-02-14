@@ -9,6 +9,8 @@ const SHORTCUTS = [
   { keys: ["Ctrl", "P"], description: "Toggle pin on conversation" },
   { keys: ["Ctrl", "Enter"], description: "Send message / Run SQL" },
   { keys: ["Ctrl", "Shift", "F"], description: "Search messages" },
+  { keys: ["Enter"], description: "Next search match" },
+  { keys: ["Shift", "Enter"], description: "Previous search match" },
   { keys: ["Ctrl", "Shift", "L"], description: "Toggle theme" },
   { keys: ["?"], description: "Show this help" },
   { keys: ["Esc"], description: "Unfocus chat input / Close modal" },

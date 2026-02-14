@@ -127,8 +127,8 @@ describe("SEARCH-FILTER-1: Filters messages by search query", () => {
   });
 });
 
-describe("SEARCH-COUNT-1: Shows match count", () => {
-  it("shows match count when search query is non-empty", () => {
+describe("SEARCH-COUNT-1: Shows match count with navigation", () => {
+  it("shows 'N of M' format when search query is non-empty", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
       makeMessage({ id: "msg-2", role: "assistant", content: "Hi there" }),
@@ -140,10 +140,10 @@ describe("SEARCH-COUNT-1: Shows match count", () => {
 
     const matchCount = screen.getByTestId("search-match-count");
     expect(matchCount).toBeInTheDocument();
-    expect(matchCount.textContent).toBe("2 matches");
+    expect(matchCount.textContent).toBe("1 of 2");
   });
 
-  it("shows singular 'match' for 1 result", () => {
+  it("shows '1 of 1' for single result", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
       makeMessage({ id: "msg-2", role: "assistant", content: "Hi there" }),
@@ -153,10 +153,10 @@ describe("SEARCH-COUNT-1: Shows match count", () => {
     renderWithProviders(<SearchBar />);
 
     const matchCount = screen.getByTestId("search-match-count");
-    expect(matchCount.textContent).toBe("1 match");
+    expect(matchCount.textContent).toBe("1 of 1");
   });
 
-  it("shows 0 matches when nothing found", () => {
+  it("shows 'No matches' when nothing found", () => {
     setChatIdle("conv-1", [
       makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
     ]);
@@ -165,7 +165,7 @@ describe("SEARCH-COUNT-1: Shows match count", () => {
     renderWithProviders(<SearchBar />);
 
     const matchCount = screen.getByTestId("search-match-count");
-    expect(matchCount.textContent).toBe("0 matches");
+    expect(matchCount.textContent).toBe("No matches");
   });
 
   it("does not show match count when search query is empty", () => {
@@ -177,6 +177,75 @@ describe("SEARCH-COUNT-1: Shows match count", () => {
     renderWithProviders(<SearchBar />);
 
     expect(screen.queryByTestId("search-match-count")).not.toBeInTheDocument();
+  });
+
+  it("renders prev/next navigation buttons", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+      makeMessage({ id: "msg-2", role: "user", content: "Hello again" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "Hello" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-prev-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("search-next-btn")).toBeInTheDocument();
+  });
+
+  it("disables prev/next buttons when no matches", () => {
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "xyz" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-prev-btn")).toBeDisabled();
+    expect(screen.getByTestId("search-next-btn")).toBeDisabled();
+  });
+
+  it("advances to next match on next button click", async () => {
+    const user = userEvent.setup();
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+      makeMessage({ id: "msg-2", role: "user", content: "Hello again" }),
+      makeMessage({ id: "msg-3", role: "user", content: "Hello third" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "Hello" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 3");
+
+    await user.click(screen.getByTestId("search-next-btn"));
+    expect(screen.getByTestId("search-match-count").textContent).toBe("2 of 3");
+
+    await user.click(screen.getByTestId("search-next-btn"));
+    expect(screen.getByTestId("search-match-count").textContent).toBe("3 of 3");
+
+    // Wraps around
+    await user.click(screen.getByTestId("search-next-btn"));
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 3");
+  });
+
+  it("goes to previous match on prev button click", async () => {
+    const user = userEvent.setup();
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+      makeMessage({ id: "msg-2", role: "user", content: "Hello again" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "Hello" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 2");
+
+    // Wraps to last
+    await user.click(screen.getByTestId("search-prev-btn"));
+    expect(screen.getByTestId("search-match-count").textContent).toBe("2 of 2");
+
+    await user.click(screen.getByTestId("search-prev-btn"));
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 2");
   });
 });
 
@@ -215,6 +284,46 @@ describe("SEARCH-ESC-1: Escape key closes search", () => {
 
     expect(useChatStore.getState().searchOpen).toBe(false);
     expect(useChatStore.getState().searchQuery).toBe("");
+  });
+});
+
+describe("SEARCH-NAV-1: Enter/Shift+Enter navigates matches", () => {
+  it("Enter advances to next match", async () => {
+    const user = userEvent.setup();
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+      makeMessage({ id: "msg-2", role: "user", content: "Hello again" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "Hello" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 2");
+
+    const input = screen.getByTestId("search-input");
+    await user.click(input);
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("2 of 2");
+  });
+
+  it("Shift+Enter goes to previous match", async () => {
+    const user = userEvent.setup();
+    setChatIdle("conv-1", [
+      makeMessage({ id: "msg-1", role: "user", content: "Hello world" }),
+      makeMessage({ id: "msg-2", role: "user", content: "Hello again" }),
+    ]);
+    useChatStore.setState({ searchOpen: true, searchQuery: "Hello" });
+
+    renderWithProviders(<SearchBar />);
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("1 of 2");
+
+    const input = screen.getByTestId("search-input");
+    await user.click(input);
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+
+    expect(screen.getByTestId("search-match-count").textContent).toBe("2 of 2");
   });
 });
 

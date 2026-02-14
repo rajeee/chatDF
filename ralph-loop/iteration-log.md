@@ -153,3 +153,4 @@ Track each improvement cycle: what was done, what was learned.
 | 147 | 2026-02-12 | 139 new backend tests: LLM helpers, dataset search helpers, persistent cache edge cases | hardening | 2693 frontend, 2485/2485 backend (+139 new) | 3a3a29d |
 | 148 | 2026-02-14 | (auto-logged) | — | — | — | $3.2369129499999993 |
 | 149 | 2026-02-14 | Fix 4 broken backend tests, enrich shared conversation view with SQL results + charts | test fixes + feature | 748 frontend unit, 2342/2342 backend (0 failures!) | — |
+| 149 | 2026-02-14 | (auto-logged) | — | — | 6d53a57 | $4.9360237499999995 |

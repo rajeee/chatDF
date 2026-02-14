@@ -23,9 +23,10 @@ interface MessageListProps {
   /** When true, the first message gets a more dramatic entrance animation */
   isFirstMessageEntrance?: boolean;
   onRetry?: (messageId: string, content: string) => void;
+  onEdit?: (messageId: string, newContent: string) => void;
 }
 
-export function MessageList({ isFirstMessageEntrance = false, onRetry }: MessageListProps) {
+export function MessageList({ isFirstMessageEntrance = false, onRetry, onEdit }: MessageListProps) {
   const queryClient = useQueryClient();
   const messages = useChatStore((s) => s.messages);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
@@ -468,6 +469,7 @@ export function MessageList({ isFirstMessageEntrance = false, onRetry }: Message
               onShowReasoning={handleShowReasoning}
               onVisualize={handleVisualize}
               onRetry={onRetry}
+              onEdit={onEdit}
               onFork={handleFork}
               onRedo={handleRedo}
               searchQuery={searchQuery}

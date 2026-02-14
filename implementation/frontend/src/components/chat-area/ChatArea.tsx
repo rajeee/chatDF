@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useDatasetStore, filterDatasetsByConversation } from "@/stores/datasetStore";
 import { useKeyboardShortcuts, type ChatInputHandle } from "@/hooks/useKeyboardShortcuts";
-import { apiPost } from "@/api/client";
+import { apiPost, deleteMessage } from "@/api/client";
 import { useToastStore } from "@/stores/toastStore";
 import { OnboardingGuide } from "./OnboardingGuide";
 import { SuggestedPrompts } from "./SuggestedPrompts";
@@ -169,6 +169,35 @@ export function ChatArea() {
     [handleSend]
   );
 
+  // Edit a user message: remove it + following assistant message, then re-send
+  const handleEdit = useCallback(
+    (messageId: string, newContent: string) => {
+      const { messages, removeMessage } = useChatStore.getState();
+      const convId = activeConversationId;
+      const msgIndex = messages.findIndex((m) => m.id === messageId);
+      if (msgIndex === -1) return;
+      // Collect IDs to delete from backend
+      const idsToDelete: string[] = [];
+      // Remove the next message if it's an assistant response
+      if (msgIndex + 1 < messages.length && messages[msgIndex + 1].role === "assistant") {
+        const assistantId = messages[msgIndex + 1].id;
+        idsToDelete.push(assistantId);
+        removeMessage(assistantId);
+      }
+      idsToDelete.push(messageId);
+      removeMessage(messageId);
+      // Delete from backend (fire-and-forget, don't block re-send)
+      if (convId) {
+        for (const id of idsToDelete) {
+          deleteMessage(convId, id).catch(() => {});
+        }
+      }
+      // Re-send with edited content
+      handleSend(newContent);
+    },
+    [handleSend, activeConversationId]
+  );
+
   // Run a saved query by inserting it into the chat input and auto-sending
   const handleRunQuery = useCallback((query: string) => {
     chatInputRef.current?.setInputValue(query);
@@ -291,7 +320,7 @@ export function ChatArea() {
             <SkeletonMessages />
           )}
 
-          {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} onRetry={handleRetry} />}
+          {hasMessages && <MessageList isFirstMessageEntrance={exitingPanel === "onboarding"} onRetry={handleRetry} onEdit={handleEdit} />}
         </div>
 
         {/* Follow-up suggestion chips */}

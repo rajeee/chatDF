@@ -42,6 +42,7 @@ interface MessageBubbleProps {
   onRetry?: (messageId: string, content: string) => void;
   onFork?: (messageId: string) => void;
   onRedo?: (messageId: string) => void;
+  onEdit?: (messageId: string, newContent: string) => void;
   searchQuery?: string;
 }
 
@@ -73,6 +74,7 @@ function MessageBubbleComponent({
   onRetry,
   onFork,
   onRedo,
+  onEdit,
   searchQuery,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -80,6 +82,41 @@ function MessageBubbleComponent({
   const devMode = useDevModeStore((s) => s.devMode);
   const reasoningContent = message.reasoning;
 
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleEditStart = useCallback(() => {
+    setEditContent(message.content);
+    setIsEditing(true);
+    // Auto-focus textarea after render
+    setTimeout(() => editTextareaRef.current?.focus(), 0);
+  }, [message.content]);
+
+  const handleEditCancel = useCallback(() => {
+    setIsEditing(false);
+    setEditContent(message.content);
+  }, [message.content]);
+
+  const handleEditSave = useCallback(() => {
+    const trimmed = editContent.trim();
+    if (!trimmed || trimmed === message.content) {
+      setIsEditing(false);
+      return;
+    }
+    setIsEditing(false);
+    onEdit?.(message.id, trimmed);
+  }, [editContent, message.content, message.id, onEdit]);
+
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleEditSave();
+    } else if (e.key === "Escape") {
+      handleEditCancel();
+    }
+  }, [handleEditSave, handleEditCancel]);
 
   // Find the first sql_execution that has chartable data
   const visualizableIndex = useMemo(() => {
@@ -221,7 +258,48 @@ function MessageBubbleComponent({
         }}
       >
         {/* Message content - use StreamingMessage component for active streaming, otherwise show finalized content */}
-        {isUser ? (
+        {isUser && isEditing ? (
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <textarea
+              ref={editTextareaRef}
+              data-testid={`edit-textarea-${message.id}`}
+              className="w-full rounded px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-1"
+              style={{
+                backgroundColor: "var(--color-bg)",
+                color: "var(--color-text)",
+                border: "1px solid var(--color-border)",
+                minHeight: "60px",
+              }}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              rows={Math.min(editContent.split("\n").length + 1, 8)}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                data-testid={`edit-cancel-${message.id}`}
+                className="text-xs px-2.5 py-1 rounded border active:scale-95 transition-all"
+                style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                onClick={handleEditCancel}
+              >
+                Cancel
+              </button>
+              <button
+                data-testid={`edit-save-${message.id}`}
+                className="text-xs px-2.5 py-1 rounded active:scale-95 transition-all"
+                style={{
+                  backgroundColor: "var(--color-white)",
+                  color: "var(--color-accent)",
+                  opacity: editContent.trim() && editContent.trim() !== message.content ? 1 : 0.5,
+                }}
+                onClick={handleEditSave}
+                disabled={!editContent.trim() || editContent.trim() === message.content}
+              >
+                Save &amp; Resend
+              </button>
+            </div>
+          </div>
+        ) : isUser ? (
           <span className="break-words">
             {searchQuery ? highlightText(message.content, searchQuery) : message.content}
           </span>
@@ -645,6 +723,25 @@ function MessageBubbleComponent({
               rows={message.sql_executions[visualizableIndex].rows!}
               onExpand={() => onVisualize(message.sql_executions, visualizableIndex)}
             />
+          </div>
+        )}
+
+        {/* Edit button for user messages */}
+        {isUser && !isCurrentlyStreaming && !message.sendFailed && !isEditing && onEdit && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              data-testid={`edit-btn-${message.id}`}
+              className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1"
+              style={{ borderColor: "rgba(255,255,255,0.3)", color: "var(--color-white)", '--btn-index': 0 } as React.CSSProperties}
+              onClick={handleEditStart}
+              aria-label="Edit message"
+            >
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Edit
+            </button>
           </div>
         )}
 

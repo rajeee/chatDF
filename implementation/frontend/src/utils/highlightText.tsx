@@ -25,7 +25,7 @@ export function highlightText(text: string, query: string): ReactNode {
           key={i}
           className="search-highlight"
           style={{
-            backgroundColor: "rgba(250, 204, 21, 0.4)",
+            backgroundColor: "var(--color-search-highlight, rgba(250, 204, 21, 0.4))",
             color: "inherit",
             borderRadius: "2px",
             padding: "0 1px",

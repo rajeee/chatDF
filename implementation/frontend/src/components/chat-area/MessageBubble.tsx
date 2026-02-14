@@ -251,10 +251,11 @@ function MessageBubbleComponent({
           })[messageDensity]
         }`}
         style={{
-          backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
-          color: isUser ? "var(--color-white)" : "var(--color-text)",
-          border: isUser ? "none" : "1px solid var(--color-border)",
-          boxShadow: isUser ? "none" : "0 1px 2px var(--color-shadow)",
+          backgroundColor: isUser && isEditing ? "var(--color-surface)" : isUser ? "var(--color-accent)" : "var(--color-surface)",
+          color: isUser && isEditing ? "var(--color-text)" : isUser ? "var(--color-white)" : "var(--color-text)",
+          border: isUser && isEditing ? "2px solid var(--color-accent)" : isUser ? "none" : "1px solid var(--color-border)",
+          boxShadow: isUser && isEditing ? "0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent)" : isUser ? "none" : "0 1px 2px var(--color-shadow)",
+          transition: "all 0.2s ease",
         }}
       >
         {/* Message content - use StreamingMessage component for active streaming, otherwise show finalized content */}

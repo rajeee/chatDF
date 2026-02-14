@@ -56,14 +56,10 @@ function formatColumnName(name: string): string {
   return name.replace(/_/g, " ");
 }
 
-export function buildSmartSuggestions(datasets: Dataset[]): string[] {
-  if (datasets.length === 0) return [];
-
-  const ds = datasets[0];
+function buildSingleDatasetSuggestions(ds: Dataset): string[] {
   const columns = parseSchema(ds.schema_json);
   const name = ds.name;
 
-  // If schema is empty or unparseable, fall back to generic suggestions
   if (columns.length === 0) {
     return [
       `Show me the first 5 rows of ${name}`,
@@ -79,10 +75,8 @@ export function buildSmartSuggestions(datasets: Dataset[]): string[] {
 
   const suggestions: string[] = [];
 
-  // Always start with a preview suggestion
   suggestions.push(`Show me the first 5 rows of ${name}`);
 
-  // Numeric + categorical → group-by aggregation
   if (numericCols.length > 0 && categoricalCols.length > 0) {
     const numCol = numericCols[0];
     const catCol = categoricalCols[0];
@@ -90,14 +84,12 @@ export function buildSmartSuggestions(datasets: Dataset[]): string[] {
       `What is the average ${formatColumnName(numCol.name)} by ${formatColumnName(catCol.name)}?`
     );
   } else if (numericCols.length > 0) {
-    // Numeric only → summary stats
     const numCol = numericCols[0];
     suggestions.push(
       `What are the min, max, and average ${formatColumnName(numCol.name)}?`
     );
   }
 
-  // Date column → trend question
   if (dateCols.length > 0 && numericCols.length > 0) {
     const dateCol = dateCols[0];
     const numCol = numericCols[0];
@@ -106,7 +98,6 @@ export function buildSmartSuggestions(datasets: Dataset[]): string[] {
     );
   }
 
-  // Categorical → distribution
   if (categoricalCols.length > 0) {
     const catCol = categoricalCols[0];
     suggestions.push(
@@ -114,17 +105,69 @@ export function buildSmartSuggestions(datasets: Dataset[]): string[] {
     );
   }
 
-  // Fill remaining slots up to 4 with useful generic questions
-  const fillers = [
-    `What are the summary statistics for ${name}?`,
-    `How many rows are in ${name}?`,
-    `Which columns have missing values in ${name}?`,
-  ];
-  for (const filler of fillers) {
-    if (suggestions.length >= 4) break;
-    if (!suggestions.includes(filler)) {
-      suggestions.push(filler);
+  return suggestions;
+}
+
+function buildCrossDatasetSuggestion(datasets: Dataset[]): string | null {
+  if (datasets.length < 2) return null;
+
+  const ds1 = datasets[0];
+  const ds2 = datasets[1];
+  const cols1 = parseSchema(ds1.schema_json);
+  const cols2 = parseSchema(ds2.schema_json);
+
+  if (cols1.length === 0 || cols2.length === 0) return null;
+
+  // Find common columns between datasets (potential join keys)
+  const colNames1 = new Set(cols1.map((c) => c.name.toLowerCase()));
+  const commonCols = cols2.filter((c) => colNames1.has(c.name.toLowerCase()));
+
+  if (commonCols.length > 0) {
+    return `Compare ${ds1.name} and ${ds2.name} by joining on ${formatColumnName(commonCols[0].name)}`;
+  }
+
+  return `Compare the summary statistics of ${ds1.name} and ${ds2.name}`;
+}
+
+export function buildSmartSuggestions(datasets: Dataset[]): string[] {
+  if (datasets.length === 0) return [];
+
+  if (datasets.length === 1) {
+    // Single dataset: use existing logic
+    const suggestions = buildSingleDatasetSuggestions(datasets[0]);
+    const name = datasets[0].name;
+    const fillers = [
+      `What are the summary statistics for ${name}?`,
+      `How many rows are in ${name}?`,
+      `Which columns have missing values in ${name}?`,
+    ];
+    for (const filler of fillers) {
+      if (suggestions.length >= 4) break;
+      if (!suggestions.includes(filler)) {
+        suggestions.push(filler);
+      }
     }
+    return suggestions.slice(0, 4);
+  }
+
+  // Multiple datasets: mix suggestions from each + cross-dataset
+  const suggestions: string[] = [];
+
+  // Add one suggestion per dataset (round-robin)
+  const perDataset = datasets.map((ds) => buildSingleDatasetSuggestions(ds));
+  for (let i = 0; suggestions.length < 3 && i < 4; i++) {
+    for (const dsPrompts of perDataset) {
+      if (suggestions.length >= 3) break;
+      if (dsPrompts[i]) {
+        suggestions.push(dsPrompts[i]);
+      }
+    }
+  }
+
+  // Add a cross-dataset comparison suggestion
+  const crossSuggestion = buildCrossDatasetSuggestion(datasets);
+  if (crossSuggestion) {
+    suggestions.push(crossSuggestion);
   }
 
   return suggestions.slice(0, 4);

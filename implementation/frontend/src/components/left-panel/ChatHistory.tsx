@@ -736,7 +736,7 @@ export function ChatHistory() {
                     className="w-full px-2 py-2 text-left hover:bg-gray-500/10 transition-colors"
                   >
                     <div className="text-xs font-medium truncate">{result.conversation_title || "Untitled"}</div>
-                    <div className="text-xs opacity-60 mt-0.5" dangerouslySetInnerHTML={{ __html: result.snippet.replace(new RegExp(`(${deferredSearchQuery})`, 'gi'), '<mark style="background-color: yellow; color: black; padding: 0 2px;">$1</mark>') }} />
+                    <div className="text-xs opacity-60 mt-0.5" dangerouslySetInnerHTML={{ __html: result.snippet.replace(new RegExp(`(${deferredSearchQuery})`, 'gi'), '<mark class="search-highlight" style="background-color: var(--color-search-highlight, rgba(250, 204, 21, 0.4)); color: inherit; border-radius: 2px; padding: 0 2px;">$1</mark>') }} />
                     <div className="text-[10px] opacity-40 mt-1">{formatRelativeTime(result.created_at)}</div>
                   </button>
                 ))}

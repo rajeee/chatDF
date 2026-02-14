@@ -24,6 +24,7 @@
     --color-text-muted: #9ca3af;
     --color-backdrop: rgba(0, 0, 0, 0.5);
     --color-phase-thinking: #7c3aed;
+    --color-search-highlight: rgba(250, 204, 21, 0.4);
 
     /* Syntax highlighting (light theme) */
     --syntax-keyword: #a626a4;
@@ -75,6 +76,7 @@
     --color-text-muted: #6b7280;
     --color-backdrop: rgba(0, 0, 0, 0.5);
     --color-phase-thinking: #a78bfa;
+    --color-search-highlight: rgba(96, 165, 250, 0.3);
 
     /* Syntax highlighting (dark theme) */
     --syntax-keyword: #c678dd;

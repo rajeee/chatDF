@@ -300,6 +300,23 @@ function MessageBubbleComponent({
                 <polyline points="9 18 15 12 9 6" />
               </svg>
               <span className="font-mono opacity-70">SQL</span>
+              {message.sql_executions.some(e => e.error) && (
+                <span
+                  data-testid={`sql-error-indicator-${message.id}`}
+                  className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] font-semibold"
+                  style={{
+                    backgroundColor: "color-mix(in srgb, var(--color-error) 15%, transparent)",
+                    color: "var(--color-error)",
+                  }}
+                >
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  error
+                </span>
+              )}
               {message.sql_executions.length > 1 && (
                 <span className="opacity-40">({message.sql_executions.length} queries)</span>
               )}

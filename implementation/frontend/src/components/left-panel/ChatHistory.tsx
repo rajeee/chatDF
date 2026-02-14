@@ -867,6 +867,31 @@ export function ChatHistory() {
                             {conv.message_count}
                           </span>
                         )}
+                        {conv.dataset_count > 0 && (
+                          <span
+                            data-testid="dataset-count-badge"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full text-[10px] leading-4 font-medium shrink-0"
+                            style={{
+                              backgroundColor: "color-mix(in srgb, var(--color-accent) 15%, transparent)",
+                              color: "var(--color-accent)",
+                            }}
+                          >
+                            <svg
+                              className="w-2.5 h-2.5"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <ellipse cx="12" cy="5" rx="9" ry="3" />
+                              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                            </svg>
+                            {conv.dataset_count}
+                          </span>
+                        )}
                         {drafts[conv.id] && (
                           <span
                             data-testid="draft-indicator"

@@ -144,6 +144,69 @@ describe("MessageBubble SQL error display", () => {
     expect(screen.queryByTestId("sql-error-msg-stream-1")).not.toBeInTheDocument();
   });
 
+  it("shows error indicator badge on SQL toggle when errors exist", () => {
+    const msg = {
+      id: "msg-indicator-1",
+      role: "assistant" as const,
+      content: "I tried to run the query",
+      sql_query: null,
+      sql_executions: [
+        {
+          query: "SELECT * FROM nonexistent",
+          columns: null,
+          rows: null,
+          total_rows: null,
+          error: "Table not found: nonexistent",
+          execution_time_ms: null,
+        },
+      ],
+      reasoning: null,
+      created_at: new Date().toISOString(),
+    };
+    render(
+      <MessageBubble
+        message={msg}
+        isCurrentlyStreaming={false}
+        onShowSQL={noopFn}
+        onShowReasoning={noopFn}
+        onVisualize={noopFn}
+      />
+    );
+    expect(screen.getByTestId("sql-error-indicator-msg-indicator-1")).toBeInTheDocument();
+    expect(screen.getByTestId("sql-error-indicator-msg-indicator-1").textContent).toContain("error");
+  });
+
+  it("does not show error indicator badge when no errors", () => {
+    const msg = {
+      id: "msg-no-indicator",
+      role: "assistant" as const,
+      content: "Results",
+      sql_query: null,
+      sql_executions: [
+        {
+          query: "SELECT 1",
+          columns: ["1"],
+          rows: [[1]],
+          total_rows: 1,
+          error: null,
+          execution_time_ms: 5,
+        },
+      ],
+      reasoning: null,
+      created_at: new Date().toISOString(),
+    };
+    render(
+      <MessageBubble
+        message={msg}
+        isCurrentlyStreaming={false}
+        onShowSQL={noopFn}
+        onShowReasoning={noopFn}
+        onVisualize={noopFn}
+      />
+    );
+    expect(screen.queryByTestId("sql-error-indicator-msg-no-indicator")).not.toBeInTheDocument();
+  });
+
   it("shows multiple errors with query numbers", () => {
     const msg = {
       id: "msg-multi-1",

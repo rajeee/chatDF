@@ -873,3 +873,80 @@ describe("CH-10: Message count badge", () => {
     expect(badges[1].textContent).toContain("42");
   });
 });
+
+describe("CH-11: Dataset count badge", () => {
+  it("shows dataset count badge when dataset_count > 0", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-with-ds",
+        title: "Chat With Datasets",
+        dataset_count: 3,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chat With Datasets")).toBeInTheDocument();
+    });
+
+    const badge = screen.getByTestId("dataset-count-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain("3");
+  });
+
+  it("does not show dataset count badge when dataset_count is 0", async () => {
+    const conversations = [
+      createConversation({
+        id: "conv-no-ds",
+        title: "No Datasets",
+        dataset_count: 0,
+      }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No Datasets")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("dataset-count-badge")).not.toBeInTheDocument();
+  });
+
+  it("shows correct dataset count across multiple conversations", async () => {
+    const conversations = [
+      createConversation({ id: "ds-a", title: "Has 2", dataset_count: 2, message_count: 1 }),
+      createConversation({ id: "ds-b", title: "Has 0", dataset_count: 0, message_count: 1 }),
+      createConversation({ id: "ds-c", title: "Has 5", dataset_count: 5, message_count: 1 }),
+    ];
+
+    server.use(
+      http.get("/conversations", () => {
+        return HttpResponse.json({ conversations });
+      })
+    );
+
+    renderWithProviders(<ChatHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Has 2")).toBeInTheDocument();
+    });
+
+    const badges = screen.getAllByTestId("dataset-count-badge");
+    expect(badges).toHaveLength(2);
+    expect(badges[0].textContent).toContain("2");
+    expect(badges[1].textContent).toContain("5");
+  });
+});

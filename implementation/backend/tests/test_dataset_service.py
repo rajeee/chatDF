@@ -495,13 +495,19 @@ class TestRemoveDataset:
 
     async def test_deletes_uploaded_file_on_removal(self, fresh_db, test_user):
         """Deleting an uploaded dataset (file:// URL) should remove the physical file."""
+        from app.config import get_settings
         from app.services.dataset_service import remove_dataset
 
         conv = make_conversation(user_id=test_user["id"])
         await _insert_conversation(fresh_db, conv)
 
-        # Create a real temp file to simulate an upload
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".parquet") as f:
+        # Create a real temp file inside the uploads dir (path traversal guard
+        # only allows deletion within upload_dir).
+        upload_dir = os.path.abspath(get_settings().upload_dir)
+        os.makedirs(upload_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".parquet", dir=upload_dir
+        ) as f:
             f.write(b"PAR1fakecontent")
             temp_path = f.name
 

@@ -105,7 +105,10 @@ class TestPeriodicCacheCleanup:
                 raise asyncio.CancelledError
             return None
 
+        mock_cursor = AsyncMock()
+        mock_cursor.rowcount = 0
         mock_write_conn = AsyncMock()
+        mock_write_conn.execute.return_value = mock_cursor
         mock_db_pool = MagicMock()
         mock_db_pool.get_write_connection.return_value = mock_write_conn
 

@@ -5,10 +5,17 @@
 // Supports markdown rendering with code blocks, collapsible SQL previews,
 // and inline chart visualizations.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useParams, Link } from "react-router-dom";
 import { apiGetPublic } from "@/api/client";
 import ReactMarkdown from "react-markdown";
+import { parseSqlExecutions, type SqlExecution } from "@/stores/chatStore";
+
+const ChartVisualization = lazy(() =>
+  import("@/components/chat-area/ChartVisualization").then((m) => ({
+    default: m.ChartVisualization,
+  }))
+);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,6 +205,94 @@ function SqlPreview({ sql, messageId }: { sql: string; messageId: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Inline Result Table (compact, read-only)
+// ---------------------------------------------------------------------------
+
+function SharedResultTable({ exec }: { exec: SqlExecution }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!exec.columns || !exec.rows || exec.rows.length === 0) return null;
+
+  const displayRows = expanded ? exec.rows.slice(0, 100) : exec.rows.slice(0, 5);
+
+  return (
+    <div
+      className="mt-2 rounded overflow-hidden text-xs"
+      style={{
+        border: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-bg)",
+      }}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {exec.columns.map((col, i) => (
+                <th
+                  key={i}
+                  className="px-2 py-1 text-left font-medium whitespace-nowrap"
+                  style={{
+                    borderBottom: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    fontSize: "0.65rem",
+                  }}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayRows.map((row, ri) => (
+              <tr key={ri}>
+                {(row as unknown[]).map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className="px-2 py-0.5 whitespace-nowrap"
+                    style={{
+                      borderBottom: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      fontSize: "0.65rem",
+                      maxWidth: "200px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {cell == null ? (
+                      <span style={{ color: "var(--color-muted)", fontStyle: "italic" }}>null</span>
+                    ) : (
+                      String(cell)
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div
+        className="flex items-center justify-between px-2 py-1"
+        style={{ borderTop: "1px solid var(--color-border)", color: "var(--color-muted)" }}
+      >
+        <span style={{ fontSize: "0.6rem" }}>
+          {exec.total_rows != null ? exec.total_rows.toLocaleString() : exec.rows.length} rows
+          {exec.execution_time_ms != null && ` \u00B7 ${exec.execution_time_ms.toFixed(0)}ms`}
+        </span>
+        {exec.rows.length > 5 && (
+          <button
+            className="text-xs hover:underline"
+            style={{ color: "var(--color-accent)", fontSize: "0.6rem" }}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Show less" : `Show ${Math.min(exec.rows.length, 100)} rows`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Schema Info (expandable per-dataset)
 // ---------------------------------------------------------------------------
 
@@ -244,6 +339,167 @@ function DatasetSchemaInfo({ dataset }: { dataset: SharedDataset }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Message Bubble (with parsed sql_executions, tables, charts)
+// ---------------------------------------------------------------------------
+
+function SharedMessageBubble({ message }: { message: SharedMessage }) {
+  const isUser = message.role === "user";
+  const executions = useMemo(
+    () => (isUser ? [] : parseSqlExecutions(message.sql_query)),
+    [message.sql_query, isUser]
+  );
+  const hasResults = executions.some(
+    (e) => e.columns && e.rows && e.rows.length > 0 && !e.error
+  );
+  const hasChart = executions.some(
+    (e) => e.chartSpec && e.columns && e.rows
+  );
+
+  return (
+    <div
+      className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+      data-testid={`message-${message.id}`}
+    >
+      <div
+        className="max-w-[80%] rounded-lg px-4 py-2 text-sm break-words"
+        style={{
+          backgroundColor: isUser ? "var(--color-accent)" : "var(--color-surface)",
+          color: isUser ? "var(--color-white)" : "var(--color-text)",
+          border: isUser ? "none" : "1px solid var(--color-border)",
+          boxShadow: isUser ? "none" : "0 1px 2px var(--color-shadow)",
+        }}
+      >
+        {isUser ? (
+          <span className="break-words">{message.content}</span>
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+            <ReactMarkdown
+              components={{
+                code: SharedCodeBlock,
+                p: ({ children }) => {
+                  if (
+                    children &&
+                    typeof children === "object" &&
+                    "type" in children &&
+                    children.type === "div"
+                  ) {
+                    return <>{children}</>;
+                  }
+                  return <p>{children}</p>;
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
+
+        {/* SQL preview + result tables (rich JSON format) */}
+        {!isUser && hasResults &&
+          executions.map((exec, i) => (
+            <div key={i}>
+              <SqlPreview sql={exec.query} messageId={`${message.id}-${i}`} />
+              {exec.error && (
+                <div
+                  className="mt-1 text-xs px-2 py-1 rounded"
+                  style={{
+                    backgroundColor: "var(--color-error-bg, #fef2f2)",
+                    color: "var(--color-error, #dc2626)",
+                    border: "1px solid var(--color-error-border, #fecaca)",
+                  }}
+                >
+                  {exec.error}
+                </div>
+              )}
+              {!exec.error && <SharedResultTable exec={exec} />}
+            </div>
+          ))}
+
+        {/* Legacy/plain SQL preview (no result data) */}
+        {!isUser && message.sql_query && !hasResults && (
+          <SqlPreview sql={executions.length > 0 ? executions[0].query : message.sql_query} messageId={message.id} />
+        )}
+      </div>
+
+      {/* Inline chart visualization */}
+      {!isUser && hasChart && (
+        <div
+          className="max-w-[80%] mt-1 rounded-lg overflow-hidden"
+          style={{
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-bg)",
+            height: "260px",
+          }}
+          data-testid={`shared-chart-${message.id}`}
+        >
+          <Suspense
+            fallback={
+              <div
+                className="flex items-center justify-center h-full text-xs"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Loading chart...
+              </div>
+            }
+          >
+            {executions
+              .filter((e) => e.chartSpec && e.columns && e.rows)
+              .map((exec, i) => (
+                <ChartVisualization
+                  key={i}
+                  columns={exec.columns!}
+                  rows={exec.rows!}
+                  llmSpec={exec.chartSpec}
+                />
+              ))}
+          </Suspense>
+        </div>
+      )}
+
+      {/* Auto-detected chart for results without explicit chartSpec */}
+      {!isUser && hasResults && !hasChart && (
+        <div
+          className="max-w-[80%] mt-1 rounded-lg overflow-hidden"
+          style={{
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-bg)",
+            height: "220px",
+          }}
+          data-testid={`shared-auto-chart-${message.id}`}
+        >
+          <Suspense
+            fallback={
+              <div
+                className="flex items-center justify-center h-full text-xs"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Loading chart...
+              </div>
+            }
+          >
+            {(() => {
+              const exec = executions.find(
+                (e) => e.columns && e.rows && e.rows.length > 0 && !e.error
+              );
+              return exec ? (
+                <ChartVisualization columns={exec.columns!} rows={exec.rows!} />
+              ) : null;
+            })()}
+          </Suspense>
+        </div>
+      )}
+
+      <span
+        className="text-xs mt-1 opacity-30"
+        style={{ color: "var(--color-text)" }}
+      >
+        {formatTime(message.created_at)}
+      </span>
     </div>
   );
 }
@@ -464,70 +720,9 @@ export function SharedConversationView() {
       {/* Messages */}
       <div className="flex-1">
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-          {conversation.messages.map((message) => {
-            const isUser = message.role === "user";
-            return (
-              <div
-                key={message.id}
-                className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-                data-testid={`message-${message.id}`}
-              >
-                <div
-                  className="max-w-[80%] rounded-lg px-4 py-2 text-sm break-words"
-                  style={{
-                    backgroundColor: isUser
-                      ? "var(--color-accent)"
-                      : "var(--color-surface)",
-                    color: isUser
-                      ? "var(--color-white)"
-                      : "var(--color-text)",
-                    border: isUser
-                      ? "none"
-                      : "1px solid var(--color-border)",
-                    boxShadow: isUser
-                      ? "none"
-                      : "0 1px 2px var(--color-shadow)",
-                  }}
-                >
-                  {isUser ? (
-                    <span className="break-words">{message.content}</span>
-                  ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                      <ReactMarkdown
-                        components={{
-                          code: SharedCodeBlock,
-                          p: ({ children }) => {
-                            if (
-                              children &&
-                              typeof children === "object" &&
-                              "type" in children &&
-                              children.type === "div"
-                            ) {
-                              return <>{children}</>;
-                            }
-                            return <p>{children}</p>;
-                          },
-                        }}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  )}
-
-                  {/* SQL preview for messages with sql_query */}
-                  {!isUser && message.sql_query && (
-                    <SqlPreview sql={message.sql_query} messageId={message.id} />
-                  )}
-                </div>
-                <span
-                  className="text-xs mt-1 opacity-30"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  {formatTime(message.created_at)}
-                </span>
-              </div>
-            );
-          })}
+          {conversation.messages.map((message) => (
+            <SharedMessageBubble key={message.id} message={message} />
+          ))}
         </div>
       </div>
 

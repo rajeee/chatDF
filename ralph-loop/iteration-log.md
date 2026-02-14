@@ -164,3 +164,5 @@ Track each improvement cycle: what was done, what was learned.
 | 158 | 2026-02-14 | Error handling UX: empty results, retry buttons, timeout messages, DB indexes | UX + perf | 99/99 right-panel tests, 4/4 DB pool tests, frontend builds | 0eafc68 |
 | 158 | 2026-02-14 | (auto-logged) | — | — | 36cf1fa | $2.7143760500000007 |
 | 160 | 2026-02-14 | Copy button + Visualize button on assistant messages | UX | 46/46 MessageBubble tests (10 new), frontend builds | 7a156a5 |
+| 160 | 2026-02-14 | (auto-logged) | — | — | a4d4802 | $2.49639005 |
+| 162 | 2026-02-14 | Inline message editing (Edit + Save & Resend) | UX feature | 40/40 MessageBubble tests (14 new), frontend builds | c6652e6 |

@@ -1100,8 +1100,9 @@ async def send_message(
     connection_manager = getattr(request.app.state, "connection_manager", None)
 
     async def ws_send(message: dict) -> None:
-        """Send a WebSocket message (already formatted)."""
+        """Send a WebSocket message with conversation_id injected."""
         if connection_manager is not None:
+            message["cid"] = conv_id
             await connection_manager.send_to_user(user["id"], message)
 
     # Get the worker pool
@@ -1834,6 +1835,7 @@ async def redo_message(
 
     async def ws_send(message: dict) -> None:
         if connection_manager is not None:
+            message["cid"] = conv_id
             await connection_manager.send_to_user(user["id"], message)
 
     pool = getattr(request.app.state, "worker_pool", None)

@@ -39,9 +39,20 @@ export function useWebSocket(isAuthenticated: boolean): void {
         return;
       }
 
+      // Guard: ignore chat/tool events for a different conversation.
+      // The backend injects `cid` (conversation_id) into every WS message.
+      // If the event is for a conversation we're not viewing, discard it
+      // to prevent cross-conversation state pollution on rapid switching.
+      const eventConvId = msg.cid as string | undefined;
+      const isForActiveConversation = () => {
+        if (!eventConvId) return true; // no cid = legacy/global event, allow
+        return useChatStore.getState().activeConversationId === eventConvId;
+      };
+
       switch (msg.type) {
         case "rt": // reasoning_token (compressed)
         case "reasoning_token": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           if (!chatStore.isStreaming) {
             // First reasoning token: add placeholder message
@@ -63,12 +74,14 @@ export function useWebSocket(isAuthenticated: boolean): void {
         }
         case "rc": // reasoning_complete (compressed)
         case "reasoning_complete": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           chatStore.setReasoning(false);
           break;
         }
         case "ct": // chat_token (compressed)
         case "chat_token": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           if (!chatStore.isStreaming) {
             // First token: add a placeholder assistant message so
@@ -90,6 +103,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
         }
         case "cc": // chat_complete (compressed)
         case "chat_complete": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           // Copy accumulated streaming tokens into the message content
           // before clearing, so the response persists in the message list.
@@ -139,6 +153,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
         }
         case "cs": // chart_spec (compressed)
         case "chart_spec": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           const executionIndex = (msg.ei ?? msg.execution_index) as number;
           const spec = (msg.sp ?? msg.spec) as import("@/stores/chatStore").ChartSpec;
@@ -149,6 +164,7 @@ export function useWebSocket(isAuthenticated: boolean): void {
         }
         case "tcs": // tool_call_start (compressed)
         case "tool_call_start": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           const tool = (msg.tl || msg.tool) as string;
           const args = (msg.a || msg.args) as Record<string, unknown>;
@@ -158,17 +174,20 @@ export function useWebSocket(isAuthenticated: boolean): void {
         }
         case "qp": // query_progress (compressed)
         case "query_progress": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           chatStore.setQueryProgress((msg.n ?? msg.query_number) as number);
           break;
         }
         case "fs": // followup_suggestions (compressed)
         case "followup_suggestions": {
+          if (!isForActiveConversation()) break;
           useChatStore.getState().setFollowupSuggestions(((msg.sg ?? msg.suggestions) as string[]) || []);
           break;
         }
         case "ce": // chat_error (compressed)
         case "chat_error": {
+          if (!isForActiveConversation()) break;
           const chatStore = useChatStore.getState();
           // Show error toast to the user
           const errorMsg = (msg.error || msg.e) as string | undefined;
@@ -182,7 +201,6 @@ export function useWebSocket(isAuthenticated: boolean): void {
           break;
         }
         case "dataset_loaded": {
-          const datasetStore = useDatasetStore.getState();
           if (msg.dataset) {
             const dsPayload = msg.dataset as {
               id: string;
@@ -195,12 +213,13 @@ export function useWebSocket(isAuthenticated: boolean): void {
               status: "loading" | "ready" | "error";
               error_message: string | null;
             };
-            // Ensure conversation_id is set (fallback to active conversation for backwards compat)
-            const convId =
-              dsPayload.conversation_id ||
-              useChatStore.getState().activeConversationId ||
-              "";
-            const datasetWithConv = { ...dsPayload, conversation_id: convId };
+            // Only process dataset events for the active conversation
+            const convId = dsPayload.conversation_id;
+            if (convId && convId !== useChatStore.getState().activeConversationId) {
+              break;
+            }
+            const datasetWithConv = { ...dsPayload, conversation_id: convId || "" };
+            const datasetStore = useDatasetStore.getState();
             const exists = datasetStore.datasets.some(
               (d) => d.id === dsPayload.id
             );

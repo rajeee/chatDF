@@ -24,6 +24,7 @@ interface UiState {
   reasoningModalOpen: boolean;
   activeReasoning: string;
   shortcutsModalOpen: boolean;
+  settingsModalOpen: boolean;
   pendingSql: string | null;
   queryResultComparisonOpen: boolean;
   comparisonCurrentResult: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null;
@@ -55,6 +56,8 @@ interface UiActions {
   closeReasoningModal: () => void;
   openShortcutsModal: () => void;
   closeShortcutsModal: () => void;
+  openSettingsModal: () => void;
+  closeSettingsModal: () => void;
   setPendingSql: (sql: string | null) => void;
   openQueryResultComparison: (currentResult?: { query: string; columns: string[]; rows: unknown[][]; total_rows: number } | null) => void;
   closeQueryResultComparison: () => void;
@@ -83,6 +86,7 @@ export const useUiStore = create<UiState & UiActions>()(
       reasoningModalOpen: false,
       activeReasoning: "",
       shortcutsModalOpen: false,
+      settingsModalOpen: false,
       pendingSql: null,
       queryResultComparisonOpen: false,
       comparisonCurrentResult: null,
@@ -157,6 +161,12 @@ export const useUiStore = create<UiState & UiActions>()(
 
       closeShortcutsModal: () =>
         set({ shortcutsModalOpen: false }),
+
+      openSettingsModal: () =>
+        set({ settingsModalOpen: true }),
+
+      closeSettingsModal: () =>
+        set({ settingsModalOpen: false }),
 
       setPendingSql: (sql) => set({ pendingSql: sql }),
 

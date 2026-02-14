@@ -1,9 +1,9 @@
-// Tests: spec/frontend/left_panel/test_plan.md#settings-tests
-// Verifies: spec/frontend/left_panel/settings/plan.md
+// Tests: Settings Modal
+// Verifies settings controls work correctly inside the modal
 //
 // ST-1: Theme toggle cycles through light/dark/system
 // ST-2: Clear all conversations with confirmation
-// ST-3: About modal opens and closes
+// ST-3: About section is visible in modal
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -11,7 +11,8 @@ import { renderWithProviders, screen, waitFor, userEvent } from "../../helpers/r
 import { resetAllStores } from "../../helpers/stores";
 import { server } from "../../helpers/mocks/server";
 import { useChatStore } from "@/stores/chatStore";
-import { Settings } from "@/components/left-panel/Settings";
+import { useUiStore } from "@/stores/uiStore";
+import { SettingsModal } from "@/components/left-panel/SettingsModal";
 
 // In-memory localStorage stub (jsdom localStorage is unreliable)
 function createMockLocalStorage() {
@@ -62,6 +63,8 @@ let originalLocalStorage: Storage;
 
 beforeEach(() => {
   resetAllStores();
+  // Open the settings modal for tests
+  useUiStore.setState({ settingsModalOpen: true });
 
   originalMatchMedia = window.matchMedia;
   originalLocalStorage = window.localStorage;
@@ -95,9 +98,30 @@ afterEach(() => {
   document.documentElement.classList.remove("dark");
 });
 
+describe("Settings modal renders when open", () => {
+  it("renders settings modal when settingsModalOpen is true", () => {
+    renderWithProviders(<SettingsModal />);
+    expect(screen.getByTestId("settings-modal")).toBeInTheDocument();
+  });
+
+  it("does not render when settingsModalOpen is false", () => {
+    useUiStore.setState({ settingsModalOpen: false });
+    renderWithProviders(<SettingsModal />);
+    expect(screen.queryByTestId("settings-modal")).not.toBeInTheDocument();
+  });
+
+  it("closes when close button is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsModal />);
+
+    await user.click(screen.getByTestId("close-settings-modal"));
+    expect(useUiStore.getState().settingsModalOpen).toBe(false);
+  });
+});
+
 describe("ST-1: Theme toggle", () => {
   it("renders theme toggle with three options", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     expect(screen.getByTestId("theme-light")).toBeInTheDocument();
     expect(screen.getByTestId("theme-dark")).toBeInTheDocument();
@@ -106,7 +130,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("clicking dark adds dark class to document", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("theme-dark"));
 
@@ -115,7 +139,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("clicking light removes dark class from document", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     // First set dark, then switch to light
     await user.click(screen.getByTestId("theme-dark"));
@@ -127,7 +151,7 @@ describe("ST-1: Theme toggle", () => {
 
   it("persists theme choice to localStorage", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("theme-dark"));
 
@@ -137,14 +161,14 @@ describe("ST-1: Theme toggle", () => {
 
 describe("ST-2: Clear all conversations", () => {
   it("renders clear all conversations button", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     expect(screen.getByText("Clear all conversations")).toBeInTheDocument();
   });
 
   it("clicking clear shows confirmation dialog", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByText("Clear all conversations"));
 
@@ -165,7 +189,7 @@ describe("ST-2: Clear all conversations", () => {
     useChatStore.setState({ activeConversationId: "conv-1" });
 
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByText("Clear all conversations"));
     await user.click(screen.getByText("Delete All"));
@@ -178,7 +202,7 @@ describe("ST-2: Clear all conversations", () => {
 
   it("cancelling confirmation closes the dialog", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByText("Clear all conversations"));
     expect(screen.getByText("Delete All")).toBeInTheDocument();
@@ -189,26 +213,10 @@ describe("ST-2: Clear all conversations", () => {
   });
 });
 
-describe("ST-3: About modal", () => {
-  it("opens about modal when About link is clicked", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+describe("ST-3: About section", () => {
+  it("shows about text inline in the modal", () => {
+    renderWithProviders(<SettingsModal />);
 
-    await user.click(screen.getByText("About"));
-
-    expect(screen.getByTestId("about-modal")).toBeInTheDocument();
-    expect(screen.getByText("ChatDF")).toBeInTheDocument();
-  });
-
-  it("closes about modal when close button is clicked", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Settings />);
-
-    await user.click(screen.getByText("About"));
-    expect(screen.getByTestId("about-modal")).toBeInTheDocument();
-
-    await user.click(screen.getByTestId("close-about-modal"));
-
-    expect(screen.queryByTestId("about-modal")).not.toBeInTheDocument();
+    expect(screen.getByText(/Conversational data analysis/)).toBeInTheDocument();
   });
 });

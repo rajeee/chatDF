@@ -28,6 +28,7 @@ export function resetAllStores(): void {
     sqlResultModalIndex: null,
     schemaModalDatasetId: null,
     comparisonDatasetIds: null,
+    settingsModalOpen: false,
   });
 }
 

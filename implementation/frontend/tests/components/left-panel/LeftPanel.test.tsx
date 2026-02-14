@@ -24,8 +24,8 @@ vi.mock("@/components/left-panel/BookmarkPanel", () => ({
   BookmarkPanel: () => <div data-testid="mock-bookmark-panel">BookmarkPanel</div>,
 }));
 
-vi.mock("@/components/left-panel/Settings", () => ({
-  Settings: () => <div data-testid="mock-settings">Settings</div>,
+vi.mock("@/components/left-panel/SettingsModal", () => ({
+  SettingsModal: () => <div data-testid="mock-settings-modal">SettingsModal</div>,
 }));
 
 vi.mock("@/components/left-panel/UsageStats", () => ({
@@ -73,14 +73,13 @@ describe("LP-1: Renders collapsed state when leftPanelOpen is false", () => {
     expect(panel.style.minWidth).toBe("48px");
   });
 
-  it("does not render child components in collapsed state", () => {
+  it("does not render content components in collapsed state", () => {
     setUiState({ leftPanelOpen: false });
 
     render(<LeftPanel />);
 
     expect(screen.queryByTestId("mock-chat-history")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mock-bookmark-panel")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-settings")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mock-usage-stats")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mock-account")).not.toBeInTheDocument();
   });
@@ -113,7 +112,7 @@ describe("LP-2: Renders expanded state when leftPanelOpen is true", () => {
     render(<LeftPanel />);
 
     expect(screen.getByTestId("mock-chat-history")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-settings")).toBeInTheDocument();
+    expect(screen.getByTestId("mock-settings-modal")).toBeInTheDocument();
     expect(screen.getByTestId("mock-usage-stats")).toBeInTheDocument();
     expect(screen.getByTestId("mock-account")).toBeInTheDocument();
   });
@@ -348,5 +347,37 @@ describe("LP-10: Panel width matches leftPanelWidth from store", () => {
 
     const panel = screen.getByTestId("left-panel");
     expect(panel.style.width).toBe("48px");
+  });
+});
+
+describe("LP-11: Gear icon opens settings modal", () => {
+  it("renders gear icon button in expanded state", () => {
+    setUiState({ leftPanelOpen: true });
+
+    render(<LeftPanel />);
+
+    const gearBtn = screen.getAllByTestId("open-settings");
+    expect(gearBtn.length).toBeGreaterThan(0);
+  });
+
+  it("renders gear icon button in collapsed state", () => {
+    setUiState({ leftPanelOpen: false });
+
+    render(<LeftPanel />);
+
+    const gearBtn = screen.getByTestId("open-settings");
+    expect(gearBtn).toBeInTheDocument();
+  });
+
+  it("clicking gear icon opens settings modal", () => {
+    setUiState({ leftPanelOpen: true });
+
+    render(<LeftPanel />);
+
+    // Get the gear button in the expanded panel (the last one)
+    const gearBtns = screen.getAllByTestId("open-settings");
+    fireEvent.click(gearBtns[gearBtns.length - 1]);
+
+    expect(useUiStore.getState().settingsModalOpen).toBe(true);
   });
 });

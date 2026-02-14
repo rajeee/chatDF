@@ -13,7 +13,7 @@ import {
   userEvent,
 } from "../../helpers/render";
 import { resetAllStores } from "../../helpers/stores";
-import { Settings } from "@/components/left-panel/Settings";
+import { SettingsModal } from "@/components/left-panel/SettingsModal";
 
 // In-memory localStorage stub (jsdom localStorage is unreliable)
 function createMockLocalStorage() {
@@ -58,9 +58,9 @@ let originalLocalStorage: Storage;
 
 beforeEach(async () => {
   resetAllStores();
-  // Ensure messageDensity is reset to default (resetAllStores doesn't cover it)
+  // Ensure messageDensity is reset and modal is open for testing
   const { useUiStore } = await import("@/stores/uiStore");
-  useUiStore.setState({ messageDensity: "normal" });
+  useUiStore.setState({ messageDensity: "normal", settingsModalOpen: true });
 
   originalMatchMedia = window.matchMedia;
   originalLocalStorage = window.localStorage;
@@ -96,7 +96,7 @@ afterEach(() => {
 
 describe("DENSITY-1: Density toggle buttons render in Settings", () => {
   it("renders all three density toggle buttons", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     expect(screen.getByTestId("density-compact")).toBeInTheDocument();
     expect(screen.getByTestId("density-normal")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("DENSITY-1: Density toggle buttons render in Settings", () => {
   });
 
   it("renders Message Density label", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     expect(screen.getByText("Message Density")).toBeInTheDocument();
   });
@@ -113,7 +113,7 @@ describe("DENSITY-1: Density toggle buttons render in Settings", () => {
 describe("DENSITY-2: Clicking Compact calls setMessageDensity('compact')", () => {
   it("sets messageDensity to compact when Compact button is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("density-compact"));
 
@@ -125,7 +125,7 @@ describe("DENSITY-2: Clicking Compact calls setMessageDensity('compact')", () =>
 describe("DENSITY-3: Clicking Spacious calls setMessageDensity('spacious')", () => {
   it("sets messageDensity to spacious when Spacious button is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("density-spacious"));
 
@@ -136,7 +136,7 @@ describe("DENSITY-3: Clicking Spacious calls setMessageDensity('spacious')", () 
 
 describe("DENSITY-4: Active density button has accent background class", () => {
   it("Normal button has bg-accent class by default", () => {
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     const normalBtn = screen.getByTestId("density-normal");
     expect(normalBtn.className).toContain("bg-accent");
@@ -144,7 +144,7 @@ describe("DENSITY-4: Active density button has accent background class", () => {
 
   it("Compact button gets bg-accent class when selected", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("density-compact"));
 
@@ -156,7 +156,7 @@ describe("DENSITY-4: Active density button has accent background class", () => {
 
   it("Spacious button gets bg-accent class when selected", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     await user.click(screen.getByTestId("density-spacious"));
 
@@ -170,7 +170,7 @@ describe("DENSITY-4: Active density button has accent background class", () => {
 describe("DENSITY-5: Density state persists in uiStore", () => {
   it("stores density value in uiStore state", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<SettingsModal />);
 
     // Default should be "normal"
     const { useUiStore } = await import("@/stores/uiStore");

@@ -255,8 +255,24 @@ function DatasetCardComponent({ dataset, index = 0 }: DatasetCardProps) {
                 </div>
               )}
               {previewError && (
-                <div className="text-xs text-red-500 py-2" data-testid="inline-preview-error">
-                  {previewError}
+                <div className="flex items-center gap-2 text-xs text-red-500 py-2" data-testid="inline-preview-error">
+                  <span className="flex-1">{previewError}</span>
+                  <button
+                    data-testid="inline-preview-retry"
+                    className="shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-red-300 dark:border-red-700 hover:opacity-70 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!conversationId) return;
+                      setPreviewError(null);
+                      setPreviewLoading(true);
+                      previewDataset(conversationId, dataset.id, { sampleSize: 5, sampleMethod: "head" })
+                        .then((result) => setPreviewData(result))
+                        .catch((err) => setPreviewError(err instanceof Error ? err.message : "Failed to load preview"))
+                        .finally(() => setPreviewLoading(false));
+                    }}
+                  >
+                    Retry
+                  </button>
                 </div>
               )}
               {previewData && !previewLoading && !previewError && (

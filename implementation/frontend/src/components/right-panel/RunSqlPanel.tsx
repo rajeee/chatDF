@@ -5,7 +5,7 @@
 // Uses CodeMirror 6 for the SQL editor with syntax highlighting.
 
 import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
-import { apiPost, explainSql, generateSql } from "@/api/client";
+import { apiPost, explainSql, generateSql, TimeoutError } from "@/api/client";
 import { useUiStore } from "@/stores/uiStore";
 import { useQueryHistoryStore } from "@/stores/queryHistoryStore";
 import { useSavedQueryStore } from "@/stores/savedQueryStore";
@@ -153,9 +153,13 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
       setCurrentPage(response.page);
       addQuery(trimmed);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Query execution failed";
-      setError(message);
+      if (err instanceof TimeoutError) {
+        setError("Query timed out after 60 seconds. Try adding a LIMIT clause or filtering with WHERE to reduce the result set.");
+      } else {
+        const message =
+          err instanceof Error ? err.message : "Query execution failed";
+        setError(message);
+      }
     } finally {
       setIsExecuting(false);
     }
@@ -178,9 +182,13 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
         setResult(response);
         setCurrentPage(response.page);
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Query execution failed";
-        setError(message);
+        if (err instanceof TimeoutError) {
+          setError("Page fetch timed out. Try again or reduce the page size.");
+        } else {
+          const message =
+            err instanceof Error ? err.message : "Query execution failed";
+          setError(message);
+        }
       } finally {
         setIsExecuting(false);
       }
@@ -922,7 +930,34 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 backgroundColor: "rgba(239, 68, 68, 0.05)",
               }}
             >
-              {error}
+              <div className="flex items-start gap-1.5">
+                <svg
+                  className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                <span className="flex-1">{error}</span>
+                <button
+                  data-testid="run-sql-retry"
+                  className="shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium hover:opacity-70 transition-opacity"
+                  style={{
+                    borderColor: "var(--color-error)",
+                    color: "var(--color-error)",
+                  }}
+                  disabled={isExecuting}
+                  onClick={executeQuery}
+                >
+                  Retry
+                </button>
+              </div>
             </div>
           )}
 
@@ -1228,12 +1263,41 @@ export function RunSqlPanel({ conversationId }: RunSqlPanelProps) {
                 </div>
               )}
 
+              {/* Empty results message */}
+              {result.total_rows === 0 && (
+                <div
+                  data-testid="run-sql-empty"
+                  className="flex flex-col items-center justify-center py-6 px-4 text-center"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  <svg
+                    className="w-8 h-8 mb-2 opacity-30"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                  <span className="text-xs font-medium">No rows returned</span>
+                  <span className="text-[10px] mt-0.5 opacity-60">
+                    Your query ran successfully but matched no data. Try broadening your WHERE clause or checking column values.
+                  </span>
+                </div>
+              )}
+
               {/* DataGrid with sorting, column resizing, column visibility, copy, and export */}
-              <DataGrid
-                columns={result.columns}
-                rows={dataGridRows}
-                totalRows={result.rows.length}
-              />
+              {result.total_rows > 0 && (
+                <DataGrid
+                  columns={result.columns}
+                  rows={dataGridRows}
+                  totalRows={result.rows.length}
+                />
+              )}
 
               {/* Pagination controls */}
               {result.total_pages > 1 && (

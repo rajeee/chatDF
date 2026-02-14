@@ -144,6 +144,9 @@ CREATE TABLE IF NOT EXISTS query_results_cache (
 CREATE INDEX IF NOT EXISTS idx_query_cache_expires ON query_results_cache(expires_at);
 CREATE INDEX IF NOT EXISTS idx_saved_queries_user_id ON saved_queries(user_id);
 CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON query_history(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_datasets_conv_url ON datasets(conversation_id, url);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at);
 """
 
 

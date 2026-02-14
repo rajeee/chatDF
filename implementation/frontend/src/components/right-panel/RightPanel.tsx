@@ -97,7 +97,7 @@ export function RightPanel() {
       style={{
         width: rightPanelWidth,
         minWidth: rightPanelWidth,
-        height: "calc(100vh - 3rem)",
+        height: "calc(var(--app-height, 100vh) - 3rem)",
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-border)",
         boxShadow: "-1px 0 3px var(--color-shadow)",

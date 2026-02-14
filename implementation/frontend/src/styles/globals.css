@@ -37,11 +37,24 @@
   html {
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* Dynamic viewport height: dvh accounts for mobile browser chrome and
+       virtual keyboard. Falls back to vh for browsers without dvh support.
+       Components use var(--app-height) instead of 100vh directly. */
+    --app-height: 100dvh;
+  }
+
+  /* Fallback for browsers without dvh support */
+  @supports not (height: 100dvh) {
+    html {
+      --app-height: 100vh;
+    }
   }
 
   body {
     overflow-x: hidden;
     width: 100%;
+    /* Prevent pull-to-refresh and overscroll bounce on mobile */
+    overscroll-behavior: none;
   }
 
   .dark {
@@ -325,6 +338,19 @@ select:focus-visible {
   animation: modalScaleIn 0.2s ease-out forwards;
 }
 
+/* Mobile modal improvements: ensure modals have horizontal margin on small
+   screens and use dynamic viewport height so they don't hide behind the
+   virtual keyboard. The .modal-backdrop-enter parent uses flex centering,
+   so we add padding to create gutters. */
+@media (max-width: 640px) {
+  .modal-backdrop-enter {
+    padding: 0.5rem;
+  }
+  .modal-scale-enter {
+    max-height: calc(var(--app-height, 100vh) - 1rem) !important;
+  }
+}
+
 /* Stagger entrance animation for dataset cards.
    Uses --stagger-index custom property set inline for per-card delay. */
 .dataset-card-enter {
@@ -416,6 +442,14 @@ select:focus-visible {
 /* Show hidden action buttons when focused via keyboard (Tab navigation) */
 .touch-action-btn:focus-visible {
   opacity: 1 !important;
+}
+
+/* Mobile scroll improvements: prevent overscroll bounce from propagating
+   out of scrollable panels, and enable smooth momentum scrolling on iOS. */
+.overflow-y-auto,
+.overflow-y-scroll {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Safe-area insets for notched phones (iPhone X+).

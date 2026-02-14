@@ -88,9 +88,9 @@ while IFS= read -r line; do
         fi
       fi
 
-      # Show text content (the actual response)
+      # Show text content (the actual response) — full output, no truncation
       if echo "$line" | grep -q '"type":"text"'; then
-        text=$(echo "$line" | grep -o '"text":"[^"]*"' | tail -1 | cut -d'"' -f4 | head -c 200)
+        text=$(echo "$line" | grep -o '"text":"[^"]*"' | tail -1 | cut -d'"' -f4)
         if [[ -n "$text" ]] && ! echo "$text" | grep -qE '^\s*$'; then
           echo -e "${prefix}${GREEN}[claude] ${text}${NC}"
         fi

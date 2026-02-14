@@ -107,7 +107,7 @@ export function LeftPanel() {
         style={{
           width: 48,
           minWidth: 48,
-          height: "calc(100vh - 3rem)",
+          height: "calc(var(--app-height, 100vh) - 3rem)",
           backgroundColor: "var(--color-surface)",
           borderColor: "var(--color-border)",
         }}
@@ -149,7 +149,7 @@ export function LeftPanel() {
       style={{
         width: leftPanelWidth,
         minWidth: leftPanelWidth,
-        height: "calc(100vh - 3rem)",
+        height: "calc(var(--app-height, 100vh) - 3rem)",
         backgroundColor: "var(--color-surface)",
         borderColor: "var(--color-border)",
       }}

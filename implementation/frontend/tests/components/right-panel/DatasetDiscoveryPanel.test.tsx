@@ -21,6 +21,7 @@ const mockApiPost = vi.fn();
 vi.mock("@/api/client", () => ({
   searchDatasets: (...args: unknown[]) => mockSearchDatasets(...args),
   apiPost: (...args: unknown[]) => mockApiPost(...args),
+  getCatalogCount: () => Promise.resolve({ total: 386000 }),
 }));
 
 // Mock stores

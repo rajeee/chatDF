@@ -587,6 +587,26 @@ function MessageBubbleComponent({
           </div>
         )}
 
+        {/* Auto-detected chart preview — shown when data is chartable but LLM didn't request a chart */}
+        {!isUser && !isCurrentlyStreaming && visualizableIndex >= 0 &&
+          !message.sql_executions.some(e => e.chartSpec && e.columns && e.rows) && (
+          <div
+            data-testid={`auto-chart-${message.id}`}
+            className="mt-3 rounded-lg overflow-hidden chart-fade-in"
+            style={{
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--color-bg)",
+              height: "240px",
+            }}
+          >
+            <ChartVisualization
+              columns={message.sql_executions[visualizableIndex].columns!}
+              rows={message.sql_executions[visualizableIndex].rows!}
+              onExpand={() => onVisualize(message.sql_executions, visualizableIndex)}
+            />
+          </div>
+        )}
+
         {/* Action buttons row */}
         {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0 || (devMode && onRedo)) && (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -612,29 +632,6 @@ function MessageBubbleComponent({
               </button>
             )}
 
-            {/* Visualize button — prominent, shown when results have chartable data */}
-            {visualizableIndex >= 0 && (
-              <button
-                data-testid={`visualize-btn-${message.id}`}
-                className="action-btn-stagger text-xs px-3 py-1 rounded border font-medium hover:opacity-90 focus-visible:ring-1 active:scale-95 transition-all duration-150 flex items-center gap-1.5"
-                style={{
-                  borderColor: "var(--color-success)",
-                  color: "var(--color-success)",
-                  backgroundColor: "color-mix(in srgb, var(--color-success) 10%, transparent)",
-                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0),
-                } as React.CSSProperties}
-                onClick={() => onVisualize(message.sql_executions, visualizableIndex)}
-                aria-label="Visualize query results"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="12" width="4" height="9" rx="1" />
-                  <rect x="10" y="7" width="4" height="14" rx="1" />
-                  <rect x="17" y="3" width="4" height="18" rx="1" />
-                </svg>
-                Visualize
-              </button>
-            )}
-
             {/* Redo button (dev mode) */}
             {devMode && onRedo && (
               <button
@@ -643,7 +640,7 @@ function MessageBubbleComponent({
                 style={{
                   borderColor: "var(--color-accent)",
                   color: "var(--color-accent)",
-                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0) + (visualizableIndex >= 0 ? 1 : 0),
+                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0),
                 } as React.CSSProperties}
                 onClick={() => onRedo(message.id)}
                 aria-label="Redo this message"

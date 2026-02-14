@@ -485,8 +485,8 @@ describe("Performance: content-visibility optimization", () => {
   });
 });
 
-describe("ML-VIZ-1: Visualize button in chat messages", () => {
-  it("renders Visualize button when sql_execution has chartable data", () => {
+describe("ML-VIZ-1: Inline auto-chart preview in chat messages", () => {
+  it("renders auto-chart preview when sql_execution has chartable data", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-viz",
@@ -507,12 +507,11 @@ describe("ML-VIZ-1: Visualize button in chat messages", () => {
 
     renderWithProviders(<MessageList />);
 
-    const vizBtn = screen.getByTestId("visualize-btn-msg-viz");
-    expect(vizBtn).toBeInTheDocument();
-    expect(vizBtn.textContent).toContain("Visualize");
+    const autoChart = screen.getByTestId("auto-chart-msg-viz");
+    expect(autoChart).toBeInTheDocument();
   });
 
-  it("does not render Visualize button when sql_execution has no chartable data", () => {
+  it("does not render auto-chart when sql_execution has no chartable data", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-no-viz",
@@ -533,10 +532,10 @@ describe("ML-VIZ-1: Visualize button in chat messages", () => {
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.queryByTestId("visualize-btn-msg-no-viz")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("auto-chart-msg-no-viz")).not.toBeInTheDocument();
   });
 
-  it("does not render Visualize button when sql_execution has error and no data", () => {
+  it("does not render auto-chart when sql_execution has error and no data", () => {
     setChatIdle("conv-1", [
       makeMessage({
         id: "msg-err",
@@ -557,67 +556,6 @@ describe("ML-VIZ-1: Visualize button in chat messages", () => {
 
     renderWithProviders(<MessageList />);
 
-    expect(screen.queryByTestId("visualize-btn-msg-err")).not.toBeInTheDocument();
-  });
-
-  it("clicking Visualize button opens SQL chart modal with correct state", async () => {
-    const user = userEvent.setup();
-    const executions = [
-      {
-        query: "SELECT category, count FROM data",
-        columns: ["category", "count"],
-        rows: [["A", 10], ["B", 20], ["C", 30]],
-        total_rows: 3,
-        error: null,
-        execution_time_ms: 42,
-      },
-    ];
-
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-viz-click",
-        role: "assistant",
-        content: "Results",
-        sql_executions: executions,
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const vizBtn = screen.getByTestId("visualize-btn-msg-viz-click");
-    await user.click(vizBtn);
-
-    const state = useUiStore.getState();
-    expect(state.chartModalExecution).not.toBeNull();
-    expect(state.chartModalExecution!.query).toBe("SELECT category, count FROM data");
-    expect(state.chartModalExecution!.columns).toEqual(["category", "count"]);
-  });
-
-  it("Visualize button has green styling and chart icon", () => {
-    setChatIdle("conv-1", [
-      makeMessage({
-        id: "msg-style",
-        role: "assistant",
-        content: "Results",
-        sql_executions: [
-          {
-            query: "SELECT x, y FROM data",
-            columns: ["x", "y"],
-            rows: [[1, 2], [3, 4]],
-            total_rows: 2,
-            error: null,
-            execution_time_ms: 5,
-          },
-        ],
-      }),
-    ]);
-
-    renderWithProviders(<MessageList />);
-
-    const vizBtn = screen.getByTestId("visualize-btn-msg-style");
-    expect(vizBtn).toHaveStyle({ borderColor: "var(--color-success)", color: "var(--color-success)" });
-    // Has chart icon SVG
-    expect(vizBtn.querySelector("svg")).not.toBeNull();
-    expect(vizBtn).toHaveAttribute("aria-label", "Visualize query results");
+    expect(screen.queryByTestId("auto-chart-msg-err")).not.toBeInTheDocument();
   });
 });

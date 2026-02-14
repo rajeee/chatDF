@@ -185,6 +185,7 @@ class TestProcessMessageHappyPath:
             mock_rl.check_limit = AsyncMock(side_effect=[rate_status_ok, rate_status_after])
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -245,6 +246,7 @@ class TestProcessMessageHappyPath:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -294,6 +296,7 @@ class TestConcurrencyGuard:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=slow_stream)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -363,6 +366,7 @@ class TestStopGeneration:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=capture_cancel)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -431,6 +435,7 @@ class TestRateLimitWarning:
             mock_rl.check_limit = AsyncMock(side_effect=[rate_status_ok, rate_status_after])
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -479,6 +484,7 @@ class TestRateLimitWarning:
             mock_rl.check_limit = AsyncMock(side_effect=[rate_status_warning, rate_status_after])
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -527,6 +533,7 @@ class TestRateLimitExceeded:
         ):
             mock_rl.check_limit = AsyncMock(return_value=rate_status_exceeded)
             mock_llm.stream_chat = AsyncMock()
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.exceptions import RateLimitError
@@ -567,6 +574,7 @@ class TestRateLimitExceeded:
         ):
             mock_rl.check_limit = AsyncMock(return_value=rate_status_exceeded)
             mock_llm.stream_chat = AsyncMock()
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.exceptions import RateLimitError
@@ -604,6 +612,7 @@ class TestRateLimitExceeded:
         ):
             mock_rl.check_limit = AsyncMock(return_value=rate_status_exceeded)
             mock_llm.stream_chat = AsyncMock()
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.exceptions import RateLimitError
@@ -649,6 +658,7 @@ class TestErrorHandling:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=RuntimeError("Gemini API failure"))
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -688,6 +698,7 @@ class TestErrorHandling:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=RuntimeError("fail"))
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -748,6 +759,7 @@ class TestContextBuilding:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=capture_stream_chat)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -786,6 +798,7 @@ class TestContextBuilding:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -821,6 +834,7 @@ class TestContextBuilding:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=fake_datasets)
 

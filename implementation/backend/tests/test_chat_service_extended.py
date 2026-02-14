@@ -265,6 +265,7 @@ async def _run_process_message(
         )
         mock_rl.record_usage = AsyncMock()
         mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+        mock_llm.generate_title = AsyncMock(return_value="Auto Title")
         mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
         mock_llm.GeminiRateLimitError = _get_gemini_rate_limit_error()
         mock_ds.get_datasets = AsyncMock(return_value=datasets)
@@ -396,23 +397,23 @@ class TestAutoTitleGeneration:
         )
 
         updated_conv = await _get_conversation(fresh_db, conv["id"])
-        assert updated_conv["title"] == "Show me the sales data"
+        assert updated_conv["title"] == "Auto Title"
 
     @pytest.mark.asyncio
-    async def test_auto_title_truncated_at_50_chars(
+    async def test_auto_title_calls_generate_title(
         self, fresh_db, user_and_conv_no_title, ws_send, mock_pool
     ):
-        """Auto-title should be truncated to 50 chars with ellipsis if content is longer."""
+        """Auto-title should call generate_title with the user message."""
         user, conv = user_and_conv_no_title
         long_content = "A" * 60
-        result, _, _ = await _run_process_message(
+        result, mock_llm, _ = await _run_process_message(
             fresh_db, user, conv, ws_send, mock_pool,
             content=long_content,
         )
 
+        mock_llm.generate_title.assert_called_once_with(long_content)
         updated_conv = await _get_conversation(fresh_db, conv["id"])
-        # Title should be first 50 chars + ellipsis
-        assert updated_conv["title"] == "A" * 50 + "\u2026"
+        assert updated_conv["title"] == "Auto Title"
 
     @pytest.mark.asyncio
     async def test_auto_title_not_set_if_already_titled(
@@ -451,10 +452,10 @@ class TestAutoTitleGeneration:
         assert "ctu" in event_types  # conversation_title_updated compressed
 
     @pytest.mark.asyncio
-    async def test_exact_50_chars_no_ellipsis(
+    async def test_auto_title_uses_llm_result(
         self, fresh_db, user_and_conv_no_title, ws_send, mock_pool
     ):
-        """Content of exactly 50 chars should not get an ellipsis."""
+        """Title should be set to whatever generate_title returns."""
         user, conv = user_and_conv_no_title
         content_50 = "B" * 50
         result, _, _ = await _run_process_message(
@@ -463,7 +464,7 @@ class TestAutoTitleGeneration:
         )
 
         updated_conv = await _get_conversation(fresh_db, conv["id"])
-        assert updated_conv["title"] == content_50
+        assert updated_conv["title"] == "Auto Title"
 
 
 # ---------------------------------------------------------------------------
@@ -545,6 +546,7 @@ class TestStopGenerationExtended:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(side_effect=quick_stream)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -811,6 +813,7 @@ class TestTokenCountAndUsage:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -930,6 +933,7 @@ class TestSelectedModelPassedToLlm:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -968,6 +972,7 @@ class TestSelectedModelPassedToLlm:
             mock_rl.check_limit = AsyncMock(return_value=rate_status)
             mock_rl.record_usage = AsyncMock()
             mock_llm.stream_chat = AsyncMock(return_value=stream_result)
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
@@ -1015,6 +1020,7 @@ class TestErrorHandlingExtended:
             mock_llm.stream_chat = AsyncMock(
                 side_effect=GeminiRateLimitError()
             )
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -1056,6 +1062,7 @@ class TestErrorHandlingExtended:
             mock_llm.stream_chat = AsyncMock(
                 side_effect=ValueError("bad value")
             )
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -1117,6 +1124,7 @@ class TestErrorHandlingExtended:
             mock_llm.stream_chat = AsyncMock(
                 side_effect=ValueError("original error")
             )
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -1154,6 +1162,7 @@ class TestErrorHandlingExtended:
             mock_llm.stream_chat = AsyncMock(
                 side_effect=ValueError("fail")
             )
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -1306,6 +1315,7 @@ class TestUserMessagePersistenceOrder:
             mock_llm.stream_chat = AsyncMock(
                 side_effect=RuntimeError("LLM crashed")
             )
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_llm.prune_context = MagicMock(side_effect=lambda msgs, **kw: msgs)
             mock_llm.GeminiRateLimitError = GeminiRateLimitError
             mock_ds.get_datasets = AsyncMock(return_value=[])
@@ -1354,6 +1364,7 @@ class TestUserMessagePersistenceOrder:
         ):
             mock_rl.check_limit = AsyncMock(return_value=rate_status_exceeded)
             mock_llm.stream_chat = AsyncMock()
+            mock_llm.generate_title = AsyncMock(return_value="Auto Title")
             mock_ds.get_datasets = AsyncMock(return_value=[])
 
             from app.exceptions import RateLimitError

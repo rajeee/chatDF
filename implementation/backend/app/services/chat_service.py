@@ -100,9 +100,7 @@ async def process_message(
         )
         conv_row = await cursor.fetchone()
         if conv_row and (not conv_row["title"]):
-            auto_title = content[:50].strip()
-            if len(content) > 50:
-                auto_title += "…"
+            auto_title = await llm_service.generate_title(content)
             await db.execute(
                 "UPDATE conversations SET title = ? WHERE id = ?",
                 (auto_title, conversation_id),

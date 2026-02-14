@@ -1041,3 +1041,43 @@ async def stream_chat(
     result.reasoning = collected_reasoning
     result.tool_call_trace = trace_entries
     return result
+
+
+# ---------------------------------------------------------------------------
+# Title generation
+# ---------------------------------------------------------------------------
+
+_TITLE_PROMPT = (
+    "Generate a short, descriptive title (max 6 words) for a conversation "
+    "that starts with the following message. Return ONLY the title text, "
+    "nothing else. No quotes, no punctuation at the end.\n\n"
+    "Message: {message}"
+)
+
+
+async def generate_title(message: str) -> str:
+    """Use the LLM to generate a concise conversation title.
+
+    Falls back to simple truncation if the LLM call fails.
+    """
+    fallback = message[:50].strip()
+    if len(message) > 50:
+        fallback += "\u2026"
+
+    try:
+        response = await client.aio.models.generate_content(
+            model=MODEL_ID,
+            contents=_TITLE_PROMPT.format(message=message[:500]),
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=30,
+            ),
+        )
+        title = (response.text or "").strip().strip('"\'')
+        if not title:
+            return fallback
+        # Cap at 80 chars just in case
+        return title[:80]
+    except Exception:
+        logger.warning("LLM title generation failed, using fallback", exc_info=True)
+        return fallback

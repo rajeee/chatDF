@@ -59,7 +59,7 @@ export function KeyboardShortcutsModal() {
       }}
     >
       <div
-        className="rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 animate-modal-enter"
+        className="rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 modal-scale-enter"
         style={{
           backgroundColor: "var(--color-surface)",
           color: "var(--color-text)",

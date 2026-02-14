@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPut } from "@/api/client";
 import { useChatStore } from "@/stores/chatStore";
@@ -100,7 +101,7 @@ export function SettingsModal() {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       data-testid="settings-modal"
       ref={overlayRef}
@@ -110,7 +111,7 @@ export function SettingsModal() {
       }}
     >
       <div
-        className="rounded-lg shadow-xl p-6 max-w-md w-full mx-4 animate-modal-enter"
+        className="rounded-lg shadow-xl p-6 max-w-md w-full mx-4 modal-scale-enter"
         style={{
           backgroundColor: "var(--color-surface)",
           color: "var(--color-text)",
@@ -355,6 +356,7 @@ export function SettingsModal() {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

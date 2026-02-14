@@ -4,7 +4,7 @@
 // Assistant messages: left-aligned, surface bg, markdown rendered.
 // Per-message actions: copy button, "Show SQL" button, "Show Reasoning" button, timestamp on hover.
 
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { type Message, type SqlExecution, useChatStore } from "@/stores/chatStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -95,6 +95,8 @@ function MessageBubbleComponent({
   const [sqlExpanded, setSqlExpanded] = useState(false);
   const [traceExpanded, setTraceExpanded] = useState(false);
   const [forked, setForked] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [explaining, setExplaining] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
 
@@ -105,6 +107,28 @@ function MessageBubbleComponent({
       setTimeout(() => setForked(false), 1500);
     }
   }, [onFork, message.id]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Fallback for older browsers / insecure contexts
+      const textarea = document.createElement("textarea");
+      textarea.value = message.content;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
+    }
+  }, [message.content]);
 
   const handleExplainInline = useCallback(async () => {
     if (explaining || message.sql_executions.length === 0) return;
@@ -625,13 +649,39 @@ function MessageBubbleComponent({
         )}
 
         {/* Action buttons row */}
-        {!isUser && !isCurrentlyStreaming && (reasoningContent || message.sql_executions.length > 0 || (devMode && onRedo)) && (
+        {!isUser && !isCurrentlyStreaming && (
           <div className="mt-2 flex flex-wrap gap-2">
+            {/* Copy button */}
+            <button
+              data-testid={`copy-msg-btn-${message.id}`}
+              className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1"
+              style={{ borderColor: "var(--color-border)", color: "var(--color-text)", '--btn-index': 0 } as React.CSSProperties}
+              onClick={handleCopy}
+              aria-label={copied ? "Copied" : "Copy message"}
+            >
+              {copied ? (
+                <>
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span style={{ color: "var(--color-success)" }}>Copied</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy
+                </>
+              )}
+            </button>
+
             {/* Show Reasoning button */}
             {reasoningContent && (
               <button
                 className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150"
-                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': 0 } as React.CSSProperties}
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': 1 } as React.CSSProperties}
                 onClick={() => onShowReasoning(reasoningContent)}
               >
                 Show Reasoning
@@ -642,10 +692,33 @@ function MessageBubbleComponent({
             {message.sql_executions.length > 0 && (
               <button
                 className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150"
-                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': reasoningContent ? 1 : 0 } as React.CSSProperties}
+                style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)", '--btn-index': 1 + (reasoningContent ? 1 : 0) } as React.CSSProperties}
                 onClick={() => onShowSQL(message.sql_executions)}
               >
                 Show SQL ({message.sql_executions.length})
+              </button>
+            )}
+
+            {/* Visualize button — shown when data is chartable */}
+            {visualizableIndex >= 0 && (
+              <button
+                data-testid={`visualize-btn-${message.id}`}
+                className="action-btn-stagger text-xs px-2 py-1 rounded border opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 hover:shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1"
+                style={{
+                  borderColor: "var(--color-accent)",
+                  color: "var(--color-accent)",
+                  '--btn-index': 1 + (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0),
+                } as React.CSSProperties}
+                onClick={() => onVisualize(message.sql_executions, visualizableIndex)}
+                aria-label="Open chart in full view"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="4" />
+                  <rect x="14" y="10" width="7" height="11" />
+                  <rect x="3" y="13" width="7" height="8" />
+                </svg>
+                Visualize
               </button>
             )}
 
@@ -657,7 +730,7 @@ function MessageBubbleComponent({
                 style={{
                   borderColor: "var(--color-accent)",
                   color: "var(--color-accent)",
-                  '--btn-index': (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0),
+                  '--btn-index': 1 + (reasoningContent ? 1 : 0) + (message.sql_executions.length > 0 ? 1 : 0) + (visualizableIndex >= 0 ? 1 : 0),
                 } as React.CSSProperties}
                 onClick={() => onRedo(message.id)}
                 aria-label="Redo this message"

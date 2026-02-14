@@ -42,10 +42,11 @@ CACHE_CLEANUP_INTERVAL_SECONDS = 1800  # 30 minutes
 
 
 async def _periodic_cache_cleanup(db_pool: DatabasePool) -> None:
-    """Run persistent cache cleanup every 30 minutes.
+    """Run periodic cleanup every 30 minutes.
 
-    Removes expired entries from the ``query_results_cache`` table using
-    the pool's write connection.  Runs until cancelled on shutdown.
+    Removes expired entries from the ``query_results_cache`` table and
+    expired sessions from the ``sessions`` table using the pool's write
+    connection.  Runs until cancelled on shutdown.
     """
     while True:
         try:
@@ -54,6 +55,14 @@ async def _periodic_cache_cleanup(db_pool: DatabasePool) -> None:
             removed = await persistent_cache.cleanup(write_conn)
             if removed > 0:
                 logger.info("Cache cleanup: removed %d expired entries", removed)
+
+            # Clean up expired sessions
+            cursor = await write_conn.execute(
+                "DELETE FROM sessions WHERE expires_at < datetime('now')"
+            )
+            if cursor.rowcount and cursor.rowcount > 0:
+                await write_conn.commit()
+                logger.info("Session cleanup: removed %d expired sessions", cursor.rowcount)
         except asyncio.CancelledError:
             break
         except Exception:

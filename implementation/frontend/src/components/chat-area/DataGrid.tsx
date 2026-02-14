@@ -67,6 +67,80 @@ function SortUnsortedIcon() {
   );
 }
 
+/* ---------- Cell value formatting ---------- */
+
+// ISO 8601 date/datetime pattern (e.g. "2025-02-14", "2025-02-14T12:34:56Z")
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+function isIsoDateString(value: unknown): value is string {
+  return typeof value === "string" && value.length >= 10 && ISO_DATE_RE.test(value);
+}
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function formatCellValue(value: unknown): React.ReactNode {
+  if (value === null || value === undefined) {
+    return (
+      <span className="inline-block px-1.5 py-0.5 rounded text-xs italic text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/50">
+        null
+      </span>
+    );
+  }
+
+  // Boolean values → styled text
+  if (typeof value === "boolean") {
+    return (
+      <span
+        className={`inline-block text-xs font-medium ${value ? "text-green-600 dark:text-green-400" : "text-gray-400 dark:text-gray-500"}`}
+        aria-label={value ? "true" : "false"}
+      >
+        {value ? "true" : "false"}
+      </span>
+    );
+  }
+
+  // Numeric values → locale-formatted with thousands separators
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return String(value);
+    // Integers: no decimal places; floats: up to 4 significant decimal digits
+    if (Number.isInteger(value)) {
+      return value.toLocaleString();
+    }
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    });
+  }
+
+  // Date strings → readable format
+  if (isIsoDateString(value)) {
+    try {
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        // Date-only (10 chars like "2025-02-14") vs datetime
+        const hasTime = value.length > 10;
+        return hasTime ? dateTimeFormatter.format(date) : dateFormatter.format(date);
+      }
+    } catch {
+      // Fall through to string rendering
+    }
+  }
+
+  return String(value);
+}
+
 interface DataGridProps {
   columns: string[];
   rows: Record<string, unknown>[];
@@ -106,17 +180,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
         accessorFn: (row: Record<string, unknown>) => row[col],
         header: col,
         minSize: 50,
-        cell: ({ getValue }) => {
-          const value = getValue();
-          if (value === null || value === undefined) {
-            return (
-              <span className="inline-block px-1.5 py-0.5 rounded text-xs italic text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/50">
-                null
-              </span>
-            );
-          }
-          return String(value);
-        },
+        cell: ({ getValue }) => formatCellValue(getValue()),
       })),
     [columns]
   );
@@ -436,7 +500,7 @@ export function DataGrid({ columns, rows, totalRows }: DataGridProps) {
                         key={cell.id}
                         role="cell"
                         className={`px-3 py-1.5 truncate ${isNumeric ? "text-right" : ""}`}
-                        title={String(cell.getValue() ?? "")}
+                        title={cell.getValue() != null ? String(cell.getValue()) : ""}
                         style={{ width: cell.column.getSize() }}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -22,7 +22,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import get_settings
 from app.database import DatabasePool
 from app.exceptions import ConflictError, NotFoundError, RateLimitError
-from app.routers import auth, conversations, dataset_search, datasets, export, health, query_history, saved_queries, shared, usage
+from app.routers import auth, catalog_search, conversations, dataset_search, datasets, export, health, query_history, saved_queries, shared, usage
 from app.routers import settings as settings_router
 from app.routers.conversations import public_router as shared_router
 from app.routers.websocket import router as ws_router
@@ -92,6 +92,19 @@ async def lifespan(application: FastAPI):
     # -- File cache startup cleanup (remove orphaned temp files) --
     file_cache_startup_cleanup()
 
+    # -- Catalog DB (read-only connection to datagov_catalog.db) --
+    catalog_db_path = settings.catalog_db_path
+    try:
+        catalog_conn = await aiosqlite.connect(
+            f"file:{catalog_db_path}?mode=ro", uri=True
+        )
+        application.state.catalog_db = catalog_conn
+        logger.info("Catalog DB opened: %s", catalog_db_path)
+    except Exception:
+        logger.warning("Catalog DB not available at %s — catalog search disabled", catalog_db_path)
+        application.state.catalog_db = None
+        catalog_conn = None
+
     # -- Periodic cache cleanup --
     _cleanup_task = asyncio.create_task(_periodic_cache_cleanup(db_pool))
 
@@ -105,6 +118,10 @@ async def lifespan(application: FastAPI):
             await _cleanup_task
         except asyncio.CancelledError:
             pass
+
+    # Close catalog DB
+    if catalog_conn is not None:
+        await catalog_conn.close()
 
     # Implements: spec/backend/plan.md#Lifespan (drain pool, close DB on shutdown)
     worker_pool.shutdown(pool)
@@ -249,4 +266,5 @@ app.include_router(shared_router, prefix="/shared", tags=["shared"])
 app.include_router(shared.router, prefix="/api", tags=["shared-results"])
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(dataset_search.router, prefix="/api", tags=["dataset-search"])
+app.include_router(catalog_search.router, prefix="/api", tags=["catalog-search"])
 app.include_router(ws_router)

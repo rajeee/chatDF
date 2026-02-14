@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     secure_cookies: bool = False
     upload_dir: str = "uploads"
     max_upload_size_mb: int = 500
+    catalog_db_path: str = "../../datagov_catalog.db"
 
     model_config = {
         "env_file": ".env",

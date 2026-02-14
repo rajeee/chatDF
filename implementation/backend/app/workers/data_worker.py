@@ -25,14 +25,29 @@ DOWNLOAD_TIMEOUT = 300  # seconds for full file downloads
 
 
 def _is_csv_file(path_or_url: str) -> bool:
-    """Check if a path/URL points to a CSV file."""
-    lower = path_or_url.lower()
-    return lower.endswith('.csv') or lower.endswith('.csv.gz') or lower.endswith('.tsv')
+    """Check if a path/URL points to a CSV file.
+
+    Parses the URL path component to ignore query strings, so URLs like
+    ``rows.csv?accessType=DOWNLOAD`` are correctly detected.
+    """
+    from urllib.parse import urlparse
+
+    if path_or_url.startswith(("http://", "https://")):
+        path = urlparse(path_or_url).path.lower()
+    else:
+        path = path_or_url.lower()
+    return path.endswith('.csv') or path.endswith('.csv.gz') or path.endswith('.tsv')
 
 
 def _is_tsv_file(path_or_url: str) -> bool:
     """Check if a path/URL points to a TSV file."""
-    return path_or_url.lower().endswith('.tsv')
+    from urllib.parse import urlparse
+
+    if path_or_url.startswith(("http://", "https://")):
+        path = urlparse(path_or_url).path.lower()
+    else:
+        path = path_or_url.lower()
+    return path.endswith('.tsv')
 
 
 def _scan_data_file(path_or_url: str, is_local: bool = False) -> "object":

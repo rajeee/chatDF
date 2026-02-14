@@ -65,11 +65,11 @@ class TestIsCsvFile:
         assert _is_csv_file("https://example.com/data/archive.csv.gz") is True
 
     def test_url_with_query_params(self):
-        """Query params after .csv break the endswith check."""
-        assert _is_csv_file("https://example.com/data.csv?token=abc") is False
+        """Query params after .csv are stripped — URL path is checked."""
+        assert _is_csv_file("https://example.com/data.csv?token=abc") is True
 
     def test_url_with_fragment(self):
-        assert _is_csv_file("https://example.com/data.csv#section") is False
+        assert _is_csv_file("https://example.com/data.csv#section") is True
 
     def test_empty_string(self):
         assert _is_csv_file("") is False

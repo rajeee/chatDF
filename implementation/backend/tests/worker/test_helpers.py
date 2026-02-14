@@ -73,11 +73,11 @@ class TestIsCsvFile:
         assert _is_csv_file("https://example.com/data/table.parquet") is False
 
     def test_url_with_query_params_after_csv(self):
-        # The function checks endswith, so query params break the match
-        assert _is_csv_file("https://example.com/data.csv?token=abc") is False
+        # URL path component is checked, ignoring query params
+        assert _is_csv_file("https://example.com/data.csv?token=abc") is True
 
     def test_url_with_fragment_after_csv(self):
-        assert _is_csv_file("https://example.com/data.csv#section") is False
+        assert _is_csv_file("https://example.com/data.csv#section") is True
 
     def test_local_path_csv(self):
         assert _is_csv_file("/tmp/uploads/my_data.csv") is True

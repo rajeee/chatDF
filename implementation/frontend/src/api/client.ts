@@ -359,6 +359,74 @@ export async function discoverDatasets(
 }
 
 // ---------------------------------------------------------------------------
+// Catalog search (data.gov full-text search)
+// ---------------------------------------------------------------------------
+
+export interface CatalogResource {
+  url: string;
+  format: string;
+  name: string | null;
+}
+
+export interface CatalogSearchResult {
+  id: string;
+  title: string;
+  description: string | null;
+  publisher: string | null;
+  theme: string[];
+  landing_page: string | null;
+  modified: string | null;
+  resources: CatalogResource[];
+}
+
+export interface CatalogSearchResponse {
+  results: CatalogSearchResult[];
+  total: number;
+  query: string;
+}
+
+/**
+ * Full-text search over the local data.gov catalog (386K datasets).
+ *
+ * @param formats  Optional array of format strings (e.g. ["csv","json"]).
+ *                 When provided, only datasets with matching resources are returned.
+ */
+export async function searchCatalog(
+  query: string,
+  limit: number = 20,
+  offset: number = 0,
+  formats?: string[]
+): Promise<CatalogSearchResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (formats && formats.length > 0) {
+    params.set("formats", formats.join(","));
+  }
+  return apiGet<CatalogSearchResponse>(
+    `/api/catalog-search?${params.toString()}`
+  );
+}
+
+/**
+ * Get total dataset count, optionally filtered by format.
+ */
+export async function getCatalogCount(
+  formats?: string[]
+): Promise<{ total: number }> {
+  const params = new URLSearchParams();
+  if (formats && formats.length > 0) {
+    params.set("formats", formats.join(","));
+  }
+  const qs = params.toString();
+  return apiGet<{ total: number }>(
+    `/api/catalog-count${qs ? `?${qs}` : ""}`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Bulk conversation operations
 // ---------------------------------------------------------------------------
 
